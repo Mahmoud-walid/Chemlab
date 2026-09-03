@@ -15,7 +15,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Smartphone, Settings } from "lucide-react";
 import SystemPageContent from "@/components/customs/system-page.content";
-import Image from "next/image";
 
 const MOBILE_BREAKPOINT = 640;
 

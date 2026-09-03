@@ -1,19 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { type QuizAttempt, type Difficulty } from "@/types/quiz";
 import {
-  getAttempts,
   clearAttempts,
-  percentage,
   gradeLabel,
+  parseAttempts,
+  percentage,
+  QUIZ_STORAGE_KEY,
 } from "@/lib/quiz-storage";
+import { useStoredValue } from "@/hooks/use-stored-value";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, Clock, Trash2, BookOpen } from "lucide-react";
+import { Clock, Trash2, BookOpen } from "lucide-react";
 
 const DIFFICULTY_STYLES: Record<Difficulty, string> = {
   easy: "bg-chart-5/20 text-chart-5 border-chart-5/40",
@@ -124,16 +126,12 @@ function SummaryStats({ attempts }: { attempts: QuizAttempt[] }) {
 //  PAGE
 // ─────────────────────────────────────────────
 export default function ResultsPage() {
-  const [attempts, setAttempts] = useState<QuizAttempt[]>([]);
-
-  // Read from sessionStorage on mount (client-only)
-  useEffect(() => {
-    setAttempts(getAttempts());
-  }, []);
+  // Read from sessionStorage (client-only); re-renders when it changes.
+  const stored = useStoredValue("session", QUIZ_STORAGE_KEY);
+  const attempts = useMemo(() => parseAttempts(stored), [stored]);
 
   function handleClear() {
     clearAttempts();
-    setAttempts([]);
   }
 
   return (

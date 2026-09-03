@@ -8,33 +8,113 @@
     "questions": [
       {
         "question": "What is the chemical symbol for Gold?",
-        "options": ["Go", "Gd", "Au", "Ag"],
+        "options": [
+          "Go",
+          "Gd",
+          "Au",
+          "Ag"
+        ],
         "answer": "Au",
         "explanation": "Gold's symbol Au comes from its Latin name Aurum."
       },
       {
         "question": "Which element has the atomic number 1?",
-        "options": ["Helium", "Hydrogen", "Lithium", "Carbon"],
+        "options": [
+          "Helium",
+          "Hydrogen",
+          "Lithium",
+          "Carbon"
+        ],
         "answer": "Hydrogen",
         "explanation": "Hydrogen (H) is the lightest and most abundant element in the universe with atomic number 1."
       },
       {
         "question": "What is the symbol for Sodium?",
-        "options": ["So", "Sa", "Sd", "Na"],
+        "options": [
+          "So",
+          "Sa",
+          "Sd",
+          "Na"
+        ],
         "answer": "Na",
         "explanation": "Sodium's symbol Na comes from its Latin name Natrium."
       },
       {
         "question": "Which element is represented by the symbol Fe?",
-        "options": ["Fluorine", "Iron", "Fermium", "Francium"],
+        "options": [
+          "Fluorine",
+          "Iron",
+          "Fermium",
+          "Francium"
+        ],
         "answer": "Iron",
         "explanation": "Fe stands for Ferrum, the Latin name for Iron."
       },
       {
         "question": "How many elements are in Period 2 of the periodic table?",
-        "options": ["2", "6", "8", "18"],
+        "options": [
+          "2",
+          "6",
+          "8",
+          "18"
+        ],
         "answer": "8",
         "explanation": "Period 2 contains 8 elements: Li, Be, B, C, N, O, F, and Ne."
+      },
+      {
+        "question": "Which element is a noble gas?",
+        "options": [
+          "Oxygen",
+          "Neon",
+          "Sodium",
+          "Nitrogen"
+        ],
+        "answer": "Neon",
+        "explanation": "Neon (Ne) is a noble gas with a full valence shell, making it chemically inert."
+      },
+      {
+        "question": "Which element is in Group 1 of the periodic table?",
+        "options": [
+          "Sodium",
+          "Calcium",
+          "Chlorine",
+          "Helium"
+        ],
+        "answer": "Sodium",
+        "explanation": "Group 1 elements are alkali metals; Sodium (Na) is one of them."
+      },
+      {
+        "question": "Which element has the highest electronegativity?",
+        "options": [
+          "Fluorine",
+          "Oxygen",
+          "Nitrogen",
+          "Chlorine"
+        ],
+        "answer": "Fluorine",
+        "explanation": "Fluorine is the most electronegative element on the periodic table."
+      },
+      {
+        "question": "Which period contains the element Magnesium?",
+        "options": [
+          "Period 1",
+          "Period 2",
+          "Period 3",
+          "Period 4"
+        ],
+        "answer": "Period 3",
+        "explanation": "Magnesium (Mg) is in Period 3 of the periodic table."
+      },
+      {
+        "question": "What type of element is Bromine?",
+        "options": [
+          "Alkali metal",
+          "Halogen",
+          "Noble gas",
+          "Transition metal"
+        ],
+        "answer": "Halogen",
+        "explanation": "Bromine (Br) is a halogen, located in Group 17."
       }
     ]
   },
@@ -58,19 +138,34 @@
       },
       {
         "question": "In a covalent bond, atoms share what?",
-        "options": ["Protons", "Neutrons", "Electrons", "Nuclei"],
+        "options": [
+          "Protons",
+          "Neutrons",
+          "Electrons",
+          "Nuclei"
+        ],
         "answer": "Electrons",
         "explanation": "Covalent bonds involve the sharing of electron pairs between atoms."
       },
       {
         "question": "Which molecule contains a triple bond?",
-        "options": ["H₂O", "CO₂", "N₂", "O₂"],
+        "options": [
+          "H₂O",
+          "CO₂",
+          "N₂",
+          "O₂"
+        ],
         "answer": "N₂",
         "explanation": "Nitrogen gas (N₂) has a triple bond — one sigma and two pi bonds — making it very stable."
       },
       {
         "question": "What is the shape of a water molecule?",
-        "options": ["Linear", "Trigonal planar", "Bent", "Tetrahedral"],
+        "options": [
+          "Linear",
+          "Trigonal planar",
+          "Bent",
+          "Tetrahedral"
+        ],
         "answer": "Bent",
         "explanation": "Water has a bent shape due to the two lone pairs on oxygen repelling the bonding pairs."
       },
@@ -84,6 +179,61 @@
         ],
         "answer": "Covalent bond",
         "explanation": "Covalent bonds, especially double and triple bonds, are generally the strongest type of chemical bond."
+      },
+      {
+        "question": "Which bond forms between two non-metals?",
+        "options": [
+          "Ionic",
+          "Covalent",
+          "Metallic",
+          "Hydrogen"
+        ],
+        "answer": "Covalent",
+        "explanation": "Non-metal atoms share electrons to form covalent bonds."
+      },
+      {
+        "question": "Which molecule exhibits hydrogen bonding?",
+        "options": [
+          "CH₄",
+          "H₂O",
+          "CO₂",
+          "O₂"
+        ],
+        "answer": "H₂O",
+        "explanation": "Water molecules form hydrogen bonds due to polar O–H bonds."
+      },
+      {
+        "question": "Metallic bonding is characterized by:",
+        "options": [
+          "Shared electrons in specific bonds",
+          "Delocalized electrons across a lattice",
+          "Transfer of electrons",
+          "No electron movement"
+        ],
+        "answer": "Delocalized electrons across a lattice",
+        "explanation": "Metallic bonds involve a lattice of positive ions with delocalized electrons."
+      },
+      {
+        "question": "Which bond is strongest?",
+        "options": [
+          "Hydrogen bond",
+          "Ionic bond",
+          "Covalent bond",
+          "Van der Waals"
+        ],
+        "answer": "Covalent bond",
+        "explanation": "Covalent bonds involve shared electron pairs, making them stronger than hydrogen or Van der Waals interactions."
+      },
+      {
+        "question": "Which compound is ionic?",
+        "options": [
+          "H₂O",
+          "NaCl",
+          "CO₂",
+          "CH₄"
+        ],
+        "answer": "NaCl",
+        "explanation": "Sodium chloride forms ions (Na⁺ and Cl⁻), creating an ionic lattice."
       }
     ]
   },
@@ -96,7 +246,12 @@
     "questions": [
       {
         "question": "What is the pH of a neutral solution at 25°C?",
-        "options": ["0", "5", "7", "14"],
+        "options": [
+          "0",
+          "5",
+          "7",
+          "14"
+        ],
         "answer": "7",
         "explanation": "Pure water at 25°C has equal concentrations of H⁺ and OH⁻ ions, giving a pH of exactly 7."
       },
@@ -124,7 +279,12 @@
       },
       {
         "question": "What is the conjugate base of H₂SO₄?",
-        "options": ["H₃SO₄⁺", "HSO₄⁻", "SO₄²⁻", "H₂SO₃"],
+        "options": [
+          "H₃SO₄⁺",
+          "HSO₄⁻",
+          "SO₄²⁻",
+          "H₂SO₃"
+        ],
         "answer": "HSO₄⁻",
         "explanation": "H₂SO₄ donates one proton to form HSO₄⁻, its conjugate base."
       },
@@ -138,6 +298,61 @@
         ],
         "answer": "A weak acid and its conjugate base",
         "explanation": "Buffers work because the weak acid neutralises added base, while the conjugate base neutralises added acid."
+      },
+      {
+        "question": "Which acid is found in vinegar?",
+        "options": [
+          "HCl",
+          "CH₃COOH",
+          "H₂SO₄",
+          "HNO₃"
+        ],
+        "answer": "CH₃COOH",
+        "explanation": "Acetic acid (CH₃COOH) is the main component of vinegar."
+      },
+      {
+        "question": "Which base is used in soap making?",
+        "options": [
+          "NaOH",
+          "NH₃",
+          "KCl",
+          "CaO"
+        ],
+        "answer": "NaOH",
+        "explanation": "Sodium hydroxide reacts with fats to produce soap via saponification."
+      },
+      {
+        "question": "A solution with pH 10 is:",
+        "options": [
+          "Acidic",
+          "Neutral",
+          "Basic",
+          "Strong acid"
+        ],
+        "answer": "Basic",
+        "explanation": "pH > 7 indicates a basic solution."
+      },
+      {
+        "question": "What is the conjugate acid of NH₃?",
+        "options": [
+          "NH₄⁺",
+          "NH₂⁻",
+          "OH⁻",
+          "H₂O"
+        ],
+        "answer": "NH₄⁺",
+        "explanation": "NH₃ accepts a proton to form NH₄⁺, its conjugate acid."
+      },
+      {
+        "question": "Which of these is a weak acid?",
+        "options": [
+          "HCl",
+          "H₂SO₄",
+          "CH₃COOH",
+          "HNO₃"
+        ],
+        "answer": "CH₃COOH",
+        "explanation": "Acetic acid only partially dissociates in water, making it a weak acid."
       }
     ]
   },
@@ -150,7 +365,12 @@
     "questions": [
       {
         "question": "What is the electron configuration of Carbon (Z=6)?",
-        "options": ["1s² 2s² 2p¹", "1s² 2s¹ 2p³", "1s² 2s² 2p²", "1s² 2p⁴"],
+        "options": [
+          "1s² 2s² 2p¹",
+          "1s² 2s¹ 2p³",
+          "1s² 2s² 2p²",
+          "1s² 2p⁴"
+        ],
         "answer": "1s² 2s² 2p²",
         "explanation": "Carbon has 6 electrons: 2 fill 1s, 2 fill 2s, and 2 occupy the 2p subshell."
       },
@@ -167,13 +387,23 @@
       },
       {
         "question": "How many electrons can a 3d subshell hold?",
-        "options": ["2", "6", "10", "14"],
+        "options": [
+          "2",
+          "6",
+          "10",
+          "14"
+        ],
         "answer": "10",
         "explanation": "The d subshell has 5 orbitals, and each orbital holds 2 electrons, giving a maximum of 10."
       },
       {
         "question": "Which element is an exception to the Aufbau principle due to extra stability of a half-filled d subshell?",
-        "options": ["Iron (Fe)", "Zinc (Zn)", "Chromium (Cr)", "Nickel (Ni)"],
+        "options": [
+          "Iron (Fe)",
+          "Zinc (Zn)",
+          "Chromium (Cr)",
+          "Nickel (Ni)"
+        ],
         "answer": "Chromium (Cr)",
         "explanation": "Chromium has [Ar] 3d⁵ 4s¹ instead of [Ar] 3d⁴ 4s² because a half-filled d subshell has extra stability."
       },
@@ -187,6 +417,61 @@
         ],
         "answer": "Occupy separate orbitals with parallel spins first",
         "explanation": "Hund's rule minimises electron repulsion by spreading electrons across degenerate orbitals before pairing."
+      },
+      {
+        "question": "Which element has configuration [Ne] 3s² 3p³?",
+        "options": [
+          "Phosphorus",
+          "Sulfur",
+          "Chlorine",
+          "Argon"
+        ],
+        "answer": "Phosphorus",
+        "explanation": "Phosphorus (P) has 15 electrons and fills 3s² 3p³ after Neon."
+      },
+      {
+        "question": "Which subshell can hold a maximum of 14 electrons?",
+        "options": [
+          "s",
+          "p",
+          "d",
+          "f"
+        ],
+        "answer": "f",
+        "explanation": "f-subshell has 7 orbitals, each holding 2 electrons, for a total of 14."
+      },
+      {
+        "question": "Which principle states no two electrons can have identical quantum numbers?",
+        "options": [
+          "Aufbau",
+          "Pauli Exclusion",
+          "Hund's Rule",
+          "Heisenberg Uncertainty"
+        ],
+        "answer": "Pauli Exclusion",
+        "explanation": "The Pauli Exclusion Principle restricts electrons to unique quantum numbers."
+      },
+      {
+        "question": "Which element is a transition metal?",
+        "options": [
+          "Calcium",
+          "Iron",
+          "Sodium",
+          "Oxygen"
+        ],
+        "answer": "Iron",
+        "explanation": "Iron (Fe) is a d-block transition metal."
+      },
+      {
+        "question": "According to Hund's Rule, electrons occupy degenerate orbitals by:",
+        "options": [
+          "Pairing immediately",
+          "Occupying separate orbitals first",
+          "Filling highest energy orbital first",
+          "Always with opposite spins"
+        ],
+        "answer": "Occupying separate orbitals first",
+        "explanation": "Electrons spread across degenerate orbitals with parallel spins before pairing."
       }
     ]
   },
@@ -251,255 +536,26 @@
         ],
         "answer": "Enthalpy being a state function",
         "explanation": "Because enthalpy is a state function, the total enthalpy change is independent of the path taken."
-      }
-    ]
-  },
-  {
-    "slug": "organic-chemistry",
-    "title": "Organic Chemistry",
-    "description": "Functional groups, reactions, and nomenclature.",
-    "difficulty": "hard",
-    "category": "Organic",
-    "questions": [
-      {
-        "question": "Which functional group is characteristic of an aldehyde?",
-        "options": ["–OH", "–COOH", "–CHO", "–CO–"],
-        "answer": "–CHO",
-        "explanation": "Aldehydes contain a –CHO (formyl) group where the carbonyl carbon is bonded to at least one hydrogen."
       },
-      {
-        "question": "What type of reaction converts an alkene to a haloalkane?",
-        "options": [
-          "Substitution",
-          "Elimination",
-          "Electrophilic addition",
-          "Nucleophilic addition"
-        ],
-        "answer": "Electrophilic addition",
-        "explanation": "The π bond of an alkene acts as a nucleophile, attacking an electrophilic halogen molecule via addition."
-      },
-      {
-        "question": "In Markovnikov's rule, when HX adds to an unsymmetrical alkene, the H adds to:",
-        "options": [
-          "The carbon with fewer hydrogen atoms",
-          "The carbon with more hydrogen atoms",
-          "Either carbon randomly",
-          "The carbon bonded to the halogen"
-        ],
-        "answer": "The carbon with more hydrogen atoms",
-        "explanation": "Markovnikov's rule: H adds to the carbon already bearing more H atoms, forming the more stable carbocation intermediate."
-      },
-      {
-        "question": "Which reagent is used for the oxidation of a primary alcohol to a carboxylic acid?",
-        "options": ["NaBH₄", "K₂Cr₂O₇ / H₂SO₄", "LiAlH₄", "Fehling's solution"],
-        "answer": "K₂Cr₂O₇ / H₂SO₄",
-        "explanation": "Acidified dichromate (K₂Cr₂O₇/H₂SO₄) is a strong oxidant that oxidises primary alcohols fully to carboxylic acids."
-      },
-      {
-        "question": "What is the IUPAC name of CH₃CH₂CH(CH₃)CH₂OH?",
-        "options": [
-          "2-methylbutan-1-ol",
-          "3-methylbutan-1-ol",
-          "2-methylbutan-4-ol",
-          "3-methylpentan-1-ol"
-        ],
-        "answer": "2-methylbutan-1-ol",
-        "explanation": "The longest chain containing –OH has 4 carbons (butanol). The methyl branch is on C2. Hydroxyl is on C1: 2-methylbutan-1-ol."
-      }
-    ]
-  },
-  {
-    "slug": "periodic-table-basics",
-    "title": "Periodic Table Basics",
-    "description": "Test your knowledge of element symbols, periods, and groups.",
-    "difficulty": "easy",
-    "category": "Periodic Table",
-    "questions": [
-      {
-        "question": "Which element is a noble gas?",
-        "options": ["Oxygen", "Neon", "Sodium", "Nitrogen"],
-        "answer": "Neon",
-        "explanation": "Neon (Ne) is a noble gas with a full valence shell, making it chemically inert."
-      },
-      {
-        "question": "Which element is in Group 1 of the periodic table?",
-        "options": ["Sodium", "Calcium", "Chlorine", "Helium"],
-        "answer": "Sodium",
-        "explanation": "Group 1 elements are alkali metals; Sodium (Na) is one of them."
-      },
-      {
-        "question": "Which element has the highest electronegativity?",
-        "options": ["Fluorine", "Oxygen", "Nitrogen", "Chlorine"],
-        "answer": "Fluorine",
-        "explanation": "Fluorine is the most electronegative element on the periodic table."
-      },
-      {
-        "question": "Which period contains the element Magnesium?",
-        "options": ["Period 1", "Period 2", "Period 3", "Period 4"],
-        "answer": "Period 3",
-        "explanation": "Magnesium (Mg) is in Period 3 of the periodic table."
-      },
-      {
-        "question": "What type of element is Bromine?",
-        "options": ["Alkali metal", "Halogen", "Noble gas", "Transition metal"],
-        "answer": "Halogen",
-        "explanation": "Bromine (Br) is a halogen, located in Group 17."
-      }
-    ]
-  },
-  {
-    "slug": "chemical-bonding",
-    "title": "Chemical Bonding",
-    "description": "Explore ionic, covalent, and metallic bonds.",
-    "difficulty": "easy",
-    "category": "Bonding",
-    "questions": [
-      {
-        "question": "Which bond forms between two non-metals?",
-        "options": ["Ionic", "Covalent", "Metallic", "Hydrogen"],
-        "answer": "Covalent",
-        "explanation": "Non-metal atoms share electrons to form covalent bonds."
-      },
-      {
-        "question": "Which molecule exhibits hydrogen bonding?",
-        "options": ["CH₄", "H₂O", "CO₂", "O₂"],
-        "answer": "H₂O",
-        "explanation": "Water molecules form hydrogen bonds due to polar O–H bonds."
-      },
-      {
-        "question": "Metallic bonding is characterized by:",
-        "options": [
-          "Shared electrons in specific bonds",
-          "Delocalized electrons across a lattice",
-          "Transfer of electrons",
-          "No electron movement"
-        ],
-        "answer": "Delocalized electrons across a lattice",
-        "explanation": "Metallic bonds involve a lattice of positive ions with delocalized electrons."
-      },
-      {
-        "question": "Which bond is strongest?",
-        "options": [
-          "Hydrogen bond",
-          "Ionic bond",
-          "Covalent bond",
-          "Van der Waals"
-        ],
-        "answer": "Covalent bond",
-        "explanation": "Covalent bonds involve shared electron pairs, making them stronger than hydrogen or Van der Waals interactions."
-      },
-      {
-        "question": "Which compound is ionic?",
-        "options": ["H₂O", "NaCl", "CO₂", "CH₄"],
-        "answer": "NaCl",
-        "explanation": "Sodium chloride forms ions (Na⁺ and Cl⁻), creating an ionic lattice."
-      }
-    ]
-  },
-  {
-    "slug": "acids-and-bases",
-    "title": "Acids & Bases",
-    "description": "pH scale, Arrhenius, and Brønsted–Lowry theory.",
-    "difficulty": "medium",
-    "category": "Reactions",
-    "questions": [
-      {
-        "question": "Which acid is found in vinegar?",
-        "options": ["HCl", "CH₃COOH", "H₂SO₄", "HNO₃"],
-        "answer": "CH₃COOH",
-        "explanation": "Acetic acid (CH₃COOH) is the main component of vinegar."
-      },
-      {
-        "question": "Which base is used in soap making?",
-        "options": ["NaOH", "NH₃", "KCl", "CaO"],
-        "answer": "NaOH",
-        "explanation": "Sodium hydroxide reacts with fats to produce soap via saponification."
-      },
-      {
-        "question": "A solution with pH 10 is:",
-        "options": ["Acidic", "Neutral", "Basic", "Strong acid"],
-        "answer": "Basic",
-        "explanation": "pH > 7 indicates a basic solution."
-      },
-      {
-        "question": "What is the conjugate acid of NH₃?",
-        "options": ["NH₄⁺", "NH₂⁻", "OH⁻", "H₂O"],
-        "answer": "NH₄⁺",
-        "explanation": "NH₃ accepts a proton to form NH₄⁺, its conjugate acid."
-      },
-      {
-        "question": "Which of these is a weak acid?",
-        "options": ["HCl", "H₂SO₄", "CH₃COOH", "HNO₃"],
-        "answer": "CH₃COOH",
-        "explanation": "Acetic acid only partially dissociates in water, making it a weak acid."
-      }
-    ]
-  },
-  {
-    "slug": "electron-configuration",
-    "title": "Electron Configuration",
-    "description": "Orbitals, subshells, and quantum numbers.",
-    "difficulty": "medium",
-    "category": "Atomic Structure",
-    "questions": [
-      {
-        "question": "Which element has configuration [Ne] 3s² 3p³?",
-        "options": ["Phosphorus", "Sulfur", "Chlorine", "Argon"],
-        "answer": "Phosphorus",
-        "explanation": "Phosphorus (P) has 15 electrons and fills 3s² 3p³ after Neon."
-      },
-      {
-        "question": "Which subshell can hold a maximum of 14 electrons?",
-        "options": ["s", "p", "d", "f"],
-        "answer": "f",
-        "explanation": "f-subshell has 7 orbitals, each holding 2 electrons, for a total of 14."
-      },
-      {
-        "question": "Which principle states no two electrons can have identical quantum numbers?",
-        "options": [
-          "Aufbau",
-          "Pauli Exclusion",
-          "Hund's Rule",
-          "Heisenberg Uncertainty"
-        ],
-        "answer": "Pauli Exclusion",
-        "explanation": "The Pauli Exclusion Principle restricts electrons to unique quantum numbers."
-      },
-      {
-        "question": "Which element is a transition metal?",
-        "options": ["Calcium", "Iron", "Sodium", "Oxygen"],
-        "answer": "Iron",
-        "explanation": "Iron (Fe) is a d-block transition metal."
-      },
-      {
-        "question": "According to Hund's Rule, electrons occupy degenerate orbitals by:",
-        "options": [
-          "Pairing immediately",
-          "Occupying separate orbitals first",
-          "Filling highest energy orbital first",
-          "Always with opposite spins"
-        ],
-        "answer": "Occupying separate orbitals first",
-        "explanation": "Electrons spread across degenerate orbitals with parallel spins before pairing."
-      }
-    ]
-  },
-  {
-    "slug": "thermodynamics",
-    "title": "Chemical Thermodynamics",
-    "description": "Enthalpy, entropy, Gibbs free energy, and spontaneity.",
-    "difficulty": "hard",
-    "category": "Thermodynamics",
-    "questions": [
       {
         "question": "An endothermic reaction has ΔH:",
-        "options": ["Negative", "Positive", "Zero", "Undefined"],
+        "options": [
+          "Negative",
+          "Positive",
+          "Zero",
+          "Undefined"
+        ],
         "answer": "Positive",
         "explanation": "Endothermic reactions absorb heat, so ΔH > 0."
       },
       {
         "question": "At equilibrium, Gibbs free energy change ΔG is:",
-        "options": ["Positive", "Negative", "Zero", "Undefined"],
+        "options": [
+          "Positive",
+          "Negative",
+          "Zero",
+          "Undefined"
+        ],
         "answer": "Zero",
         "explanation": "At equilibrium, ΔG = 0."
       },
@@ -546,20 +602,90 @@
     "category": "Organic",
     "questions": [
       {
+        "question": "Which functional group is characteristic of an aldehyde?",
+        "options": [
+          "–OH",
+          "–COOH",
+          "–CHO",
+          "–CO–"
+        ],
+        "answer": "–CHO",
+        "explanation": "Aldehydes contain a –CHO (formyl) group where the carbonyl carbon is bonded to at least one hydrogen."
+      },
+      {
+        "question": "What type of reaction converts an alkene to a haloalkane?",
+        "options": [
+          "Substitution",
+          "Elimination",
+          "Electrophilic addition",
+          "Nucleophilic addition"
+        ],
+        "answer": "Electrophilic addition",
+        "explanation": "The π bond of an alkene acts as a nucleophile, attacking an electrophilic halogen molecule via addition."
+      },
+      {
+        "question": "In Markovnikov's rule, when HX adds to an unsymmetrical alkene, the H adds to:",
+        "options": [
+          "The carbon with fewer hydrogen atoms",
+          "The carbon with more hydrogen atoms",
+          "Either carbon randomly",
+          "The carbon bonded to the halogen"
+        ],
+        "answer": "The carbon with more hydrogen atoms",
+        "explanation": "Markovnikov's rule: H adds to the carbon already bearing more H atoms, forming the more stable carbocation intermediate."
+      },
+      {
+        "question": "Which reagent is used for the oxidation of a primary alcohol to a carboxylic acid?",
+        "options": [
+          "NaBH₄",
+          "K₂Cr₂O₇ / H₂SO₄",
+          "LiAlH₄",
+          "Fehling's solution"
+        ],
+        "answer": "K₂Cr₂O₇ / H₂SO₄",
+        "explanation": "Acidified dichromate (K₂Cr₂O₇/H₂SO₄) is a strong oxidant that oxidises primary alcohols fully to carboxylic acids."
+      },
+      {
+        "question": "What is the IUPAC name of CH₃CH₂CH(CH₃)CH₂OH?",
+        "options": [
+          "2-methylbutan-1-ol",
+          "3-methylbutan-1-ol",
+          "2-methylbutan-4-ol",
+          "3-methylpentan-1-ol"
+        ],
+        "answer": "2-methylbutan-1-ol",
+        "explanation": "The longest chain containing –OH has 4 carbons (butanol). The methyl branch is on C2. Hydroxyl is on C1: 2-methylbutan-1-ol."
+      },
+      {
         "question": "Which functional group is a ketone?",
-        "options": ["–OH", "–COOH", "–CO–", "–CHO"],
+        "options": [
+          "–OH",
+          "–COOH",
+          "–CO–",
+          "–CHO"
+        ],
         "answer": "–CO–",
         "explanation": "Ketones have a carbonyl group bonded to two carbons."
       },
       {
         "question": "Which reaction converts an alcohol to an alkene?",
-        "options": ["Oxidation", "Reduction", "Dehydration", "Substitution"],
+        "options": [
+          "Oxidation",
+          "Reduction",
+          "Dehydration",
+          "Substitution"
+        ],
         "answer": "Dehydration",
         "explanation": "Alcohol loses H₂O to form an alkene in a dehydration reaction."
       },
       {
         "question": "Which compound is aromatic?",
-        "options": ["Cyclohexane", "Benzene", "Propene", "Butane"],
+        "options": [
+          "Cyclohexane",
+          "Benzene",
+          "Propene",
+          "Butane"
+        ],
         "answer": "Benzene",
         "explanation": "Benzene has a conjugated π-electron system and follows Hückel's rule."
       },
@@ -576,7 +702,12 @@
       },
       {
         "question": "Esters contain which functional group?",
-        "options": ["–COO–", "–OH", "–CHO", "–CO–"],
+        "options": [
+          "–COO–",
+          "–OH",
+          "–CHO",
+          "–CO–"
+        ],
         "answer": "–COO–",
         "explanation": "Esters have –COO– linking carbonyl and oxygen atoms."
       }

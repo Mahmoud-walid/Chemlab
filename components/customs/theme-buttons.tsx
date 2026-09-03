@@ -1,9 +1,10 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { useId, useEffect, useState } from "react";
+import { useId } from "react";
 import { MoonIcon, SunIcon, MonitorIcon } from "lucide-react";
 
+import { useHydrated } from "@/hooks/use-hydrated";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
@@ -44,12 +45,8 @@ const themeOptions: ThemeOption[] = [
 export function ThemeButtons() {
   const { theme, setTheme } = useTheme();
   const id = useId();
-  const [mounted, setMounted] = useState(false);
-
-  // Prevent hydration mismatch
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  // Prevent hydration mismatch: `theme` is only known on the client.
+  const mounted = useHydrated();
 
   if (!mounted) {
     return null;
