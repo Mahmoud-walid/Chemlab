@@ -1,18 +1,20 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { X, Type, Palette, Settings } from "lucide-react";
+import { useStoredValue } from "@/hooks/use-stored-value";
+import { writeStoredValue } from "@/lib/browser-storage";
+import { Type, Palette, Settings } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogClose,
 } from "@/components/ui/dialog";
 import { ThemeButtons } from "@/components/customs/theme-buttons";
 import { cn } from "@/lib/utils";
 
 const FONT_KEY = "user-font";
+const DEFAULT_FONT = "roboto";
 const FONTS = [
   { id: "bebasNeue", name: "Bebas Neue", variable: "var(--font-bebas-neue)" },
   { id: "geist", name: "Geist Sans", variable: "var(--font-geist-sans)" },
@@ -44,7 +46,7 @@ export default function SystemPageContent({
   defaultOpen = true,
 }: Props) {
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
-  const [font, setFont] = useState<string>("roboto");
+  const font = useStoredValue("local", FONT_KEY, DEFAULT_FONT) ?? DEFAULT_FONT;
 
   const open = controlledOpen ?? internalOpen;
 
@@ -53,22 +55,16 @@ export default function SystemPageContent({
     else setInternalOpen(next);
   }
 
+  // Apply the selected font to the document (an external system).
   useEffect(() => {
-    const savedFont = localStorage.getItem(FONT_KEY) || "roboto";
-    setFont(savedFont);
-    const selected = FONTS.find((f) => f.id === savedFont);
+    const selected = FONTS.find((f) => f.id === font);
     if (selected) {
       document.body.style.setProperty("--active-font", selected.variable);
     }
-  }, []);
+  }, [font]);
 
   const handleFontChange = (fontId: string) => {
-    setFont(fontId);
-    localStorage.setItem(FONT_KEY, fontId);
-    const selected = FONTS.find((f) => f.id === fontId);
-    if (selected) {
-      document.body.style.setProperty("--active-font", selected.variable);
-    }
+    writeStoredValue("local", FONT_KEY, fontId);
   };
 
   return (

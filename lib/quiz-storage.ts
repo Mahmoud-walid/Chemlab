@@ -1,16 +1,25 @@
 import { type QuizAttempt } from "@/types/quiz";
+import {
+  readStoredValue,
+  removeStoredValue,
+  writeStoredValue,
+} from "@/lib/browser-storage";
 
-const STORAGE_KEY = "chemverse_quiz_results";
+export const QUIZ_STORAGE_KEY = "chemverse_quiz_results";
 
 // ── Read ──
-export function getAttempts(): QuizAttempt[] {
-  if (typeof window === "undefined") return [];
+export function parseAttempts(raw: string | null): QuizAttempt[] {
+  if (!raw) return [];
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as QuizAttempt[]) : [];
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as QuizAttempt[]) : [];
   } catch {
     return [];
   }
+}
+
+export function getAttempts(): QuizAttempt[] {
+  return parseAttempts(readStoredValue("session", QUIZ_STORAGE_KEY));
 }
 
 export function getAttemptBySlug(slug: string): QuizAttempt | null {
@@ -21,13 +30,17 @@ export function getAttemptBySlug(slug: string): QuizAttempt | null {
 export function saveAttempt(attempt: QuizAttempt): void {
   if (typeof window === "undefined") return;
   const existing = getAttempts().filter((a) => a.slug !== attempt.slug);
-  sessionStorage.setItem(STORAGE_KEY, JSON.stringify([attempt, ...existing]));
+  writeStoredValue(
+    "session",
+    QUIZ_STORAGE_KEY,
+    JSON.stringify([attempt, ...existing]),
+  );
 }
 
 // ── Clear ──
 export function clearAttempts(): void {
   if (typeof window === "undefined") return;
-  sessionStorage.removeItem(STORAGE_KEY);
+  removeStoredValue("session", QUIZ_STORAGE_KEY);
 }
 
 // ── Helpers ──

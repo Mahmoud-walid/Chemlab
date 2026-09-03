@@ -62,7 +62,7 @@ export default function LessonOverviewPage() {
 
       {/* Lessons Grid */}
       <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {filtered.map((lesson, i) => (
+        {filtered.map((lesson) => (
           <LessonCard
             key={lesson.slug}
             index={lessons.indexOf(lesson) + 1}

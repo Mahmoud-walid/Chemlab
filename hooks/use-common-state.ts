@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState, useMemo, useEffect } from "react";
+import { useState } from "react";
 
 export default function useCommonState() {
   const router = useRouter();
