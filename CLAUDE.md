@@ -15,6 +15,15 @@ git config user.email "modywmbadr@gmail.com"
 `main` is protected by a repository ruleset — changes must land through a pull
 request, direct pushes are rejected.
 
+## Workflow
+
+Every change follows the same path:
+
+1. Create a branch off `main`.
+2. Run `pnpm check` locally.
+3. Open a pull request against `main`.
+4. Watch CI on that pull request and drive it to green before reporting back.
+
 ## Checks
 
 Run `pnpm check` (typecheck + lint + tests) before pushing; CI (`.github/workflows/ci.yml`)
