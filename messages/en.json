@@ -1,0 +1,129 @@
+{
+  "common": {
+    "appName": "Chemlab",
+    "tagline": "Interactive Chemistry Learning for Kids",
+    "loading": "Loading…",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "close": "Close",
+    "cancel": "Cancel",
+    "save": "Save",
+    "search": "Search",
+    "madeWith": "Made with ❤️ by JayemScript"
+  },
+  "nav": {
+    "label": "Main navigation",
+    "home": "Home",
+    "lessons": "Lessons",
+    "quiz": "Quiz",
+    "experiments": "Experiments",
+    "games": "Games"
+  },
+  "locale": {
+    "switchLabel": "Change language",
+    "en": "English",
+    "ar": "العربية"
+  },
+  "underDevelopment": {
+    "title": "Page Under Development",
+    "body": "Sorry! This section of {appName} is still being cooked. Check back soon for more chemistry fun."
+  },
+  "settings": {
+    "title": "Settings",
+    "open": "Open settings",
+    "appearance": "Appearance",
+    "font": "Font",
+    "language": "Language",
+    "theme": {
+      "label": "Theme selection",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System",
+      "lightTooltip": "Use light theme",
+      "darkTooltip": "Use dark theme",
+      "systemTooltip": "Use system preference"
+    }
+  },
+  "quiz": {
+    "title": "Quizzes",
+    "start": "Start quiz",
+    "retake": "Retake quiz",
+    "myResults": "My results",
+    "seeAllResults": "See all results",
+    "browseQuizzes": "Browse quizzes",
+    "empty": "No quizzes found.",
+    "noResults": "No results yet",
+    "explanation": "Explanation:",
+    "questionProgress": "Question {current} of {total}",
+    "score": "Score",
+    "scoreValue": "{score} of {total}",
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard",
+      "all": "All"
+    },
+    "grade": {
+      "excellent": "Excellent",
+      "good": "Good",
+      "needsWork": "Needs work",
+      "keepStudying": "Keep studying"
+    },
+    "results": {
+      "title": "My Results",
+      "sessionOnly": "Results are saved for this session only",
+      "clear": "Clear results",
+      "quizzesTaken": "Quizzes taken",
+      "averageScore": "Average score",
+      "bestScore": "Best score",
+      "allQuizzes": "All quizzes",
+      "clearShort": "Clear",
+      "bestQuiz": "Best quiz",
+      "emptyBody": "Complete a quiz and your results will appear here for this session."
+    },
+    "scoreOf": "{score} / {total}"
+  },
+  "lessons": {
+    "title": "Lessons",
+    "empty": "No lessons found.",
+    "readLesson": "Read lesson",
+    "references": "References",
+    "contents": "Contents",
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard",
+      "all": "All"
+    }
+  },
+  "element": {
+    "atomicNumber": "Atomic number",
+    "atomicMass": "Atomic mass",
+    "category": "Category",
+    "phase": "Phase",
+    "density": "Density",
+    "melt": "Melting point",
+    "boil": "Boiling point",
+    "discoveredBy": "Discovered by",
+    "namedBy": "Named by",
+    "electronConfiguration": "Electron configuration",
+    "summary": "Summary",
+    "source": "Source"
+  },
+  "a11y": {
+    "skipToContent": "Skip to content",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  },
+  "errors": {
+    "notFound": "Page not found",
+    "notFoundBody": "The page you are looking for does not exist.",
+    "goHome": "Go to the home page",
+    "generic": "Something went wrong"
+  },
+  "translation": {
+    "notAvailableTitle": "Not yet available in Arabic",
+    "notAvailableBody": "This content has not been translated yet, so it is shown in English."
+  }
+}

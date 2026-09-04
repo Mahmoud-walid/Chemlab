@@ -128,16 +128,23 @@ describe("percentage", () => {
 
 describe("gradeLabel", () => {
   it.each([
-    [100, "Excellent"],
-    [90, "Excellent"],
-    [89, "Good"],
-    [75, "Good"],
-    [74, "Needs work"],
-    [50, "Needs work"],
-    [49, "Keep studying"],
-    [0, "Keep studying"],
-  ])("labels %i%% as %s", (pct, label) => {
-    expect(gradeLabel(pct).label).toBe(label);
+    [100, "excellent"],
+    [90, "excellent"],
+    [89, "good"],
+    [75, "good"],
+    [74, "needsWork"],
+    [50, "needsWork"],
+    [49, "keepStudying"],
+    [0, "keepStudying"],
+  ])("grades %i%% as %s", (pct, key) => {
+    expect(gradeLabel(pct).key).toBe(key);
+  });
+
+  it("returns a translation key, never a display string", () => {
+    // A display string here is what made the results page untranslatable.
+    for (const pct of [0, 50, 75, 90]) {
+      expect(gradeLabel(pct).key).toMatch(/^[a-z][a-zA-Z]*$/);
+    }
   });
 
   it("returns a class name for styling with every label", () => {

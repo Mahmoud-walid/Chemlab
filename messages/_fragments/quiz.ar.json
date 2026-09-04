@@ -1,0 +1,20 @@
+{
+  "quiz": {
+    "subtitle": "اختبر معلوماتك في {count, plural, zero {لا اختبارات} one {اختبار واحد} two {اختبارين} few {# اختبارات} many {# اختبارًا} other {# اختبار}}",
+    "questionCount": "{count, plural, zero {لا أسئلة} one {سؤال واحد} two {سؤالان} few {# أسئلة} many {# سؤالًا} other {# سؤال}}",
+    "pagination": {
+      "page": "صفحة {current} من {total}",
+      "previous": "الصفحة السابقة",
+      "next": "الصفحة التالية"
+    },
+    "backToQuizzes": "العودة إلى الاختبارات",
+    "result": "النتيجة",
+    "correctOf": "{score} / {total} إجابة صحيحة",
+    "progressShort": "{current} / {total}",
+    "yourAnswer": "إجابتك:",
+    "correctAnswer": "الصحيحة:",
+    "retry": "إعادة المحاولة",
+    "finish": "إنهاء الاختبار",
+    "nextQuestion": "السؤال التالي"
+  }
+}

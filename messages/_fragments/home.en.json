@@ -1,0 +1,70 @@
+{
+  "home": {
+    "heroDescription": "Explore chemistry in a simple, interactive way. Learn about atoms, molecules, elements, and reactions — all in one kid-friendly app.",
+    "rotate": {
+      "title": "Rotate for the best experience",
+      "body": "The periodic table has 18 columns. Landscape mode gives you a much better view — try rotating your device.",
+      "dismiss": "Got it, continue anyway"
+    }
+  },
+  "periodicTable": {
+    "title": "Periodic Table",
+    "hint": "Click any element to view full details",
+    "gridLabel": "Periodic table of the elements",
+    "lanthanides": "Lanthanides",
+    "actinides": "Actinides",
+    "legendLabel": "Element categories"
+  },
+  "element": {
+    "categories": {
+      "diatomicNonmetal": "Diatomic Nonmetal",
+      "nobleGas": "Noble Gas",
+      "alkaliMetal": "Alkali Metal",
+      "alkalineEarthMetal": "Alkaline Earth Metal",
+      "metalloid": "Metalloid",
+      "polyatomicNonmetal": "Polyatomic Nonmetal",
+      "postTransitionMetal": "Post-Transition Metal",
+      "transitionMetal": "Transition Metal",
+      "lanthanide": "Lanthanide",
+      "actinide": "Actinide",
+      "unknownProbablyTransitionMetal": "Unknown, probably a transition metal",
+      "unknownProbablyPostTransitionMetal": "Unknown, probably a post-transition metal",
+      "unknownProbablyMetalloid": "Unknown, probably a metalloid",
+      "unknownPredictedToBeNobleGas": "Unknown, predicted to be a noble gas",
+      "unknownButPredictedToBeAnAlkaliMetal": "Unknown, predicted to be an alkali metal"
+    },
+    "phases": {
+      "gas": "Gas",
+      "solid": "Solid",
+      "liquid": "Liquid"
+    },
+    "backToTable": "Periodic table",
+    "appearance": "Appearance",
+    "period": "Period",
+    "molarHeat": "Molar heat",
+    "shells": "Shells",
+    "electronConfigurationSemantic": "Condensed configuration",
+    "electronAffinity": "Electron affinity",
+    "electronegativity": "Electronegativity (Pauling)",
+    "color": "Colour",
+    "ionizationEnergy": "IE{index}",
+    "electronShellDiagram": "Electron shell diagram for {name}",
+    "electronCount": "{count}e",
+    "sections": {
+      "physical": "Physical properties",
+      "chemical": "Chemical properties",
+      "discovery": "Discovery",
+      "ionization": "Ionization energies"
+    },
+    "wikipedia": "Wikipedia",
+    "metaTitle": "{name} ({symbol}) — {appName}",
+    "metaDescription": "{name} ({symbol}), atomic number {number}: properties, electron configuration and discovery of this {category}.",
+    "units": {
+      "atomicMass": "{value} u",
+      "density": "{value} g/cm³",
+      "kelvin": "{value} K",
+      "molarHeat": "{value} J/(mol·K)",
+      "kilojoulesPerMole": "{value} kJ/mol"
+    }
+  }
+}

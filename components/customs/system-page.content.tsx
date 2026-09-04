@@ -1,20 +1,24 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useStoredValue } from "@/hooks/use-stored-value";
 import { writeStoredValue } from "@/lib/browser-storage";
-import { Type, Palette, Settings } from "lucide-react";
+import { Type, Palette, Settings, Languages } from "lucide-react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ThemeButtons } from "@/components/customs/theme-buttons";
+import { LocaleSwitcher } from "@/components/customs/locale-switcher";
 import { cn } from "@/lib/utils";
 
 const FONT_KEY = "user-font";
 const DEFAULT_FONT = "roboto";
+// Font names are proper nouns — they stay untranslated in every locale.
 const FONTS = [
   { id: "bebasNeue", name: "Bebas Neue", variable: "var(--font-bebas-neue)" },
   { id: "geist", name: "Geist Sans", variable: "var(--font-geist-sans)" },
@@ -45,6 +49,7 @@ export default function SystemPageContent({
   onOpenChange,
   defaultOpen = true,
 }: Props) {
+  const t = useTranslations("settings");
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const font = useStoredValue("local", FONT_KEY, DEFAULT_FONT) ?? DEFAULT_FONT;
 
@@ -74,28 +79,45 @@ export default function SystemPageContent({
         <DialogHeader className="px-6 pt-5 pb-4 border-b border-border">
           <DialogTitle className="text-base font-semibold flex items-center gap-2">
             <Settings className="w-4 h-4 text-primary" />
-            System Preference
+            {t("title")}
           </DialogTitle>
+          <DialogDescription className="text-start">
+            {t("description")}
+          </DialogDescription>
         </DialogHeader>
 
         {/* Body */}
         <div className="px-6 py-5 space-y-6 max-h-[70vh] overflow-y-auto">
           {/* Theme */}
-          <Section icon={<Palette className="w-4 h-4" />} label="Theme">
+          <Section
+            icon={<Palette className="w-4 h-4" />}
+            label={t("theme.section")}
+          >
             <ThemeButtons />
           </Section>
 
           <Divider />
 
+          {/* Language */}
+          <Section
+            icon={<Languages className="w-4 h-4" />}
+            label={t("language")}
+          >
+            <LocaleSwitcher />
+          </Section>
+
+          <Divider />
+
           {/* Font */}
-          <Section icon={<Type className="w-4 h-4" />} label="Font">
+          <Section icon={<Type className="w-4 h-4" />} label={t("font")}>
             <div className="grid grid-cols-2 gap-2">
               {FONTS.map((f) => (
                 <button
                   key={f.id}
                   onClick={() => handleFontChange(f.id)}
+                  aria-pressed={font === f.id}
                   className={cn(
-                    "flex flex-col items-start px-3 py-2.5 rounded-lg border text-left transition-all",
+                    "flex flex-col items-start px-3 py-2.5 rounded-lg border text-start transition-all",
                     font === f.id
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-border hover:border-primary/50 hover:bg-muted",
@@ -104,10 +126,16 @@ export default function SystemPageContent({
                   <span
                     className="text-lg leading-none mb-1"
                     style={{ fontFamily: f.variable }}
+                    lang="en"
+                    dir="ltr"
                   >
-                    Aa
+                    {t("fontSample")}
                   </span>
-                  <span className="text-xs text-muted-foreground truncate w-full">
+                  <span
+                    className="text-xs text-muted-foreground truncate w-full"
+                    lang="en"
+                    dir="ltr"
+                  >
                     {f.name}
                   </span>
                 </button>

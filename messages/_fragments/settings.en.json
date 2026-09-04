@@ -1,0 +1,9 @@
+{
+  "settings": {
+    "description": "Choose how Chemlab looks and which language it speaks.",
+    "theme": {
+      "section": "Theme"
+    },
+    "fontSample": "Aa"
+  }
+}

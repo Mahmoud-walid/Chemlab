@@ -1,0 +1,129 @@
+{
+  "common": {
+    "appName": "كيم لاب",
+    "tagline": "تعلُّم الكيمياء التفاعلي للأطفال",
+    "loading": "جارٍ التحميل…",
+    "back": "رجوع",
+    "next": "التالي",
+    "previous": "السابق",
+    "close": "إغلاق",
+    "cancel": "إلغاء",
+    "save": "حفظ",
+    "search": "بحث",
+    "madeWith": "صُنع بـ ❤️ بواسطة JayemScript"
+  },
+  "nav": {
+    "label": "التنقل الرئيسي",
+    "home": "الرئيسية",
+    "lessons": "الدروس",
+    "quiz": "الاختبارات",
+    "experiments": "التجارب",
+    "games": "الألعاب"
+  },
+  "locale": {
+    "switchLabel": "تغيير اللغة",
+    "en": "English",
+    "ar": "العربية"
+  },
+  "underDevelopment": {
+    "title": "الصفحة قيد التطوير",
+    "body": "عذرًا! هذا القسم من {appName} لا يزال قيد الإعداد. عُد قريبًا لمزيد من متعة الكيمياء."
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "open": "فتح الإعدادات",
+    "appearance": "المظهر",
+    "font": "الخط",
+    "language": "اللغة",
+    "theme": {
+      "label": "اختيار السمة",
+      "light": "فاتح",
+      "dark": "داكن",
+      "system": "النظام",
+      "lightTooltip": "استخدام السمة الفاتحة",
+      "darkTooltip": "استخدام السمة الداكنة",
+      "systemTooltip": "اتباع إعداد النظام"
+    }
+  },
+  "quiz": {
+    "title": "الاختبارات",
+    "start": "ابدأ الاختبار",
+    "retake": "إعادة الاختبار",
+    "myResults": "نتائجي",
+    "seeAllResults": "عرض كل النتائج",
+    "browseQuizzes": "تصفَّح الاختبارات",
+    "empty": "لا توجد اختبارات.",
+    "noResults": "لا توجد نتائج بعد",
+    "explanation": "التفسير:",
+    "questionProgress": "السؤال {current} من {total}",
+    "score": "الدرجة",
+    "scoreValue": "{score} من {total}",
+    "difficulty": {
+      "easy": "سهل",
+      "medium": "متوسط",
+      "hard": "صعب",
+      "all": "الكل"
+    },
+    "grade": {
+      "excellent": "ممتاز",
+      "good": "جيد",
+      "needsWork": "يحتاج إلى تحسين",
+      "keepStudying": "واصل المذاكرة"
+    },
+    "results": {
+      "title": "نتائجي",
+      "sessionOnly": "تُحفظ النتائج لهذه الجلسة فقط",
+      "clear": "مسح النتائج",
+      "quizzesTaken": "الاختبارات المُنجزة",
+      "averageScore": "متوسط الدرجات",
+      "bestScore": "أفضل درجة",
+      "allQuizzes": "كل الاختبارات",
+      "clearShort": "مسح",
+      "bestQuiz": "أفضل اختبار",
+      "emptyBody": "أكمل اختبارًا وستظهر نتائجك هنا لهذه الجلسة."
+    },
+    "scoreOf": "{score} / {total}"
+  },
+  "lessons": {
+    "title": "الدروس",
+    "empty": "لا توجد دروس.",
+    "readLesson": "اقرأ الدرس",
+    "references": "المراجع",
+    "contents": "المحتويات",
+    "difficulty": {
+      "easy": "سهل",
+      "medium": "متوسط",
+      "hard": "صعب",
+      "all": "الكل"
+    }
+  },
+  "element": {
+    "atomicNumber": "العدد الذري",
+    "atomicMass": "الكتلة الذرية",
+    "category": "التصنيف",
+    "phase": "الحالة",
+    "density": "الكثافة",
+    "melt": "درجة الانصهار",
+    "boil": "درجة الغليان",
+    "discoveredBy": "اكتشفه",
+    "namedBy": "سمّاه",
+    "electronConfiguration": "التوزيع الإلكتروني",
+    "summary": "نبذة",
+    "source": "المصدر"
+  },
+  "a11y": {
+    "skipToContent": "تخطَّ إلى المحتوى",
+    "openMenu": "فتح القائمة",
+    "closeMenu": "إغلاق القائمة"
+  },
+  "errors": {
+    "notFound": "الصفحة غير موجودة",
+    "notFoundBody": "الصفحة التي تبحث عنها غير موجودة.",
+    "goHome": "الذهاب إلى الصفحة الرئيسية",
+    "generic": "حدث خطأ ما"
+  },
+  "translation": {
+    "notAvailableTitle": "غير متوفر بالعربية بعد",
+    "notAvailableBody": "لم تُترجم هذه المادة بعد، لذلك تُعرض بالإنجليزية."
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "home": {
+    "heroDescription": "اكتشف الكيمياء بطريقة بسيطة وتفاعلية. تعرَّف على الذرات والجزيئات والعناصر والتفاعلات، كل ذلك في تطبيق واحد مناسب للأطفال.",
+    "rotate": {
+      "title": "أدِر جهازك للحصول على أفضل تجربة",
+      "body": "يتكوّن الجدول الدوري من 18 عمودًا. يمنحك الوضع الأفقي رؤية أوضح بكثير — جرّب إدارة جهازك.",
+      "dismiss": "فهمت، تابع على أي حال"
+    }
+  },
+  "periodicTable": {
+    "title": "الجدول الدوري",
+    "hint": "انقر على أي عنصر لعرض تفاصيله كاملة",
+    "gridLabel": "الجدول الدوري للعناصر",
+    "lanthanides": "اللانثانيدات",
+    "actinides": "الأكتينيدات",
+    "legendLabel": "تصنيفات العناصر"
+  },
+  "element": {
+    "categories": {
+      "diatomicNonmetal": "لافلز ثنائي الذرة",
+      "nobleGas": "غاز نبيل",
+      "alkaliMetal": "فلز قلوي",
+      "alkalineEarthMetal": "فلز قلوي ترابي",
+      "metalloid": "شبه فلز",
+      "polyatomicNonmetal": "لافلز متعدد الذرات",
+      "postTransitionMetal": "فلز ما بعد انتقالي",
+      "transitionMetal": "فلز انتقالي",
+      "lanthanide": "لانثانيد",
+      "actinide": "أكتينيد",
+      "unknownProbablyTransitionMetal": "غير معروف، غالبًا فلز انتقالي",
+      "unknownProbablyPostTransitionMetal": "غير معروف، غالبًا فلز ما بعد انتقالي",
+      "unknownProbablyMetalloid": "غير معروف، غالبًا شبه فلز",
+      "unknownPredictedToBeNobleGas": "غير معروف، يُتوقَّع أن يكون غازًا نبيلًا",
+      "unknownButPredictedToBeAnAlkaliMetal": "غير معروف، يُتوقَّع أن يكون فلزًا قلويًا"
+    },
+    "phases": {
+      "gas": "غاز",
+      "solid": "صلب",
+      "liquid": "سائل"
+    },
+    "backToTable": "الجدول الدوري",
+    "appearance": "المظهر",
+    "period": "الدورة",
+    "molarHeat": "السعة الحرارية المولية",
+    "shells": "الأغلفة الإلكترونية",
+    "electronConfigurationSemantic": "التوزيع الإلكتروني المختصر",
+    "electronAffinity": "الألفة الإلكترونية",
+    "electronegativity": "الكهروسالبية (باولنغ)",
+    "color": "اللون",
+    "ionizationEnergy": "طاقة التأين {index}",
+    "electronShellDiagram": "مخطط الأغلفة الإلكترونية لعنصر {name}",
+    "electronCount": "{count}e",
+    "sections": {
+      "physical": "الخواص الفيزيائية",
+      "chemical": "الخواص الكيميائية",
+      "discovery": "الاكتشاف",
+      "ionization": "طاقات التأين"
+    },
+    "wikipedia": "ويكيبيديا",
+    "metaTitle": "{name} ({symbol}) — {appName}",
+    "metaDescription": "{name} ({symbol})، العدد الذري {number}: الخواص والتوزيع الإلكتروني وتاريخ اكتشاف هذا العنصر المصنَّف {category}.",
+    "units": {
+      "atomicMass": "{value} u",
+      "density": "{value} g/cm³",
+      "kelvin": "{value} K",
+      "molarHeat": "{value} J/(mol·K)",
+      "kilojoulesPerMole": "{value} kJ/mol"
+    }
+  }
+}

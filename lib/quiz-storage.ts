@@ -48,20 +48,27 @@ export function percentage(score: number, total: number): number {
   return total === 0 ? 0 : Math.round((score / total) * 100);
 }
 
+/** Keys into the `quiz.grade` message namespace. */
+export type GradeKey = "excellent" | "good" | "needsWork" | "keepStudying";
+
+/**
+ * Grade band for a percentage.
+ *
+ * Returns a translation KEY, not a display string — the caller translates it.
+ * A helper in lib/ has no locale, and returning English here is what made the
+ * results page untranslatable.
+ */
 export function gradeLabel(pct: number): {
-  label: string;
+  key: GradeKey;
   className: string;
 } {
   if (pct >= 90)
-    return {
-      label: "Excellent",
-      className: "text-green-600 dark:text-green-400",
-    };
-  if (pct >= 75) return { label: "Good", className: "text-chart-2" };
+    return { key: "excellent", className: "text-green-600 dark:text-green-400" };
+  if (pct >= 75) return { key: "good", className: "text-chart-2" };
   if (pct >= 50)
     return {
-      label: "Needs work",
+      key: "needsWork",
       className: "text-yellow-600 dark:text-yellow-400",
     };
-  return { label: "Keep studying", className: "text-destructive" };
+  return { key: "keepStudying", className: "text-destructive" };
 }
