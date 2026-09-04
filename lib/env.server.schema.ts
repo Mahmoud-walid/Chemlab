@@ -79,6 +79,17 @@ export const serverEnvSchema = z.object({
    */
   GOOGLE_CLIENT_ID: z.string().min(1).optional(),
   GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+
+  /**
+   * The email of the account `pnpm db:bootstrap-admin` grants the Super Admin
+   * role to.
+   *
+   * Nobody can grant the first Super Admin through the app, because granting
+   * requires being one. This names the owner instead. It is only ever READ —
+   * the script looks up an existing user and refuses to create one, so no
+   * password ever exists outside Better Auth's own hashing.
+   */
+  SUPER_ADMIN_EMAIL: z.string().email().optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

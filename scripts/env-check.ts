@@ -101,6 +101,7 @@ try {
     BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+    SUPER_ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL,
   });
 
   // Presence, never the value: this secret signs every session cookie.
@@ -119,6 +120,10 @@ try {
   );
   console.log(
     `  GOOGLE_CLIENT_SECRET          ${env.GOOGLE_CLIENT_SECRET ? "set" : "(unset)"}`,
+  );
+  // Not a secret — it is an address, and it is only ever read.
+  console.log(
+    `  SUPER_ADMIN_EMAIL             ${env.SUPER_ADMIN_EMAIL ?? "(unset)"}`,
   );
 
   console.log(

@@ -114,6 +114,16 @@ export default defineConfig({
         "lib/env.server.ts",
         // A dotenv side effect at import time.
         "lib/load-env.ts",
+        // The database-and-session half of authorization: react cache, the
+        // session read and one join. The LOGIC lives in authz-core.ts, which is
+        // measured, and the behaviour that matters — union across roles,
+        // immediate revocation, the Super Admin short-circuit — is proven
+        // against real Postgres in tests/integration/rbac.test.ts.
+        "lib/authz.ts",
+        // Three lines around next/headers and one insert. The guarantee that
+        // matters (the log cannot be edited) is a database trigger, proven in
+        // tests/integration/rbac.test.ts.
+        "lib/audit.ts",
       ],
       // Deliberately per-area rather than one global gate. A single 80% number
       // drives people to write assertion-free tests over presentational code

@@ -15,6 +15,7 @@ import { eq, sql } from "drizzle-orm";
 import * as schema from "@/db/schema";
 import { connect, seedUrl } from "@/db/seed/connect";
 import { loadSeedSource } from "@/db/seed/source";
+import { seedAuthorization } from "@/db/seed/authorization";
 import { verifyContent } from "@/db/seed/verify";
 import {
   toElementRow,
@@ -185,6 +186,12 @@ async function main() {
             .where(eq(schema.quizQuestions.id, saved.id));
         }
       }
+
+      // ── Authorization ──────────────────────────────────────────────────
+      // Roles and permissions are deployment-time data, not runtime data, so
+      // they are seeded rather than created through an authorized API — there
+      // is nobody to authorize the very first grant.
+      await seedAuthorization(tx);
     });
 
     // ── Verification ─────────────────────────────────────────────────────
@@ -211,6 +218,8 @@ async function main() {
     console.log(`lessons    ${lessonCount}`);
     console.log(`quizzes    ${quizCount}`);
     console.log(`questions  ${questionCount}`);
+    console.log(`roles      ${await db.$count(schema.roles)}`);
+    console.log(`perms      ${await db.$count(schema.permissions)}`);
 
     const expected = {
       elements: elementsJson.length,

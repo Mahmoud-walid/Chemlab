@@ -160,6 +160,23 @@ this are in [docs/AUTH.md](docs/AUTH.md).
 Never give any of these a `NEXT_PUBLIC_` prefix; `pnpm env:check` fails if you
 do.
 
+### Roles and permissions
+
+Authorization is data: roles and permissions are rows, so the Super Admin can
+define both at runtime. `pnpm db:seed` creates the vocabulary and five starting
+roles; the first Super Admin is granted at deployment time because granting a
+role requires already being one:
+
+```bash
+# sign up normally at /sign-up first, then
+SUPER_ADMIN_EMAIL=owner@example.com pnpm db:bootstrap-admin
+```
+
+The database itself refuses to remove the last Super Admin, to delete or re-key
+the protected role, or to edit the audit log. The vocabulary, the rules for
+building on `requirePermission()`, and how to add a permission are in
+[docs/PERMISSIONS.md](docs/PERMISSIONS.md).
+
 ### UI components
 
 shadcn/ui components are vendored into `components/ui`. Add and update them

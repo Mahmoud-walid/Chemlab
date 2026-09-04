@@ -312,6 +312,21 @@ works on a preview.
 
 ---
 
+### Q29 — should a second Super Admin be required before going live?
+
+The database refuses to remove the _last_ Super Admin, so administrative access
+cannot be locked out by accident. It does not stop there being exactly one — and
+one holder is a bus factor of one: losing that account means losing
+administrative access with no recovery path short of shell access to the
+database. `pnpm db:bootstrap-admin` prints a warning when it leaves you with a
+single holder.
+
+**Question:** treat "at least two Super Admins" as a production readiness
+requirement, or accept one? Nothing is blocked either way; this is about what
+happens when the owner loses their account.
+
+---
+
 ## Per-issue open questions
 
 Each planning issue carries its own `## Open questions` section for decisions
@@ -326,17 +341,19 @@ Worth reading before the relevant phase starts: #10 and #14 (data modelling),
 
 ## Resolved decisions
 
-| Date       | Question           | Decision                                                                                                                                                                                  |
-| ---------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-09-04 | Auth stack         | **Better Auth** — TypeScript-first, Drizzle-native, roles/permissions plugins fit dynamic RBAC                                                                                            |
-| 2026-09-04 | Media storage      | **Cloudinary** — signed uploads, image and video transforms, CDN                                                                                                                          |
-| 2026-09-04 | Production push    | **Self-hosted Web Push / VAPID** — standard, no vendor, subscriptions in our DB                                                                                                           |
-| 2026-09-04 | CI alerts          | **Web Push** through the same pipeline, **plus Slack**                                                                                                                                    |
-| 2026-09-04 | Database           | **Neon Postgres + Drizzle ORM**                                                                                                                                                           |
-| 2026-09-04 | i18n library       | **next-intl** — already a dependency, App Router native                                                                                                                                   |
-| 2026-09-04 | UI components      | **shadcn/ui via its CLI**, never hand-copied                                                                                                                                              |
-| 2026-09-04 | Local database     | **Local PostgreSQL in development**, Neon kept as the hosted option; the driver is chosen from the connection string                                                                      |
-| 2026-09-04 | Content rendering  | **`/`, `/lessons` and `/quiz` render on demand**, so `pnpm build` still works with no database; detail routes prerender when one is present. Revisit with ISR once the admin panel exists |
-| 2026-09-04 | Email verification | **Not required to sign in**, but required for Google account linking. Requiring it needs an email provider, which is not chosen yet                                                       |
-| 2026-09-04 | Cookie cache       | **5 minutes** (`COOKIE_CACHE_SECONDS`). Bounds how long a revoked session — and later a revoked permission — keeps working                                                                |
-| 2026-09-04 | Anonymous attempts | **Discarded at sign-in**, not adopted. Adopting them means trusting a client-supplied score                                                                                               |
+| Date       | Question           | Decision                                                                                                                                                                                     |
+| ---------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-04 | Auth stack         | **Better Auth** — TypeScript-first, Drizzle-native, roles/permissions plugins fit dynamic RBAC                                                                                               |
+| 2026-09-04 | Media storage      | **Cloudinary** — signed uploads, image and video transforms, CDN                                                                                                                             |
+| 2026-09-04 | Production push    | **Self-hosted Web Push / VAPID** — standard, no vendor, subscriptions in our DB                                                                                                              |
+| 2026-09-04 | CI alerts          | **Web Push** through the same pipeline, **plus Slack**                                                                                                                                       |
+| 2026-09-04 | Database           | **Neon Postgres + Drizzle ORM**                                                                                                                                                              |
+| 2026-09-04 | i18n library       | **next-intl** — already a dependency, App Router native                                                                                                                                      |
+| 2026-09-04 | UI components      | **shadcn/ui via its CLI**, never hand-copied                                                                                                                                                 |
+| 2026-09-04 | Local database     | **Local PostgreSQL in development**, Neon kept as the hosted option; the driver is chosen from the connection string                                                                         |
+| 2026-09-04 | Content rendering  | **`/`, `/lessons` and `/quiz` render on demand**, so `pnpm build` still works with no database; detail routes prerender when one is present. Revisit with ISR once the admin panel exists    |
+| 2026-09-04 | Email verification | **Not required to sign in**, but required for Google account linking. Requiring it needs an email provider, which is not chosen yet                                                          |
+| 2026-09-04 | Cookie cache       | **5 minutes** (`COOKIE_CACHE_SECONDS`). Bounds how long a revoked session — and later a revoked permission — keeps working                                                                   |
+| 2026-09-04 | Anonymous attempts | **Discarded at sign-in**, not adopted. Adopting them means trusting a client-supplied score                                                                                                  |
+| 2026-09-04 | Deny rules         | **None.** Pure allow-lists; an exception like "editor but cannot delete" is a narrower role. Deny rules make effective permissions impossible to display honestly                            |
+| 2026-09-04 | Page open/close    | **Its own `page:toggle` permission** under a `page` resource, not `setting:update`. Keeps the admin nav's `page:read` meaningful and separates "change a setting" from "take a page offline" |
