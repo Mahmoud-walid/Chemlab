@@ -1,8 +1,8 @@
-# CHEMVERSE
+# Chemlab
 
-CHEMVERSE is an open-source, interactive web app for learning chemistry. It’s designed so anyone—from curious kids to confused adults—can explore atoms, molecules, elements, and reactions without needing an account.
+Chemlab is an open-source, interactive web app for learning chemistry. It's designed so anyone—from curious kids to confused adults—can explore atoms, molecules, elements, and reactions without needing an account.
 
-Think of it as a place where the periodic table is fun, molecules don’t bite, and quizzes might just make you say “Omg, that actually makes sense!”
+Think of it as a place where the periodic table is fun, molecules don't bite, and quizzes might just make you say "Omg, that actually makes sense!"
 
 ## Features
 
@@ -11,25 +11,48 @@ Think of it as a place where the periodic table is fun, molecules don’t bite, 
 - Take random quizzes to test your knowledge
 - Kid-friendly, but suitable for chemistry enthusiasts of all ages
 
-## Metadata Highlights
-
-- **Title:** CHEMVERSE – Interactive Chemistry Learning for Kids
-- **Description:** Fun, interactive, and kid-friendly web app to explore chemistry
-- **Keywords:** chemistry, learning, kids, interactive, periodic table, molecules, atoms, science, educational app
-- **Website:** [[https://chemverse.app](https://chemverse.app) ](https://chemverse-io.vercel.app)
-
 ## Getting Started
 
 This is a [Next.js](https://nextjs.org) app. You need Node.js 20+ and [pnpm](https://pnpm.io).
 
 ```bash
-git clone https://github.com/jayemscript/chemverse.git
-cd chemverse
+git clone https://github.com/Mahmoud-walid/Chemlab.git
+cd Chemlab
 pnpm install
 pnpm dev
 ```
 
 Then open [http://localhost:3000](http://localhost:3000).
+
+## Environment variables
+
+Chemlab runs with **no environment file at all** — every variable has a working
+default. Configure them when you deploy to a real domain:
+
+```bash
+cp .env.example .env.local
+```
+
+`.env.local` is git-ignored; `.env.example` is the tracked template.
+
+| Variable                       | Purpose                                                                                                                                                                                  | Default                 |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| `NEXT_PUBLIC_SITE_URL`         | Canonical origin of the deployment. Used for `metadataBase`, the canonical link, Open Graph / Twitter URLs, and the absolute OG image URL. Must be an absolute URL including the scheme. | `http://localhost:3000` |
+| `NEXT_PUBLIC_SITE_NAME`        | Product name shown in page titles, metadata and the UI.                                                                                                                                  | `Chemlab`               |
+| `NEXT_PUBLIC_SITE_DESCRIPTION` | Meta description and Open Graph / Twitter card description.                                                                                                                              | see `.env.example`      |
+| `NEXT_PUBLIC_TWITTER_HANDLE`   | Handle for the `twitter:site` card tag, including the `@`. Omitted from metadata when unset.                                                                                             | unset                   |
+
+Three things worth knowing:
+
+- **In production, set `NEXT_PUBLIC_SITE_URL`.** Leave it at the default and your
+  canonical URLs and social cards will point at `localhost`, which search engines
+  and link previews cannot resolve.
+- **`NEXT_PUBLIC_*` values are inlined at build time**, not read at runtime. They
+  end up in the browser bundle, so they are public — never put a secret behind
+  this prefix — and changing one requires a rebuild, not just a server restart.
+- **Invalid values fail fast.** A malformed URL or an empty name throws at startup
+  with a message naming the offending variable, rather than quietly emitting
+  broken metadata. Validation lives in `lib/env.ts`.
 
 ## Scripts
 

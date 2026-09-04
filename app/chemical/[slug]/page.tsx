@@ -28,7 +28,7 @@ export async function generateMetadata({
   const el = (elements as Element[]).find((e) => e.name.toLowerCase() === slug);
   if (!el) return {};
   return {
-    title: `${el.name} (${el.symbol}) — CHEMVERSE`,
+    title: `${el.name} (${el.symbol}) — Chemlab`,
     description: el.summary,
   };
 }

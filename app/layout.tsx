@@ -1,5 +1,6 @@
 import "@/configs/setup-console";
 import type { Metadata } from "next";
+import { absoluteUrl, env } from "@/lib/env";
 import {
   Geist,
   Geist_Mono,
@@ -58,10 +59,15 @@ const playfair = Playfair_Display({
   subsets: ["latin"],
 });
 
+const siteName = env.NEXT_PUBLIC_SITE_NAME;
+const siteUrl = env.NEXT_PUBLIC_SITE_URL;
+const siteDescription = env.NEXT_PUBLIC_SITE_DESCRIPTION;
+const title = `${siteName} – Interactive Chemistry Learning for Kids`;
+const ogImage = absoluteUrl("/og-image.png");
+
 export const metadata: Metadata = {
-  title: "CHEMVERSE – Interactive Chemistry Learning for Kids",
-  description:
-    "CHEMVERSE is a fun, interactive, and kid-friendly web app to explore chemistry. Learn atoms, molecules, elements, reactions, and take random quizzes—all without an account.",
+  title,
+  description: siteDescription,
   keywords: [
     "chemistry",
     "learning",
@@ -73,36 +79,35 @@ export const metadata: Metadata = {
     "science",
     "educational app",
   ],
-  authors: [{ name: "Your Name", url: "https://yourwebsite.com" }],
-  creator: "CHEMVERSE Team",
-  publisher: "CHEMVERSE",
-  metadataBase: new URL("https://chemverse.app"), // Replace with your live domain
+  creator: `${siteName} Team`,
+  publisher: siteName,
+  metadataBase: new URL(siteUrl),
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "CHEMVERSE – Interactive Chemistry Learning for Kids",
-    description:
-      "Explore atoms, molecules, and reactions with CHEMVERSE, the kid-friendly interactive chemistry web app. Learn, play, and test your chemistry knowledge with fun quizzes.",
-    url: "https://chemverse.app",
-    siteName: "CHEMVERSE",
+    title,
+    description: siteDescription,
+    url: siteUrl,
+    siteName,
     type: "website",
     images: [
       {
-        url: "https://chemverse.app/og-image.png", // Replace with your actual OG image
+        url: ogImage,
         width: 1200,
         height: 630,
-        alt: "CHEMVERSE - Interactive Chemistry Learning",
+        alt: `${siteName} - Interactive Chemistry Learning`,
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "CHEMVERSE – Interactive Chemistry Learning for Kids",
-    description:
-      "Explore atoms, molecules, and reactions with CHEMVERSE. Fun quizzes, interactive lessons, and chemistry for kids—all in one web app.",
-    site: "@ChemverseApp", // Optional Twitter handle
-    images: ["https://chemverse.app/og-image.png"],
+    title,
+    description: siteDescription,
+    ...(env.NEXT_PUBLIC_TWITTER_HANDLE
+      ? { site: env.NEXT_PUBLIC_TWITTER_HANDLE }
+      : {}),
+    images: [ogImage],
   },
   robots: {
     index: true,
@@ -116,6 +121,7 @@ export const metadata: Metadata = {
     },
   },
 };
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
