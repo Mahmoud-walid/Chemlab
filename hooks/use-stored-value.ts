@@ -24,5 +24,9 @@ export function useStoredValue(
   );
   const getServerSnapshot = useCallback(() => fallback, [fallback]);
 
-  return useSyncExternalStore(subscribeToStorage, getSnapshot, getServerSnapshot);
+  return useSyncExternalStore(
+    subscribeToStorage,
+    getSnapshot,
+    getServerSnapshot,
+  );
 }

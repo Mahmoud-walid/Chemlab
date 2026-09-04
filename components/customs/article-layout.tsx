@@ -224,10 +224,7 @@ export default function ArticleLayout({
       label: s.heading!,
     }));
 
-  const formattedDate =
-    date != null
-      ? formatShortDate(date)
-      : null;
+  const formattedDate = date != null ? formatShortDate(date) : null;
 
   return (
     <div

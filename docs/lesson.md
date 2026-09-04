@@ -1,4 +1,5 @@
 # Chemistry Lessons Curriculum
+
 https://chem.libretexts.org/Bookshelves/General_Chemistry/Map%3A_Chemistry_-_The_Central_Science_(Brown_et_al.)
 
 This document outlines a comprehensive chemistry curriculum suitable for high school to early undergraduate levels. It can be used for creating lessons, quizzes, or structured learning paths.

@@ -155,7 +155,6 @@
   --shadow-2xl: var(--shadow-2xl);
 }
 
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
