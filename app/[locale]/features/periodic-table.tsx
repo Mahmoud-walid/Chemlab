@@ -37,8 +37,12 @@ export function PeriodicTable({ elements }: PeriodicTableProps) {
     (c) => CATEGORY_LABELS[c],
   );
 
+  // Category strings come from JSON data, so the message key is only known at
+  // runtime; next-intl types keys as a literal union, hence the narrow cast.
   const categoryLabel = (category: string) => {
-    const key = `categories.${categoryMessageKey(category)}`;
+    const key = `categories.${categoryMessageKey(category)}` as Parameters<
+      typeof tElement
+    >[0];
     return tElement.has(key) ? tElement(key) : category;
   };
 

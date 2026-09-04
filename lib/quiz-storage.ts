@@ -63,7 +63,10 @@ export function gradeLabel(pct: number): {
   className: string;
 } {
   if (pct >= 90)
-    return { key: "excellent", className: "text-green-600 dark:text-green-400" };
+    return {
+      key: "excellent",
+      className: "text-green-600 dark:text-green-400",
+    };
   if (pct >= 75) return { key: "good", className: "text-chart-2" };
   if (pct >= 50)
     return {

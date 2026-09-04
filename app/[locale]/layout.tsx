@@ -45,7 +45,7 @@ export function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ locale: string }>;
+  params: Promise<{ locale: Locale }>;
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "common" });
@@ -89,7 +89,12 @@ export async function generateMetadata({
       locale: locale === "ar" ? "ar_EG" : "en_US",
       type: "website",
       images: [
-        { url: ogImage, width: 1200, height: 630, alt: `${siteName} - ${t("tagline")}` },
+        {
+          url: ogImage,
+          width: 1200,
+          height: 630,
+          alt: `${siteName} - ${t("tagline")}`,
+        },
       ],
     },
     twitter: {
@@ -123,6 +128,8 @@ export default async function LocaleLayout({
   params: Promise<{ locale: string }>;
 }>) {
   const { locale } = await params;
+  // Narrows `string` to `Locale`, and 404s on /fr rather than rendering an
+  // English page under a French URL.
   if (!hasLocale(routing.locales, locale)) notFound();
 
   // Opts every route in this segment into static rendering.
@@ -130,7 +137,7 @@ export default async function LocaleLayout({
 
   const t = await getTranslations("common");
   const dir = direction(locale);
-  const isArabic = (locale as Locale) === "ar";
+  const isArabic = locale === "ar";
   const fontVariables = isArabic
     ? `${latinVariables} ${arabicVariables}`
     : latinVariables;

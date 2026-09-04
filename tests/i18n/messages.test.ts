@@ -20,9 +20,7 @@ const arFlat = flatten(ar as Tree);
 
 /** ICU placeholders, e.g. {count} or {value, number, percent} -> "value". */
 function placeholders(message: string): Set<string> {
-  return new Set(
-    [...message.matchAll(/\{\s*(\w+)/g)].map((match) => match[1]),
-  );
+  return new Set([...message.matchAll(/\{\s*(\w+)/g)].map((match) => match[1]));
 }
 
 describe("message catalogues", () => {
@@ -53,17 +51,31 @@ describe("message catalogues", () => {
     // A dropped placeholder renders a literal "{count}" to the user.
     for (const [key, english] of enFlat) {
       const arabic = arFlat.get(key)!;
-      expect([...placeholders(english)].sort(), `placeholders differ for ${key}`)
-        .toEqual([...placeholders(arabic)].sort());
+      expect(
+        [...placeholders(english)].sort(),
+        `placeholders differ for ${key}`,
+      ).toEqual([...placeholders(arabic)].sort());
     }
   });
 
+  /**
+   * Values that are deliberately identical across locales: language endonyms,
+   * and the unit symbols and sample glyphs that Arabic chemistry teaching
+   * writes in Latin script (kJ/mol, g/cm³, K). Keeping them in the catalogue
+   * rather than hard-coding them means a translator can still override them.
+   */
+  const intentionallyLatin = (key: string) =>
+    key.startsWith("locale.") ||
+    key.startsWith("element.units.") ||
+    key === "settings.fontSample" ||
+    // "{count}e" — e is the electron symbol, not a word.
+    key === "element.electronCount";
+
   it("actually translates — Arabic values are not copies of the English", () => {
-    // Proper nouns and language endonyms legitimately match.
     const allowedIdentical = new Set(["locale.en", "locale.ar"]);
     const untranslated = [...enFlat.entries()]
       .filter(([key, value]) => {
-        if (allowedIdentical.has(key)) return false;
+        if (allowedIdentical.has(key) || intentionallyLatin(key)) return false;
         const arabic = arFlat.get(key)!;
         // A message that is only ICU placeholders ("{score} / {total}") is
         // identical in every locale by design and carries no prose.
@@ -79,11 +91,20 @@ describe("message catalogues", () => {
     const arabicScript = /[؀-ۿ]/;
     const suspicious = [...arFlat.entries()]
       .filter(([key, value]) => {
-        if (key.startsWith("locale.")) return false;
-        // Messages that are only placeholders or punctuation have no letters.
-        const withoutPlaceholders = value.replace(/\{[^}]*\}/g, "").trim();
-        if (!/\p{L}/u.test(withoutPlaceholders)) return false;
-        return !arabicScript.test(withoutPlaceholders);
+        if (intentionallyLatin(key)) return false;
+        // Checked against the raw value: an ICU plural nests its translated
+        // sub-messages inside braces, so stripping placeholders first would
+        // throw away the very Arabic being looked for.
+        if (arabicScript.test(value)) return false;
+        // No Arabic — is there any prose here at all, or only placeholders
+        // and punctuation? Nested braces are collapsed repeatedly.
+        let stripped = value;
+        let previous: string;
+        do {
+          previous = stripped;
+          stripped = stripped.replace(/\{[^{}]*\}/g, "");
+        } while (stripped !== previous);
+        return /\p{L}/u.test(stripped);
       })
       .map(([key]) => key);
 

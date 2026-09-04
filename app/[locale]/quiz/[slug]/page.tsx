@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
-import { Link, isRtl, useRouter } from "@/i18n/routing";
+import { isRtl } from "@/i18n/routing";
+import { Link, useRouter } from "@/i18n/navigation";
 import quizData from "@/data/quiz.json";
 import { type Quiz, type QuizQuestion, type QuizAttempt } from "@/types/quiz";
 import { saveAttempt, percentage } from "@/lib/quiz-storage";
@@ -170,7 +171,9 @@ export default function QuizSlugPage() {
             </div>
             <p className="text-sm text-muted-foreground">{quiz.description}</p>
             <div className="flex gap-4 text-sm text-muted-foreground">
-              <span>{t("questionCount", { count: quiz.questions.length })}</span>
+              <span>
+                {t("questionCount", { count: quiz.questions.length })}
+              </span>
               <span>{quiz.category}</span>
             </div>
             {/* randomise = true on first start */}

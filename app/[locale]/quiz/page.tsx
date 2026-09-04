@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useLocale, useFormatter, useTranslations } from "next-intl";
-import { Link, isRtl } from "@/i18n/routing";
+import { isRtl } from "@/i18n/routing";
+import { Link } from "@/i18n/navigation";
 import quizData from "@/data/quiz.json";
 import { type Quiz, type Difficulty } from "@/types/quiz";
 import { Badge } from "@/components/ui/badge";
@@ -45,7 +46,10 @@ function QuizCard({ quiz }: { quiz: Quiz }) {
           <CardTitle className="text-base leading-snug">{quiz.title}</CardTitle>
           <Badge
             variant="outline"
-            className={cn("shrink-0 text-xs", DIFFICULTY_STYLES[quiz.difficulty])}
+            className={cn(
+              "shrink-0 text-xs",
+              DIFFICULTY_STYLES[quiz.difficulty],
+            )}
           >
             {t(`difficulty.${quiz.difficulty}`)}
           </Badge>

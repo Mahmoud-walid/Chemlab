@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormatter, useTranslations } from "next-intl";
-import { Link } from "@/i18n/routing";
+import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import { type Element } from "@/types/element";
 import { getCategoryStyle } from "@/lib/element-utils";
@@ -30,9 +30,7 @@ export function categoryMessageKey(category: string): string {
     .split(/[^a-z0-9]+/)
     .filter(Boolean);
   return words
-    .map((word, i) =>
-      i === 0 ? word : word[0].toUpperCase() + word.slice(1),
-    )
+    .map((word, i) => (i === 0 ? word : word[0].toUpperCase() + word.slice(1)))
     .join("");
 }
 
@@ -47,7 +45,11 @@ export function ElementCell({ element, compact = false }: ElementCellProps) {
   const style = getCategoryStyle(element.category);
   const slug = element.name.toLowerCase();
 
-  const categoryKey = `categories.${categoryMessageKey(element.category)}`;
+  // The category comes from JSON data, so the message key is only known at
+  // runtime; next-intl types keys as a literal union, hence the narrow cast.
+  const categoryKey = `categories.${categoryMessageKey(
+    element.category,
+  )}` as Parameters<typeof t>[0];
   const categoryLabel = t.has(categoryKey) ? t(categoryKey) : element.category;
 
   const atomicNumber = format.number(element.number, LATIN_DIGITS);

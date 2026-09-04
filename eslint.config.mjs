@@ -45,7 +45,19 @@ const eslintConfig = defineConfig([
           // Props are checked separately below — checking them here would
           // flag every className.
           ignoreProps: true,
-          allowedStrings: ["·", "—", "–", "•", "/", "%", ":", "×", "→", "←", "❤️"],
+          allowedStrings: [
+            "·",
+            "—",
+            "–",
+            "•",
+            "/",
+            "%",
+            ":",
+            "×",
+            "→",
+            "←",
+            "❤️",
+          ],
         },
       ],
       // The user-visible attributes. A hard-coded aria-label is just as

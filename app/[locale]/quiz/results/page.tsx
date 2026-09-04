@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useTranslations, useFormatter } from "next-intl";
-import { Link } from "@/i18n/routing";
+import { Link } from "@/i18n/navigation";
 import { type QuizAttempt, type Difficulty } from "@/types/quiz";
 import {
   clearAttempts,
