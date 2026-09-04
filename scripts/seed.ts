@@ -10,11 +10,15 @@
  * Connects via DATABASE_URL_UNPOOLED (the direct endpoint), because the work
  * is transactional and PgBouncer in transaction mode cannot hold what it needs.
  */
+import "@/lib/load-env";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { neonConfig, Pool } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-serverless";
+import { neonConfig, Pool as NeonPool } from "@neondatabase/serverless";
+import { drizzle as drizzleNeon } from "drizzle-orm/neon-serverless";
+import { drizzle as drizzleNode } from "drizzle-orm/node-postgres";
+import { Pool as NodePool } from "pg";
 import ws from "ws";
+import { driverFor } from "@/db/driver";
 import { eq, sql } from "drizzle-orm";
 import * as schema from "@/db/schema";
 import {
@@ -45,8 +49,15 @@ async function main() {
     process.exit(1);
   }
 
-  const pool = new Pool({ connectionString: url });
-  const db = drizzle(pool, { schema, casing: "snake_case" });
+  // The seed is transactional, so it needs a real connection either way:
+  // Neon's WebSocket pool, or plain node-postgres for everything else.
+  const isNeon = driverFor(url) === "neon";
+  const pool = isNeon
+    ? new NeonPool({ connectionString: url })
+    : new NodePool({ connectionString: url });
+  const db = isNeon
+    ? drizzleNeon(pool as NeonPool, { schema, casing: "snake_case" })
+    : drizzleNode(pool as NodePool, { schema, casing: "snake_case" });
 
   const elementsJson = await readJson<ElementJson[]>(
     "periodic-table-detailed.json",

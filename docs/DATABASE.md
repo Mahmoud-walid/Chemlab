@@ -5,20 +5,67 @@ implement rather than re-litigate.
 
 ## Stack
 
-- **Neon Postgres** — serverless Postgres with branching.
+- **PostgreSQL** — a local cluster in development, a managed instance (Neon) in
+  production. Same wire protocol, same migrations, same schema.
 - **Drizzle ORM** — typed schema, SQL-level control, migrations committed to the repo.
-- **`@neondatabase/serverless`** as the driver, not `node-postgres`.
+- **Two drivers**, chosen from the connection string by `db/driver.ts`.
 
-Vercel's serverless functions get no long-lived process, so a `pg.Pool` either
-leaks connections across invocations or pays a fresh TCP+TLS handshake per
-request. Neon's driver speaks HTTP/WebSocket to Neon's own pooler and is built
-for that lifecycle.
+### The driver is picked from the URL, not from `NODE_ENV`
 
-**The trade-off:** it is Neon-specific. Moving to plain Postgres means swapping
-the driver — the Drizzle layer above is unchanged. Its HTTP mode also has no
-interactive multi-statement transactions: use `drizzle-orm/neon-http` for
-single-shot queries and `drizzle-orm/neon-serverless` where a real transaction
-is needed.
+| Host          | Driver                     | Why                                                                                                                                                                                                                                                 |
+| ------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `*.neon.tech` | `@neondatabase/serverless` | Serverless functions get no long-lived process, so a `pg.Pool` either leaks connections across invocations or pays a fresh TCP+TLS handshake per request. Neon's driver speaks HTTP/WebSocket to Neon's own pooler and is built for that lifecycle. |
+| anything else | `node-postgres`            | A local cluster speaks the normal wire protocol and cannot answer the Neon driver's HTTP endpoint at all.                                                                                                                                           |
+
+The same environment might point at either, and the connection string is the
+thing that actually knows — so `driverFor()` reads the host and nothing else.
+It matches on the host **suffix**: `neon.tech.example.com`, or the literal
+string appearing in a password or database name, is not Neon.
+
+Everything above the driver — schema, queries, migrations — is unchanged
+between the two. Neon's HTTP mode has no interactive multi-statement
+transactions, so use `drizzle-orm/neon-http` for single-shot queries and
+`drizzle-orm/neon-serverless` where a real transaction is needed (the seed
+script does).
+
+## Local Postgres is the default for development
+
+No cloud account, no shared database, nothing to leak:
+
+```bash
+pnpm db:local:start   # start PostgreSQL on 127.0.0.1:5432
+pnpm env:check        # what will the app ACTUALLY connect to?
+pnpm db:migrate       # apply db/migrations
+pnpm db:seed          # load the JSON content — safe to re-run
+pnpm db:check         # connectivity, server version, migrations applied
+```
+
+`pnpm db:local:reset` drops the `public` and `drizzle` schemas so the next
+`db:migrate && db:seed` rebuilds from nothing. It refuses to run against any
+host that is not local, and against the Neon driver — a reset script that can
+reach production is a loaded gun.
+
+`pnpm db:seed` is idempotent: it upserts on natural keys inside one
+transaction, then verifies the row counts and that every quiz question ends up
+with a `correct_option_id`. Running it twice leaves the same 119 elements, 13
+lessons, 6 quizzes and 60 questions.
+
+### `.env.local` wins over the shell
+
+`lib/load-env.ts` loads `.env` without overriding, then `.env.local` **with**
+`override: true`, and `next.config.ts`, `drizzle.config.ts` and every script
+import it first.
+
+Stock Next.js and dotenv both let a pre-set variable win. That is right on a
+server where the platform injects configuration, and wrong in a hosted dev
+container, which may already carry a `DATABASE_URL` pointing at a completely
+different database — there, the file you just edited silently does nothing and
+`pnpm db:seed` writes somewhere you did not intend. `.env.local` is git-ignored
+and never shipped, so its presence is always a deliberate local choice and this
+precedence cannot affect a real deployment.
+
+When in doubt, `pnpm env:check` prints the host it resolved and the driver it
+picked, with the password redacted.
 
 ## Two URLs, two jobs
 
@@ -28,12 +75,15 @@ is needed.
 | `DATABASE_URL_UNPOOLED` | **Direct**                  | `drizzle-kit`, migrations, seed scripts |
 
 PgBouncer in transaction mode cannot hold the session-level locks DDL needs, so
-migrations must not go through the pooler.
+migrations must not go through the pooler. Locally there is no pooler in front
+of the cluster, so both variables can hold the same URL.
 
 **Both are server-only secrets.** Never prefix either `NEXT_PUBLIC_` — that
-inlines the value into the JavaScript every visitor downloads, and a Neon URL
-carries its password inline. `lib/env.server.ts` imports `server-only`, so an
-accidental client import is a build error rather than a published credential.
+inlines the value into the JavaScript every visitor downloads, and a hosted
+Postgres URL carries its password inline. `lib/env.server.ts` imports
+`server-only`, so an accidental client import is a build error rather than a
+published credential. `pnpm env:check` also fails on any `NEXT_PUBLIC_` name
+that looks like a secret.
 
 ## Conventions
 

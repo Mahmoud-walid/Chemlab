@@ -100,24 +100,38 @@ conventions, the version-bump table and the rollback procedure live in
 ### Database
 
 Chemlab runs with **no database configured** — `pnpm dev`, `pnpm build` and the
-test suite all work without one. Set the two connection strings when you want
-migrations or real data:
+test suite all work without one. When you want migrations or real data, the
+default is a **local PostgreSQL cluster**; nothing here needs a cloud account.
 
 ```bash
-cp .env.example .env.local   # then fill in DATABASE_URL and DATABASE_URL_UNPOOLED
-pnpm db:check                # prove connectivity
+cp .env.example .env.local   # the defaults already point at the local cluster
+pnpm db:local:start          # start PostgreSQL on 127.0.0.1:5432
+pnpm env:check               # what will the app ACTUALLY connect to?
 pnpm db:migrate              # apply committed migrations
+pnpm db:seed                 # load the JSON content — safe to re-run
+pnpm db:check                # prove connectivity
 ```
 
-| Script             | What it does                                          |
-| ------------------ | ----------------------------------------------------- |
-| `pnpm db:generate` | Read the schema, emit SQL — needs no database         |
-| `pnpm db:migrate`  | Apply committed migrations                            |
-| `pnpm db:check`    | Connectivity, server version, applied-migration count |
-| `pnpm db:studio`   | Browse the data                                       |
+To use hosted Postgres instead, point `DATABASE_URL` at a Neon endpoint — the
+driver is chosen from the connection string, so nothing else changes.
+
+| Script                | What it does                                                           |
+| --------------------- | ---------------------------------------------------------------------- |
+| `pnpm env:check`      | Validate configuration; print the resolved host, driver and leak check |
+| `pnpm db:generate`    | Read the schema, emit SQL — needs no database                          |
+| `pnpm db:migrate`     | Apply committed migrations                                             |
+| `pnpm db:seed`        | Load content from the JSON files — idempotent                          |
+| `pnpm db:check`       | Connectivity, server version, applied-migration count                  |
+| `pnpm db:studio`      | Browse the data                                                        |
+| `pnpm db:local:start` | Start the local cluster                                                |
+| `pnpm db:local:stop`  | Stop it                                                                |
+| `pnpm db:local:reset` | Drop and rebuild from nothing — refuses non-local hosts                |
 
 Both URLs are **server-only secrets** and must never carry a `NEXT_PUBLIC_`
-prefix. Conventions, the migration loop and the rollback rules are in
+prefix; `pnpm env:check` fails if one does. Note that `.env.local` **overrides**
+a `DATABASE_URL` already set in your shell, so an injected one in a hosted dev
+container cannot quietly redirect your writes. Conventions, the driver split,
+the migration loop and the rollback rules are in
 [docs/DATABASE.md](docs/DATABASE.md).
 
 ### UI components
