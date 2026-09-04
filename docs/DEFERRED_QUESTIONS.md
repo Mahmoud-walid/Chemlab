@@ -299,6 +299,19 @@ low-risk data task — unlike the prose, where I will not guess.
 
 ---
 
+### Q28 — should preview deployments support Google sign-in?
+
+Google forbids wildcard redirect URIs, so a preview URL that changes per
+deployment can never complete an OAuth callback. Either a stable preview alias
+is registered in the console alongside production, or previews are
+credential-only (email/password still works there).
+
+**Question:** register a preview alias, or accept credential-only previews?
+Nothing is blocked either way — this only decides whether the Google button
+works on a preview.
+
+---
+
 ## Per-issue open questions
 
 Each planning issue carries its own `## Open questions` section for decisions
@@ -313,14 +326,17 @@ Worth reading before the relevant phase starts: #10 and #14 (data modelling),
 
 ## Resolved decisions
 
-| Date       | Question          | Decision                                                                                                                                                                                  |
-| ---------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-09-04 | Auth stack        | **Better Auth** — TypeScript-first, Drizzle-native, roles/permissions plugins fit dynamic RBAC                                                                                            |
-| 2026-09-04 | Media storage     | **Cloudinary** — signed uploads, image and video transforms, CDN                                                                                                                          |
-| 2026-09-04 | Production push   | **Self-hosted Web Push / VAPID** — standard, no vendor, subscriptions in our DB                                                                                                           |
-| 2026-09-04 | CI alerts         | **Web Push** through the same pipeline, **plus Slack**                                                                                                                                    |
-| 2026-09-04 | Database          | **Neon Postgres + Drizzle ORM**                                                                                                                                                           |
-| 2026-09-04 | i18n library      | **next-intl** — already a dependency, App Router native                                                                                                                                   |
-| 2026-09-04 | UI components     | **shadcn/ui via its CLI**, never hand-copied                                                                                                                                              |
-| 2026-09-04 | Local database    | **Local PostgreSQL in development**, Neon kept as the hosted option; the driver is chosen from the connection string                                                                      |
-| 2026-09-04 | Content rendering | **`/`, `/lessons` and `/quiz` render on demand**, so `pnpm build` still works with no database; detail routes prerender when one is present. Revisit with ISR once the admin panel exists |
+| Date       | Question           | Decision                                                                                                                                                                                  |
+| ---------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-04 | Auth stack         | **Better Auth** — TypeScript-first, Drizzle-native, roles/permissions plugins fit dynamic RBAC                                                                                            |
+| 2026-09-04 | Media storage      | **Cloudinary** — signed uploads, image and video transforms, CDN                                                                                                                          |
+| 2026-09-04 | Production push    | **Self-hosted Web Push / VAPID** — standard, no vendor, subscriptions in our DB                                                                                                           |
+| 2026-09-04 | CI alerts          | **Web Push** through the same pipeline, **plus Slack**                                                                                                                                    |
+| 2026-09-04 | Database           | **Neon Postgres + Drizzle ORM**                                                                                                                                                           |
+| 2026-09-04 | i18n library       | **next-intl** — already a dependency, App Router native                                                                                                                                   |
+| 2026-09-04 | UI components      | **shadcn/ui via its CLI**, never hand-copied                                                                                                                                              |
+| 2026-09-04 | Local database     | **Local PostgreSQL in development**, Neon kept as the hosted option; the driver is chosen from the connection string                                                                      |
+| 2026-09-04 | Content rendering  | **`/`, `/lessons` and `/quiz` render on demand**, so `pnpm build` still works with no database; detail routes prerender when one is present. Revisit with ISR once the admin panel exists |
+| 2026-09-04 | Email verification | **Not required to sign in**, but required for Google account linking. Requiring it needs an email provider, which is not chosen yet                                                       |
+| 2026-09-04 | Cookie cache       | **5 minutes** (`COOKIE_CACHE_SECONDS`). Bounds how long a revoked session — and later a revoked permission — keeps working                                                                |
+| 2026-09-04 | Anonymous attempts | **Discarded at sign-in**, not adopted. Adopting them means trusting a client-supplied score                                                                                               |

@@ -69,7 +69,11 @@ describe("message catalogues", () => {
     key.startsWith("element.units.") ||
     key === "settings.fontSample" ||
     // "{count}e" — e is the electron symbol, not a word.
-    key === "element.electronCount";
+    key === "element.electronCount" ||
+    // A sample email address. Email local parts and example.com are the same
+    // in every locale, and an Arabic-script placeholder would be misleading
+    // about what the field accepts.
+    key === "auth.emailPlaceholder";
 
   it("actually translates — Arabic values are not copies of the English", () => {
     const allowedIdentical = new Set(["locale.en", "locale.ar"]);

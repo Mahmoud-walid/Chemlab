@@ -107,6 +107,11 @@ jobs:
     env:
       DATABASE_URL: postgres://chemlab:chemlab@localhost:5432/chemlab_test
       DATABASE_URL_UNPOOLED: postgres://chemlab:chemlab@localhost:5432/chemlab_test
+      # A throwaway value for the account journeys. Not a secret: it signs
+      # cookies for one ephemeral runner and is discarded with it. The real one
+      # lives in the deployment's environment.
+      BETTER_AUTH_SECRET: ci-only-secret-at-least-32-characters-long
+      BETTER_AUTH_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4

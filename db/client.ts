@@ -25,6 +25,23 @@ export function getDb(): NeonDb | NodeDb {
   if (cached) return cached;
 
   const url = getServerEnv().DATABASE_URL;
+  if (!url) {
+    // The single loud, specific error. DATABASE_URL is optional in the schema
+    // because the app runs without one; it stops being optional here, where
+    // something actually wants to query.
+    throw new Error(
+      [
+        "DATABASE_URL is not set, so there is no database to query.",
+        "",
+        "Start the local cluster and point .env.local at it:",
+        "  pnpm db:local:start",
+        "  cp .env.example .env.local",
+        "  pnpm env:check",
+        "",
+        "It is a server-only secret — never give it a NEXT_PUBLIC_ prefix.",
+      ].join("\n"),
+    );
+  }
 
   cached =
     driverFor(url) === "neon"
