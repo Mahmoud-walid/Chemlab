@@ -52,9 +52,9 @@ function buildQuestions(
 const ALL_QUIZZES = quizData as Quiz[];
 
 const DIFFICULTY_STYLES: Record<string, string> = {
-  easy: "bg-chart-5/20 text-chart-5 border-chart-5/40",
-  medium: "bg-chart-4/20 text-chart-4 border-chart-4/40",
-  hard: "bg-destructive/15 text-destructive border-destructive/30",
+  easy: "bg-chart-5/20 text-chart-5-on-tint border-chart-5/40",
+  medium: "bg-chart-4/20 text-chart-4-on-tint border-chart-4/40",
+  hard: "bg-destructive/15 text-destructive-on-tint border-destructive/30",
 };
 
 type State = "idle" | "answering" | "finished";
@@ -319,7 +319,7 @@ export default function QuizSlugPage() {
                     "border-green-500 bg-green-500/10 text-green-700 dark:text-green-400";
                 } else if (isChosen && !isCorrect) {
                   optionClass =
-                    "border-destructive bg-destructive/10 text-destructive";
+                    "border-destructive bg-destructive/10 text-destructive-on-tint";
                 } else {
                   optionClass = "border-border opacity-50";
                 }

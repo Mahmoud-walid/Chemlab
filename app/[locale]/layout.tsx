@@ -156,7 +156,7 @@ export default async function LocaleLayout({
             {/* pb-24 keeps content clear of the floating nav bar */}
             <main className="pb-24">
               {children}
-              <footer className="py-4 text-center text-sm text-gray-500">
+              <footer className="py-4 text-center text-sm text-muted-foreground">
                 {t("madeWith")}
               </footer>
             </main>

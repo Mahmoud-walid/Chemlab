@@ -24,37 +24,37 @@ export const CATEGORY_STYLES: Record<
 > = {
   "diatomic nonmetal": {
     bg: "bg-chart-3/20",
-    text: "text-chart-3",
+    text: "text-chart-3-on-tint",
     border: "border-chart-3/40",
   },
   "noble gas": {
     bg: "bg-chart-4/20",
-    text: "text-chart-4",
+    text: "text-chart-4-on-tint",
     border: "border-chart-4/40",
   },
   "alkali metal": {
     bg: "bg-chart-1/20",
-    text: "text-chart-1",
+    text: "text-chart-1-on-tint",
     border: "border-chart-1/40",
   },
   "alkaline earth metal": {
     bg: "bg-chart-2/20",
-    text: "text-chart-2",
+    text: "text-chart-2-on-tint",
     border: "border-chart-2/40",
   },
   metalloid: {
     bg: "bg-chart-5/20",
-    text: "text-chart-5",
+    text: "text-chart-5-on-tint",
     border: "border-chart-5/40",
   },
   "polyatomic nonmetal": {
     bg: "bg-chart-3/15",
-    text: "text-chart-3",
+    text: "text-chart-3-on-tint",
     border: "border-chart-3/30",
   },
   "post-transition metal": {
     bg: "bg-primary/15",
-    text: "text-primary",
+    text: "text-primary-text",
     border: "border-primary/30",
   },
   "transition metal": {

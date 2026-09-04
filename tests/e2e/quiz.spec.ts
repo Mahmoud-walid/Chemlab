@@ -57,7 +57,7 @@ test.describe("taking a quiz", () => {
    *
    * color-contrast: difficulty badges, 1.64:1 and 2.06:1 — issue #33.
    */
-  const KNOWN_VIOLATIONS = ["color-contrast"];
+  const KNOWN_VIOLATIONS: string[] = [];
 
   test("the quiz list has no accessibility violations beyond the tracked ones", async ({
     page,

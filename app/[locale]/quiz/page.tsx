@@ -26,9 +26,9 @@ const ALL_QUIZZES = quizData as Quiz[];
 const PAGE_SIZE = 4;
 
 const DIFFICULTY_STYLES: Record<Difficulty, string> = {
-  easy: "bg-chart-5/20 text-chart-5 border-chart-5/40",
-  medium: "bg-chart-4/20 text-chart-4 border-chart-4/40",
-  hard: "bg-destructive/15 text-destructive border-destructive/30",
+  easy: "bg-chart-5/20 text-chart-5-on-tint border-chart-5/40",
+  medium: "bg-chart-4/20 text-chart-4-on-tint border-chart-4/40",
+  hard: "bg-destructive/15 text-destructive-on-tint border-destructive/30",
 };
 
 const FILTERS: (Difficulty | "all")[] = ["all", "easy", "medium", "hard"];

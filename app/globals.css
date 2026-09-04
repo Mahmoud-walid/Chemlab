@@ -27,6 +27,25 @@
   --chart-3: oklch(0.59 0.22 11.39);
   --chart-4: oklch(0.77 0.13 222.66);
   --chart-5: oklch(0.69 0.14 160.27);
+
+  /* Accessible foregrounds for text on a tint of the same token.
+     A chart token used as text on bg-<token>/20 keeps a contrast ratio near
+     1:1, because both sides move together — see issue #33. These are the same
+     hues at the lightness where they reach WCAG AA (4.5:1) on that tint, so
+     the palette keeps its character. Values where the original already passes
+     are left untouched. */
+  --chart-1-on-tint: oklch(0.31 0.11 327.1);
+  --chart-2-on-tint: oklch(0.37 0.14 323.4);
+  --chart-3-on-tint: oklch(0.48 0.22 11.39);
+  --chart-4-on-tint: oklch(0.49 0.13 222.66);
+  --chart-5-on-tint: oklch(0.48 0.14 160.27);
+  --destructive-on-tint: oklch(0.51 0.22 11.39);
+  /* De-emphasised text sitting on one of those tints — the same grey a shade
+     darker, so it clears 4.5:1 on every category tint. */
+  --muted-foreground-on-tint: oklch(0.45 0 0);
+  /* Primary used as TEXT rather than as a button fill. In light theme the
+     button colour already clears 4.5:1, so this matches it. */
+  --primary-text: oklch(0.37 0.14 323.4);
   --sidebar: oklch(0.96 0.01 311.36);
   --sidebar-foreground: oklch(0.23 0 0);
   --sidebar-primary: oklch(0.37 0.14 323.4);
@@ -80,6 +99,20 @@
   --chart-3: oklch(0.69 0.14 160.27);
   --chart-4: oklch(0.59 0.22 11.39);
   --chart-5: oklch(0.8 0.15 82.32);
+
+  /* Dark-theme counterparts: lighter rather than darker, same reasoning. */
+  --chart-1-on-tint: oklch(0.72 0.14 327.21);
+  --chart-2-on-tint: oklch(0.77 0.13 222.66);
+  --chart-3-on-tint: oklch(0.72 0.14 160.27);
+  --chart-4-on-tint: oklch(0.74 0.22 11.39);
+  --chart-5-on-tint: oklch(0.8 0.15 82.32);
+  --destructive-on-tint: oklch(0.72 0.22 11.39);
+  --muted-foreground-on-tint: oklch(0.76 0 0);
+  /* In dark theme the button colour is far too dark for text — 2.73:1 on the
+     page background. Lightened until it clears 4.5:1 on background, card,
+     secondary and its own tints, without touching --primary itself, which
+     still has to work as a button fill under --primary-foreground. */
+  --primary-text: oklch(0.72 0.14 327.21);
   --sidebar: oklch(0.23 0.01 260.69);
   --sidebar-foreground: oklch(0.93 0 0);
   --sidebar-primary: oklch(0.58 0.14 327.21);
@@ -127,6 +160,14 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-chart-1-on-tint: var(--chart-1-on-tint);
+  --color-chart-2-on-tint: var(--chart-2-on-tint);
+  --color-chart-3-on-tint: var(--chart-3-on-tint);
+  --color-chart-4-on-tint: var(--chart-4-on-tint);
+  --color-chart-5-on-tint: var(--chart-5-on-tint);
+  --color-destructive-on-tint: var(--destructive-on-tint);
+  --color-muted-foreground-on-tint: var(--muted-foreground-on-tint);
+  --color-primary-text: var(--primary-text);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);

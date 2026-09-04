@@ -79,7 +79,7 @@ export function ElementCell({ element, compact = false }: ElementCellProps) {
           aria-label={`${element.name} (${element.symbol})`}
         >
           {/* Atomic number */}
-          <span className="leading-none font-mono tabular-nums text-muted-foreground text-[clamp(6px,1.1cqi,9px)]">
+          <span className="leading-none font-mono tabular-nums text-muted-foreground-on-tint text-[clamp(6px,1.1cqi,9px)]">
             {atomicNumber}
           </span>
 
@@ -94,7 +94,7 @@ export function ElementCell({ element, compact = false }: ElementCellProps) {
           </span>
 
           {/* Name — element names stay in the source language (out of scope) */}
-          <span className="leading-none text-center truncate w-full px-0.5 text-muted-foreground text-[clamp(6px,0.9cqi,8px)]">
+          <span className="leading-none text-center truncate w-full px-0.5 text-muted-foreground-on-tint text-[clamp(6px,0.9cqi,8px)]">
             {element.name}
           </span>
         </Link>
