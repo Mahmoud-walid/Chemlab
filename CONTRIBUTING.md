@@ -73,6 +73,13 @@ Releases are not automatic, and that is on purpose.
    exactly what is about to ship.
 4. Merging it creates the git tag and the GitHub Release.
 
+> **Do not rewrite the release PR's title when you merge it.** release-please
+> matches the squashed commit back to its release PR _by title_. Merging
+> `chore: release main` under any other title — even a more descriptive one —
+> breaks that association: the release is never tagged, and every later run
+> aborts with "There are untagged, merged release PRs outstanding". Merge it
+> exactly as it comes.
+
 Nothing in this pipeline pushes to `main`, so the branch ruleset needs no
 bypass and no token holds bypass permission. The cost is two clicks per
 release; the benefit is that a machine never decides on its own that a change
