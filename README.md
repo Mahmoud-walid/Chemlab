@@ -97,6 +97,29 @@ changelog; merging that PR cuts the tag and the GitHub Release. Commit-message
 conventions, the version-bump table and the rollback procedure live in
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
+### Database
+
+Chemlab runs with **no database configured** — `pnpm dev`, `pnpm build` and the
+test suite all work without one. Set the two connection strings when you want
+migrations or real data:
+
+```bash
+cp .env.example .env.local   # then fill in DATABASE_URL and DATABASE_URL_UNPOOLED
+pnpm db:check                # prove connectivity
+pnpm db:migrate              # apply committed migrations
+```
+
+| Script             | What it does                                          |
+| ------------------ | ----------------------------------------------------- |
+| `pnpm db:generate` | Read the schema, emit SQL — needs no database         |
+| `pnpm db:migrate`  | Apply committed migrations                            |
+| `pnpm db:check`    | Connectivity, server version, applied-migration count |
+| `pnpm db:studio`   | Browse the data                                       |
+
+Both URLs are **server-only secrets** and must never carry a `NEXT_PUBLIC_`
+prefix. Conventions, the migration loop and the rollback rules are in
+[docs/DATABASE.md](docs/DATABASE.md).
+
 ### UI components
 
 shadcn/ui components are vendored into `components/ui`. Add and update them

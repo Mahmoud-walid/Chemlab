@@ -21,7 +21,18 @@ export default defineConfig({
     clearMocks: true,
     projects: [
       {
-        // Inherits plugins and resolve from the config above.
+        // Inherits plugins from the config above.
+        resolve: {
+          tsconfigPaths: true,
+          alias: {
+            // See tests/stubs/server-only.ts — the real guard still applies to
+            // the build; jsdom simply cannot satisfy it.
+            "server-only": new URL(
+              "./tests/stubs/server-only.ts",
+              import.meta.url,
+            ).pathname,
+          },
+        },
         test: {
           name: "unit",
           environment: "jsdom",
