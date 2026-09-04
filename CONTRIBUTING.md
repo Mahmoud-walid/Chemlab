@@ -78,8 +78,11 @@ bypass and no token holds bypass permission. The cost is two clicks per
 release; the benefit is that a machine never decides on its own that a change
 is safe to ship.
 
-`CHANGELOG.md` is generated. Editing it by hand is pointless — the next release
-overwrites it. Change the commit message instead.
+`CHANGELOG.md` is generated and contains **only** the title and the release
+entries. Editing it by hand is pointless — the next release overwrites it;
+change the commit message instead. Do not add a preamble to it either:
+release-please inserts each new release directly beneath the title, so any
+static prose ends up below the newest entry.
 
 > **Note on CI for the release PR.** A pull request opened by `GITHUB_TOKEN`
 > does not trigger `pull_request` workflows, so CI does not run on the release

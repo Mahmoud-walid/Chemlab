@@ -80,6 +80,34 @@ reused, not duplicated.)
 identity attached, for no benefit here — the setting is narrower and expires
 with nothing.
 
+### Q4c. The licence swap dropped the original author's notice
+
+`LICENSE.md` (MIT, © jayemscript) was deleted in #6/#7 and replaced with
+`LICENSE` (Apache 2.0). Two problems came with it, neither urgent but both
+worth closing:
+
+**1. The Apache file still has the placeholder.** Line 189 reads
+`Copyright [yyyy] [name of copyright owner]` — the boilerplate was never filled
+in, so the licence currently names no owner at all. That is just an unfinished
+edit, and I can fix it as soon as you tell me the name and year to use.
+
+**2. 14 of the 22 commits on `main` are still jayemscript's.** The periodic
+table, quiz section and lessons came to you under MIT, and MIT says its
+copyright notice "shall be included in all copies or substantial portions of
+the Software". You can licence **your own** contributions however you like, and
+MIT explicitly permits sublicensing — but the original notice is supposed to
+travel with the inherited code, and right now it does not exist anywhere in the
+repository.
+
+**Recommendation:** keep Apache 2.0 for the project and add a `NOTICE` file —
+which is Apache's own convention for exactly this — recording that portions
+originate from jayemscript's MIT-licensed chemverse, with the original notice
+text. It costs one small file, removes the compliance question entirely, and
+credits the person whose code the app is largely built from.
+
+I have not done this unprompted because licensing is your call, not mine. Say
+the word and it is a five-minute PR.
+
 ### Q5. Who may register, and is email verification required?
 
 Options: open registration; Google-only (no password to leak, no reset flow to
