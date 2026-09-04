@@ -1,17 +1,12 @@
 import { getRequestConfig } from "next-intl/server";
-import { hasLocale } from "next-intl";
-import { routing, type Locale } from "@/i18n/routing";
+import { resolveLocale } from "@/i18n/routing";
 
 export default getRequestConfig(async ({ requestLocale }) => {
-  const requested = await requestLocale;
-
   // Resolution order today: URL segment -> NEXT_LOCALE cookie / Accept-Language
   // (both handled by the middleware) -> default. When user profiles land, the
-  // signed-in user's `locale` column is consulted before the cookie, and that
-  // is the only change this function needs.
-  const locale: Locale = hasLocale(routing.locales, requested)
-    ? requested
-    : routing.defaultLocale;
+  // signed-in user's `locale` column is consulted inside resolveLocale, and
+  // this function does not change.
+  const locale = resolveLocale(await requestLocale);
 
   return {
     locale,

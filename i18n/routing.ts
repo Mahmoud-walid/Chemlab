@@ -16,6 +16,27 @@ export function direction(locale: string): "rtl" | "ltr" {
   return isRtl(locale) ? "rtl" : "ltr";
 }
 
+export function isSupportedLocale(value: unknown): value is Locale {
+  return (
+    typeof value === "string" && (locales as readonly string[]).includes(value)
+  );
+}
+
+/**
+ * Resolves the locale for a request.
+ *
+ * The `[locale]` segment acts as a catch-all, so anything can arrive here —
+ * an unknown language, a stray `/unknown.txt`, or nothing at all for a page
+ * rendered outside the segment. All of them fall back rather than throwing.
+ *
+ * Kept pure and separate from `i18n/request.ts` so it is unit-testable without
+ * next-intl's server build, and so the profile-locale lookup that arrives with
+ * user accounts has an obvious home.
+ */
+export function resolveLocale(requested: string | undefined): Locale {
+  return isSupportedLocale(requested) ? requested : defaultLocale;
+}
+
 export const routing = defineRouting({
   locales,
   defaultLocale,
