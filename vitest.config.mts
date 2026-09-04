@@ -39,7 +39,7 @@ export default defineConfig({
           globals: true,
           setupFiles: ["./tests/setup.ts"],
           include: [
-            "tests/{lib,hooks,components,data,i18n}/**/*.test.{ts,tsx}",
+            "tests/{lib,hooks,components,data,i18n,db}/**/*.test.{ts,tsx}",
           ],
           restoreMocks: true,
           clearMocks: true,
