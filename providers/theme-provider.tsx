@@ -1,4 +1,3 @@
-
 // src/providers/theme-provider.tsx
 "use client";
 

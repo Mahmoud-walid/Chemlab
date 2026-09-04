@@ -92,7 +92,7 @@ export default function StudyingChemistry() {
             alt: "DNA double helix structure",
             caption:
               "Figure 1.2 — The DNA double helix, central to forensic chemistry.",
-          },  
+          },
         },
         {
           id: "chemistry-and-society",

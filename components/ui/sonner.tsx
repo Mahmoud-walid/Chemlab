@@ -1,20 +1,22 @@
-import * as React from 'react';
-import { useTheme } from 'next-themes';
-import { Toaster as Sonner, toast as sonnerToast } from 'sonner';
-import type { ToasterProps as SonnerToastProps } from 'sonner';
+import * as React from "react";
+import { useTheme } from "next-themes";
+import { Toaster as Sonner, toast as sonnerToast } from "sonner";
+import type { ToasterProps as SonnerToastProps } from "sonner";
 
 // Define position types locally
 export type ToastPosition =
-  | 'top-left'
-  | 'top-center'
-  | 'top-right'
-  | 'bottom-left'
-  | 'bottom-center'
-  | 'bottom-right';
+  | "top-left"
+  | "top-center"
+  | "top-right"
+  | "bottom-left"
+  | "bottom-center"
+  | "bottom-right";
 
 // Custom Toast type
-interface CustomToastProps
-  extends Omit<SonnerToastProps, 'title' | 'description'> {
+interface CustomToastProps extends Omit<
+  SonnerToastProps,
+  "title" | "description"
+> {
   title?: string;
   description?: string;
   customButton?: React.ReactNode;
@@ -22,22 +24,22 @@ interface CustomToastProps
 }
 
 const Toaster = ({
-  position = 'top-right',
+  position = "top-right",
   ...props
 }: SonnerToastProps & { position?: ToastPosition }) => {
-  const { theme = 'system' } = useTheme();
+  const { theme = "system" } = useTheme();
 
   return (
     <Sonner
-      theme={theme as SonnerToastProps['theme']}
+      theme={theme as SonnerToastProps["theme"]}
       className="toaster group"
       position={position} // supports top-right, top-left, bottom-right, bottom-left
       duration={5000} // 5 seconds auto-close
       style={
         {
-          '--normal-bg': 'var(--popover)',
-          '--normal-text': 'var(--popover-foreground)',
-          '--normal-border': 'var(--border)',
+          "--normal-bg": "var(--popover)",
+          "--normal-text": "var(--popover-foreground)",
+          "--normal-border": "var(--border)",
         } as React.CSSProperties
       }
       {...props}
@@ -48,8 +50,8 @@ const Toaster = ({
 // Helper functions for global toast calls
 const toast = {
   success: ({
-    title = 'title',
-    description = 'description',
+    title = "title",
+    description = "description",
     customButton,
     position,
     ...props
@@ -74,8 +76,8 @@ const toast = {
   },
 
   error: ({
-    title = 'title',
-    description = 'description',
+    title = "title",
+    description = "description",
     customButton,
     position,
     ...props

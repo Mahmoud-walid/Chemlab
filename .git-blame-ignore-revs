@@ -1,0 +1,7 @@
+# Revisions to skip when running git blame.
+# Enable locally with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# GitHub honours this file automatically.
+
+# Repository-wide Prettier reformat (no behaviour change), issue #9
+03bd4e0c979859020f205740e434e1f39f07690b
