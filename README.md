@@ -89,6 +89,14 @@ merge. A green `pnpm check` therefore predicts CI, but does not guarantee the
 build step; run `pnpm build` too if you have touched anything Next.js compiles
 differently in production.
 
+### Releasing
+
+Merging a `feat:` or `fix:` PR into `main` makes release-please open a
+`chore: release x.y.z` pull request with the version bump and generated
+changelog; merging that PR cuts the tag and the GitHub Release. Commit-message
+conventions, the version-bump table and the rollback procedure live in
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
 ### UI components
 
 shadcn/ui components are vendored into `components/ui`. Add and update them
