@@ -47,6 +47,10 @@ jobs:
           path: .next/cache
           key: next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('**/*.ts', '**/*.tsx') }}
           restore-keys: next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+      # Deliberately no DATABASE_URL: the build must keep working without a
+      # database, or every pull request depends on one being up. The content
+      # routes render on demand instead of prerendering — see
+      # db/queries/availability.ts.
       - run: pnpm run build
 
   integration:
@@ -85,6 +89,24 @@ jobs:
   e2e:
     name: e2e
     runs-on: ubuntu-latest
+    # The pages read their content from Postgres now, so the browser tests need
+    # a real, seeded database — not a fixture that can drift from the schema.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: chemlab
+          POSTGRES_PASSWORD: chemlab
+          POSTGRES_DB: chemlab_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U chemlab"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://chemlab:chemlab@localhost:5432/chemlab_test
+      DATABASE_URL_UNPOOLED: postgres://chemlab:chemlab@localhost:5432/chemlab_test
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -104,6 +126,12 @@ jobs:
       # Browsers cached but system deps are not, so install those regardless.
       - if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: pnpm exec playwright install-deps chromium
+      - run: pnpm run env:check
+      - run: pnpm run db:migrate
+      - run: pnpm run db:seed
+      # Field-level, not just counts: a build against a half-seeded database
+      # produces pages that render but say the wrong thing.
+      - run: pnpm run db:verify
       - run: pnpm run build
       - run: pnpm run test:e2e
       - name: Upload the report and traces

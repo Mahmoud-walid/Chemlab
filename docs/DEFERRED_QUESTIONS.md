@@ -313,12 +313,14 @@ Worth reading before the relevant phase starts: #10 and #14 (data modelling),
 
 ## Resolved decisions
 
-| Date       | Question        | Decision                                                                                       |
-| ---------- | --------------- | ---------------------------------------------------------------------------------------------- |
-| 2026-09-04 | Auth stack      | **Better Auth** — TypeScript-first, Drizzle-native, roles/permissions plugins fit dynamic RBAC |
-| 2026-09-04 | Media storage   | **Cloudinary** — signed uploads, image and video transforms, CDN                               |
-| 2026-09-04 | Production push | **Self-hosted Web Push / VAPID** — standard, no vendor, subscriptions in our DB                |
-| 2026-09-04 | CI alerts       | **Web Push** through the same pipeline, **plus Slack**                                         |
-| 2026-09-04 | Database        | **Neon Postgres + Drizzle ORM**                                                                |
-| 2026-09-04 | i18n library    | **next-intl** — already a dependency, App Router native                                        |
-| 2026-09-04 | UI components   | **shadcn/ui via its CLI**, never hand-copied                                                   |
+| Date       | Question          | Decision                                                                                                                                                                                  |
+| ---------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-04 | Auth stack        | **Better Auth** — TypeScript-first, Drizzle-native, roles/permissions plugins fit dynamic RBAC                                                                                            |
+| 2026-09-04 | Media storage     | **Cloudinary** — signed uploads, image and video transforms, CDN                                                                                                                          |
+| 2026-09-04 | Production push   | **Self-hosted Web Push / VAPID** — standard, no vendor, subscriptions in our DB                                                                                                           |
+| 2026-09-04 | CI alerts         | **Web Push** through the same pipeline, **plus Slack**                                                                                                                                    |
+| 2026-09-04 | Database          | **Neon Postgres + Drizzle ORM**                                                                                                                                                           |
+| 2026-09-04 | i18n library      | **next-intl** — already a dependency, App Router native                                                                                                                                   |
+| 2026-09-04 | UI components     | **shadcn/ui via its CLI**, never hand-copied                                                                                                                                              |
+| 2026-09-04 | Local database    | **Local PostgreSQL in development**, Neon kept as the hosted option; the driver is chosen from the connection string                                                                      |
+| 2026-09-04 | Content rendering | **`/`, `/lessons` and `/quiz` render on demand**, so `pnpm build` still works with no database; detail routes prerender when one is present. Revisit with ISR once the admin panel exists |

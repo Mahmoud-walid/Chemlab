@@ -5,8 +5,12 @@ import {
   setRequestLocale,
 } from "next-intl/server";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import elements from "@/data/periodic-table-detailed.json";
-import { type Element } from "@/types/element";
+import {
+  getElementBySlug,
+  getElementNeighbours,
+  listElementSlugs,
+} from "@/db/queries/elements";
+import { hasDatabase } from "@/db/queries/availability";
 import { Link } from "@/i18n/navigation";
 import { defaultLocale, isRtl, type Locale } from "@/i18n/routing";
 import { getCategoryStyle } from "@/lib/element-utils";
@@ -40,15 +44,13 @@ function categoryMessageKey(category: string): string {
     .join("");
 }
 
-function findElement(slug: string) {
-  return (elements as Element[]).find((e) => e.name.toLowerCase() === slug);
-}
-
-// ── Pre-generate all 118 element pages at build time ──
+// ── Pre-generate every element page at build time, when there is a database ──
+// Without one the build still succeeds and the pages render on demand; see
+// db/queries/availability.ts.
 export async function generateStaticParams() {
-  return (elements as Element[]).map((el) => ({
-    slug: el.name.toLowerCase(),
-  }));
+  if (!hasDatabase()) return [];
+  const slugs = await listElementSlugs();
+  return slugs.map((slug) => ({ slug }));
 }
 
 // ── SEO metadata ──
@@ -58,7 +60,7 @@ export async function generateMetadata({
   params: Promise<{ locale: string; slug: string }>;
 }) {
   const { locale, slug } = await params;
-  const el = findElement(slug);
+  const el = await getElementBySlug(slug);
   if (!el) return {};
 
   const t = await getTranslations({
@@ -197,7 +199,7 @@ export default async function ChemicalPage({
   const { locale, slug } = await params;
   setRequestLocale(locale as Locale);
 
-  const el = findElement(slug);
+  const el = await getElementBySlug(slug);
   if (!el) notFound();
 
   const t = await getTranslations("element");
@@ -223,8 +225,7 @@ export default async function ChemicalPage({
   const shellList = el.shells.map((s) => num(s)).join(", ");
 
   // Previous / next navigation
-  const prev = (elements as Element[]).find((e) => e.number === el.number - 1);
-  const next = (elements as Element[]).find((e) => e.number === el.number + 1);
+  const { previous: prev, next } = await getElementNeighbours(el.number);
 
   return (
     <div className="min-h-screen bg-background">

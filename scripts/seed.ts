@@ -11,37 +11,21 @@
  * is transactional and PgBouncer in transaction mode cannot hold what it needs.
  */
 import "@/lib/load-env";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-import { neonConfig, Pool as NeonPool } from "@neondatabase/serverless";
-import { drizzle as drizzleNeon } from "drizzle-orm/neon-serverless";
-import { drizzle as drizzleNode } from "drizzle-orm/node-postgres";
-import { Pool as NodePool } from "pg";
-import ws from "ws";
-import { driverFor } from "@/db/driver";
 import { eq, sql } from "drizzle-orm";
 import * as schema from "@/db/schema";
+import { connect, seedUrl } from "@/db/seed/connect";
+import { loadSeedSource } from "@/db/seed/source";
+import { verifyContent } from "@/db/seed/verify";
 import {
   toElementRow,
   toLessonRow,
   toLessonSectionRows,
   toQuestionRows,
   toQuizRow,
-  type ElementJson,
-  type LessonJson,
-  type QuizJson,
 } from "@/db/seed/transform";
 
-neonConfig.webSocketConstructor = ws;
-
-const DATA = path.join(process.cwd(), "data");
-
-async function readJson<T>(...segments: string[]): Promise<T> {
-  return JSON.parse(await readFile(path.join(DATA, ...segments), "utf8")) as T;
-}
-
 async function main() {
-  const url = process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL;
+  const url = seedUrl();
   if (!url) {
     console.error(
       "Set DATABASE_URL_UNPOOLED (preferred) or DATABASE_URL before seeding.",
@@ -49,25 +33,13 @@ async function main() {
     process.exit(1);
   }
 
-  // The seed is transactional, so it needs a real connection either way:
-  // Neon's WebSocket pool, or plain node-postgres for everything else.
-  const isNeon = driverFor(url) === "neon";
-  const pool = isNeon
-    ? new NeonPool({ connectionString: url })
-    : new NodePool({ connectionString: url });
-  const db = isNeon
-    ? drizzleNeon(pool as NeonPool, { schema, casing: "snake_case" })
-    : drizzleNode(pool as NodePool, { schema, casing: "snake_case" });
-
-  const elementsJson = await readJson<ElementJson[]>(
-    "periodic-table-detailed.json",
-  );
-  const lessonsJson = await readJson<LessonJson[]>("lessons.json");
-  const quizzesJson = await readJson<QuizJson[]>("quiz.json");
-  const introduction = await readJson<{
-    slug: string;
-    sections: { heading: string; body: string }[];
-  }>("lessons", "introduction-basics.json");
+  const { db, close } = connect(url);
+  const source = await loadSeedSource();
+  const {
+    elements: elementsJson,
+    lessons: lessonsJson,
+    quizzes: quizzesJson,
+  } = source;
 
   try {
     await db.transaction(async (tx) => {
@@ -85,8 +57,18 @@ async function main() {
         const row = toLessonRow(json);
         const [lesson] = await tx
           .insert(schema.lessons)
-          .values(row)
-          .onConflictDoUpdate({ target: schema.lessons.slug, set: row })
+          // Everything in the JSON is live content, so it is published on
+          // first insert. On conflict the date is COALESCEd rather than
+          // overwritten: re-seeding backfills a lesson that has none but must
+          // never reset the publication date of one already live.
+          .values({ ...row, publishedAt: sql`now()` })
+          .onConflictDoUpdate({
+            target: schema.lessons.slug,
+            set: {
+              ...row,
+              publishedAt: sql`coalesce(${schema.lessons.publishedAt}, now())`,
+            },
+          })
           .returning({ id: schema.lessons.id });
 
         // Default-locale translation row, so reads can always join on locale.
@@ -106,8 +88,11 @@ async function main() {
             set: { title: row.title, description: row.description },
           });
 
-        if (json.slug === introduction.slug) {
-          for (const section of toLessonSectionRows(introduction.sections)) {
+        // Only one lesson has a body written so far; the rest seed as
+        // summary-only rows until their content exists.
+        const body = source.bodies.get(json.slug);
+        if (body) {
+          for (const section of toLessonSectionRows(body.sections)) {
             await tx
               .insert(schema.lessonSections)
               .values({ lessonId: lesson.id, ...section })
@@ -203,8 +188,8 @@ async function main() {
     });
 
     // ── Verification ─────────────────────────────────────────────────────
-    // Counts are the floor, not the ceiling: an unresolved answer is the
-    // failure this migration exists to make impossible.
+    // Counts first because a wrong count localises the problem instantly,
+    // then verifyContent compares every field against the JSON.
     const [{ count: elementCount }] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(schema.elements);
@@ -234,25 +219,25 @@ async function main() {
       questions: quizzesJson.reduce((n, q) => n + q.questions.length, 0),
     };
 
-    const problems: string[] = [];
+    const problems = await verifyContent(db);
     if (elementCount !== expected.elements)
-      problems.push(
+      problems.unshift(
         `elements: expected ${expected.elements}, found ${elementCount}`,
       );
     if (lessonCount !== expected.lessons)
-      problems.push(
+      problems.unshift(
         `lessons: expected ${expected.lessons}, found ${lessonCount}`,
       );
     if (quizCount !== expected.quizzes)
-      problems.push(
+      problems.unshift(
         `quizzes: expected ${expected.quizzes}, found ${quizCount}`,
       );
     if (questionCount !== expected.questions)
-      problems.push(
+      problems.unshift(
         `questions: expected ${expected.questions}, found ${questionCount}`,
       );
     if (unresolved > 0)
-      problems.push(`${unresolved} question(s) have no correct option`);
+      problems.unshift(`${unresolved} question(s) have no correct option`);
 
     if (problems.length > 0) {
       console.error("\nVerification failed:");
@@ -266,7 +251,7 @@ async function main() {
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   } finally {
-    await pool.end();
+    await close();
   }
 }
 

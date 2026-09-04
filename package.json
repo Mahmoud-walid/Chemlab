@@ -16,6 +16,7 @@
     "db:studio": "drizzle-kit studio",
     "db:check": "tsx scripts/db-check.ts",
     "db:seed": "tsx scripts/seed.ts",
+    "db:verify": "tsx scripts/db-verify.ts",
     "db:local:start": "pg_ctlcluster 16 main start || true",
     "db:local:stop": "pg_ctlcluster 16 main stop || true",
     "db:local:reset": "tsx scripts/db-local-reset.ts",
