@@ -1,4 +1,4 @@
-# Chemlab / CHEMVERSE
+# Chemlab
 
 ## Git
 

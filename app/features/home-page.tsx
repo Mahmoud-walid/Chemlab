@@ -94,7 +94,7 @@ export default function HomePageSection() {
           {/* App Title and Description */}
           <div className="flex flex-col">
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-primary">
-              Chemverse
+              Chemlab
             </h1>
             <p className="mt-1 text-sm sm:text-base text-muted-foreground max-w-md">
               Explore chemistry in a simple, interactive way. Learn about atoms,

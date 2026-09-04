@@ -9,7 +9,7 @@ import {
 } from "@/lib/quiz-storage";
 import type { QuizAttempt } from "@/types/quiz";
 
-const STORAGE_KEY = "chemverse_quiz_results";
+const STORAGE_KEY = "chemlab_quiz_results";
 
 function makeAttempt(overrides: Partial<QuizAttempt> = {}): QuizAttempt {
   return {

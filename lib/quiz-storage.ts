@@ -5,7 +5,7 @@ import {
   writeStoredValue,
 } from "@/lib/browser-storage";
 
-export const QUIZ_STORAGE_KEY = "chemverse_quiz_results";
+export const QUIZ_STORAGE_KEY = "chemlab_quiz_results";
 
 // ── Read ──
 export function parseAttempts(raw: string | null): QuizAttempt[] {
