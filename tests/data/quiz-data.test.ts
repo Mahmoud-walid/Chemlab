@@ -1,3 +1,10 @@
+/**
+ * Fast lane: the seed INPUT.
+ *
+ * The database is what the pages read, and `tests/integration/content.test.ts`
+ * asserts against it. These tests stay because a malformed `data/*.json` should
+ * fail in the unit project in seconds, before a seed run has to prove it.
+ */
 import { describe, expect, it } from "vitest";
 import quizzes from "@/data/quiz.json";
 import type { Quiz } from "@/types/quiz";

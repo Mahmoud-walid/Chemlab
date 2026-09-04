@@ -46,6 +46,19 @@ export default defineConfig({
         },
       },
       {
+        resolve: {
+          tsconfigPaths: true,
+          alias: {
+            // The modules under test are server-only by design. Node can run
+            // them perfectly well; it just cannot satisfy the React Server
+            // Component condition the package checks for. The real guard
+            // still applies to `pnpm build`.
+            "server-only": new URL(
+              "./tests/stubs/server-only.ts",
+              import.meta.url,
+            ).pathname,
+          },
+        },
         test: {
           name: "integration",
           environment: "node",

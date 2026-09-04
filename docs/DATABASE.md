@@ -188,6 +188,36 @@ initial dataset and turn "rebuild my dev database" into a database-dump
 problem instead of a one-command one. The cost of keeping both is drift, which
 the idempotent seed and its verification step contain.
 
+### Reading it
+
+Pages read the database, never the JSON — there is no `import … from
+"@/data/*.json"` under `app/`. The queries live in `db/queries/`, one module per
+content type, and each returns the shape the components already speak so the
+mapping lives in one place instead of at every call site.
+
+`pnpm db:verify` compares the database against the JSON **field by field** —
+every scalar, both array columns, each lesson section unwrapped back to its
+original prose, and every question's `correct_option_id` resolved to a label.
+Counts alone would pass a seed that mapped `melt` onto `boil`. `pnpm db:seed`
+runs the same check at the end of every run, and
+`tests/integration/content.test.ts` runs it in CI.
+
+### Rendering: which routes need a database, and when
+
+`pnpm build` still works with no database at all, because a build that needs a
+live database is a build that fails when the database is down.
+
+| Route                              | Rendering                                                                     |
+| ---------------------------------- | ----------------------------------------------------------------------------- |
+| `/`, `/lessons`, `/quiz`           | On demand — they list content, so prerendering them would query at build time |
+| `/chemical/[slug]`, `/quiz/[slug]` | Prerendered when a database is present, on demand when it is not              |
+| `/sitemap.xml`                     | Content URLs when a database is present, static routes only when it is not    |
+
+`db/queries/availability.ts` is the single place that decides. The detail routes
+keep `dynamicParams` at its default, so a slug that was not prerendered is
+served rather than 404ing. Revisit the first row with ISR once the admin panel
+exists and content changes have a known cadence.
+
 ### Decisions taken with the content schema
 
 - **`elements.category` is `text`, not an enum.** Fifteen stable values today,

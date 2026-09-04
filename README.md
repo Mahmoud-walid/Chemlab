@@ -110,10 +110,15 @@ pnpm env:check               # what will the app ACTUALLY connect to?
 pnpm db:migrate              # apply committed migrations
 pnpm db:seed                 # load the JSON content — safe to re-run
 pnpm db:check                # prove connectivity
+pnpm db:verify               # prove it matches data/ field by field
 ```
 
 To use hosted Postgres instead, point `DATABASE_URL` at a Neon endpoint — the
 driver is chosen from the connection string, so nothing else changes.
+
+Pages read the database, not `data/*.json`. `pnpm build` still works with no
+database: the list pages render on demand and the detail pages prerender only
+when one is present. See [docs/DATABASE.md](docs/DATABASE.md).
 
 | Script                | What it does                                                           |
 | --------------------- | ---------------------------------------------------------------------- |
@@ -121,6 +126,7 @@ driver is chosen from the connection string, so nothing else changes.
 | `pnpm db:generate`    | Read the schema, emit SQL — needs no database                          |
 | `pnpm db:migrate`     | Apply committed migrations                                             |
 | `pnpm db:seed`        | Load content from the JSON files — idempotent                          |
+| `pnpm db:verify`      | Compare the database against `data/` field by field                    |
 | `pnpm db:check`       | Connectivity, server version, applied-migration count                  |
 | `pnpm db:studio`      | Browse the data                                                        |
 | `pnpm db:local:start` | Start the local cluster                                                |

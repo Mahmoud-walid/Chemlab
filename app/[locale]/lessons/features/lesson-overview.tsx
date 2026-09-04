@@ -1,25 +1,28 @@
 "use client";
 
 import React, { useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import LessonCard from "./lesson-card";
-import lessons from "@/data/lessons.json";
-import { defaultLocale } from "@/i18n/routing";
+import type { LessonSummary } from "@/db/queries/lessons";
 
 type Difficulty = "all" | "easy" | "medium" | "hard";
 
 const difficulties: Difficulty[] = ["all", "easy", "medium", "hard"];
 
-export default function LessonOverviewPage() {
+export default function LessonOverviewPage({
+  lessons,
+}: {
+  lessons: LessonSummary[];
+}) {
   const t = useTranslations("lessons");
   const tTranslation = useTranslations("translation");
-  const locale = useLocale();
   const [activeDiff, setActiveDiff] = useState<Difficulty>("all");
 
-  // The lesson catalogue itself (titles, descriptions, categories) has only
-  // been authored in English so far. It is rendered as-is on other locales,
-  // with a notice, rather than machine-translating chemistry.
-  const contentIsTranslated = locale === defaultLocale;
+  // The notice now reflects the data instead of a hardcoded locale check: a
+  // lesson carries `isTranslated` when a translation row exists for the active
+  // locale. Chemistry is not machine-translated, so an untranslated catalogue
+  // is shown as-is and said so.
+  const contentIsTranslated = lessons.every((lesson) => lesson.isTranslated);
 
   const filtered =
     activeDiff === "all"
@@ -95,7 +98,7 @@ export default function LessonOverviewPage() {
             slug={lesson.slug}
             title={lesson.title}
             description={lesson.description}
-            difficulty={lesson.difficulty as "easy" | "medium" | "hard"}
+            difficulty={lesson.difficulty}
             category={lesson.category}
           />
         ))}

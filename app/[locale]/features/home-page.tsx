@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import elements from "@/data/periodic-table-detailed.json";
 import { type Element } from "@/types/element";
 import { PeriodicTable } from "./periodic-table";
 import {
@@ -19,7 +18,7 @@ import SystemPageContent from "@/components/customs/system-page.content";
 
 const MOBILE_BREAKPOINT = 640;
 
-export default function HomePageSection() {
+export default function HomePageSection({ elements }: { elements: Element[] }) {
   const t = useTranslations("home");
   const tCommon = useTranslations("common");
   const tSettings = useTranslations("settings");
@@ -132,7 +131,7 @@ export default function HomePageSection() {
         </p>
       </div>
       {/* ── Periodic table ── */}
-      <PeriodicTable elements={elements as Element[]} />
+      <PeriodicTable elements={elements} />
     </div>
   );
 }
