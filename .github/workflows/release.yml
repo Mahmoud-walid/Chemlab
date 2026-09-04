@@ -1,0 +1,29 @@
+name: Release
+
+# Runs only after CI has passed on main. workflow_run fires once the CI run
+# completes, and the job guard below drops anything that did not succeed, so a
+# red build can never produce a release PR.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      # Opens (or updates) a "chore: release x.y.z" pull request carrying the
+      # bumped package.json and regenerated CHANGELOG.md. Merging that PR is
+      # what tags the release — nothing here pushes to main, so the branch
+      # ruleset stays intact and needs no bypass.
+      - uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          token: ${{ secrets.GITHUB_TOKEN }}

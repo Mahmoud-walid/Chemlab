@@ -181,6 +181,33 @@ gate each new surface behind a setting in the admin settings table so `main`
 stays deployable and you control what users see. Confirm you want this, since it
 adds a small amount of work per feature.
 
+### Q19. Squash-only merges (repo setting — needs you)
+
+The repository currently allows **squash, merge commits and rebase**. Release
+automation reads the commit messages that land on `main`, and only squash
+merging guarantees those messages are the linted PR titles. A merge commit puts
+every work-in-progress commit ("aa", "fix content tab") onto `main`, where
+release-please will try to parse them.
+
+**Recommendation:** Settings → General → Pull Requests → untick _Allow merge
+commits_ and _Allow rebase merging_, leaving squash only. Also tick _Allow
+auto-merge_ (still off) and _Automatically delete head branches_.
+
+### Q20. Should the host deploy from tags instead of `main`?
+
+Right now Vercel deploys every push to `main`, so a change is live before it is
+released. Deploying from tags instead makes "merged" and "released" genuinely
+different states, and the release PR becomes the deploy gate.
+
+**Recommendation:** deploy `main` to a staging URL and tags to production once
+there are real users. Until then, deploying `main` is fine and faster.
+
+### Q21. A pre-release channel?
+
+Do you want `beta`/`next` pre-releases (`0.3.0-beta.1`), or is `main` → release
+the only path until 1.0? **Recommendation:** no pre-release channel yet — it
+doubles the release surface for a project with one deployment target.
+
 ---
 
 ## Per-issue open questions
