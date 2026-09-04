@@ -328,6 +328,7 @@ export default function QuizSlugPage() {
               return (
                 <button
                   key={option}
+                  data-testid="quiz-option"
                   onClick={() => handleChoose(option)}
                   disabled={answered}
                   className={cn(

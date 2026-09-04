@@ -8,3 +8,5 @@ public
 *.min.*
 .env.example
 CHANGELOG.md
+playwright-report
+test-results
