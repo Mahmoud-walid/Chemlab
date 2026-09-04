@@ -147,11 +147,33 @@ About twenty packages are installed and never imported: `leaflet`, `pdfkit`,
 build? Otherwise #9 removes them. `next-intl` stays regardless — it is the i18n
 library.
 
-### Q17. Feature flags for a partially-built platform
+### Q17. TipTap and react-table: remove now, or keep for imminent use?
+The audit found `@tanstack/react-table` and all nine `@tiptap/*` packages unused
+today — but #16 needs a data table and #20 needs a rich-text editor within a
+phase or two.
+
+**Recommendation:** remove them in #9 and re-add at current versions when the
+feature lands. An unused dependency is an upgrade and supply-chain cost with no
+benefit, and re-adding is one command. Say the word if you would rather keep
+them installed.
+
+### Q18. Feature flags for a partially-built platform
 As phases land, half-built features will exist on `main`. **Recommendation:**
 gate each new surface behind a setting in the admin settings table so `main`
 stays deployable and you control what users see. Confirm you want this, since it
 adds a small amount of work per feature.
+
+---
+
+## Per-issue open questions
+
+Each planning issue carries its own `## Open questions` section for decisions
+scoped to that work — schema details, policy choices, UX calls. This file holds
+only what cuts across issues or blocks work outright.
+
+Worth reading before the relevant phase starts: #10 and #14 (data modelling),
+#18 and #22 (identity and permission policy), #19 (analytics retention), #25
+(moderation), #26 (exam policy), #28 (presence privacy).
 
 ---
 
