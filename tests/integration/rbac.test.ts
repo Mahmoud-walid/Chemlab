@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
 
 import { connect, seedUrl, type SeedDatabase } from "@/db/seed/connect";
@@ -18,6 +18,9 @@ import { buildContext, hasPermission } from "@/lib/authz-core";
 let db: SeedDatabase;
 let close: () => Promise<void>;
 let roleIds: Map<string, string>;
+let baseSuperAdminId: string;
+
+const BASE_SUPER_ADMIN_EMAIL = "base-super@rbac-test.invalid";
 
 beforeAll(async () => {
   const url = seedUrl();
@@ -28,6 +31,43 @@ beforeAll(async () => {
     .select({ id: schema.roles.id, key: schema.roles.key })
     .from(schema.roles);
   roleIds = new Map(rows.map((row) => [row.key, row.id]));
+
+  /**
+   * A stable Super Admin the suite owns.
+   *
+   * "At least one Super Admin must exist" is a GLOBAL invariant, so a test that
+   * adds a holder and then removes it only works when somebody else already
+   * holds it. On a fresh database nobody does — which is exactly how CI differs
+   * from a developer machine that has run `db:bootstrap-admin`, and how the
+   * first version of this file passed locally and failed in CI.
+   *
+   * Fixed address, upserted, so repeated runs reuse the same row.
+   */
+  baseSuperAdminId = uuidv7();
+  const [existing] = await db
+    .select({ id: schema.users.id })
+    .from(schema.users)
+    .where(eq(schema.users.email, BASE_SUPER_ADMIN_EMAIL))
+    .limit(1);
+
+  if (existing) {
+    baseSuperAdminId = existing.id;
+  } else {
+    await db.insert(schema.users).values({
+      id: baseSuperAdminId,
+      name: "Base Super Admin",
+      email: BASE_SUPER_ADMIN_EMAIL,
+      emailVerified: false,
+    });
+  }
+
+  await db
+    .insert(schema.userRoles)
+    .values({
+      userId: baseSuperAdminId,
+      roleId: roleIds.get(SUPER_ADMIN_ROLE_KEY)!,
+    })
+    .onConflictDoNothing();
 });
 
 afterAll(async () => {
@@ -242,55 +282,87 @@ describe("effective permissions", () => {
     expect(hasPermission(context, "role:assign")).toBe(true);
     expect(hasPermission(context, "user:impersonate")).toBe(true);
 
+    // Safe because the base holder remains: revoke first, then remove the user.
+    // Deleting the user directly would cascade into user_roles and be refused
+    // if this happened to be the only Super Admin.
+    await db
+      .delete(schema.userRoles)
+      .where(eq(schema.userRoles.userId, userId));
     await db.delete(schema.users).where(eq(schema.users.id, userId));
   });
 });
 
 describe("the last Super Admin", () => {
-  it("cannot be revoked, deleted, or reassigned while they are the only one", async () => {
-    const holders = await db
-      .select({ userId: schema.userRoles.userId })
-      .from(schema.userRoles)
-      .where(eq(schema.userRoles.roleId, roleIds.get(SUPER_ADMIN_ROLE_KEY)!));
-
-    // The suite runs against a seeded database; give it exactly one holder to
-    // assert against, whatever it started with.
-    let onlyHolder = holders[0]?.userId;
-    if (!onlyHolder) {
-      onlyHolder = await makeUser(`last-super-${Date.now()}@rbac-test.invalid`);
-      await grant(onlyHolder, SUPER_ADMIN_ROLE_KEY);
-    }
-
-    const remaining = await db
-      .select({ userId: schema.userRoles.userId })
-      .from(schema.userRoles)
-      .where(eq(schema.userRoles.roleId, roleIds.get(SUPER_ADMIN_ROLE_KEY)!));
-    // Only meaningful with exactly one holder.
-    expect(remaining.length).toBe(1);
-
+  /**
+   * Runs `attempt` with the base holder as the ONLY Super Admin, and expects
+   * the database to refuse it.
+   *
+   * The reduction to one holder happens inside a transaction, and the refusal
+   * itself aborts that transaction — so every other holder is restored by the
+   * rollback. Mutating the holder set for real would make the suite depend on
+   * its own execution order, and would delete a genuine Super Admin on a
+   * developer's machine.
+   */
+  async function expectRefusedAsLastSuperAdmin(
+    attempt: (tx: SeedDatabase) => Promise<unknown>,
+    pattern: RegExp,
+  ) {
     await expectRefused(
       () =>
-        db
+        db.transaction(async (tx) => {
+          // Each of these leaves the base holder behind, so none is refused.
+          await tx
+            .delete(schema.userRoles)
+            .where(
+              and(
+                eq(schema.userRoles.roleId, roleIds.get(SUPER_ADMIN_ROLE_KEY)!),
+                ne(schema.userRoles.userId, baseSuperAdminId),
+              ),
+            );
+
+          const holders = await tx
+            .select({ userId: schema.userRoles.userId })
+            .from(schema.userRoles)
+            .where(
+              eq(schema.userRoles.roleId, roleIds.get(SUPER_ADMIN_ROLE_KEY)!),
+            );
+          expect(holders.length, "expected exactly one holder").toBe(1);
+
+          // Must be refused. The throw rolls the whole transaction back.
+          await attempt(tx as unknown as SeedDatabase);
+        }),
+      pattern,
+    );
+  }
+
+  it("cannot have their role revoked", async () => {
+    await expectRefusedAsLastSuperAdmin(
+      (tx) =>
+        tx
           .delete(schema.userRoles)
-          .where(eq(schema.userRoles.userId, onlyHolder!)),
+          .where(eq(schema.userRoles.userId, baseSuperAdminId)),
       /last super_admin/i,
     );
+  });
 
-    // Deleting the user cascades into user_roles and hits the same trigger.
-    await expectRefused(
-      () => db.delete(schema.users).where(eq(schema.users.id, onlyHolder!)),
+  it("cannot be deleted, because the cascade hits the same trigger", async () => {
+    await expectRefusedAsLastSuperAdmin(
+      (tx) =>
+        tx.delete(schema.users).where(eq(schema.users.id, baseSuperAdminId)),
       /last super_admin/i,
     );
+  });
 
-    // Re-pointing the row at another role is a revocation in disguise.
-    await expectRefused(
-      () =>
-        db
+  it("cannot have their row re-pointed at another role", async () => {
+    // A revocation in disguise.
+    await expectRefusedAsLastSuperAdmin(
+      (tx) =>
+        tx
           .update(schema.userRoles)
           .set({ roleId: roleIds.get("member")! })
           .where(
             and(
-              eq(schema.userRoles.userId, onlyHolder!),
+              eq(schema.userRoles.userId, baseSuperAdminId),
               eq(schema.userRoles.roleId, roleIds.get(SUPER_ADMIN_ROLE_KEY)!),
             ),
           ),
