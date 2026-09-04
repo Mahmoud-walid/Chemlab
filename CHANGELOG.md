@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.2.0...v0.3.0) (2026-09-04)
+
+
+### Features
+
+* **db:** add the Neon Postgres and Drizzle foundation ([#45](https://github.com/Mahmoud-walid/Chemlab/issues/45)) ([2247362](https://github.com/Mahmoud-walid/Chemlab/commit/2247362a9904e5fe8421c0d30a7b5a61e9fc09f7))
+* **db:** model the content and add an idempotent seed ([#47](https://github.com/Mahmoud-walid/Chemlab/issues/47)) ([ef77ee0](https://github.com/Mahmoud-walid/Chemlab/commit/ef77ee0139e3b2e778ee43c364e5a42003dedd47))
+
 ## [0.2.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.1.0...v0.2.0) (2026-09-04)
 
 
