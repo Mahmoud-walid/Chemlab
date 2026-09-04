@@ -8,5 +8,7 @@ public
 *.min.*
 .env.example
 CHANGELOG.md
+# Written by release-please, which formats it compactly on every release.
+.release-please-manifest.json
 playwright-report
 test-results
