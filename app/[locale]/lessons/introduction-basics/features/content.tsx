@@ -1,11 +1,22 @@
 "use client";
 
+/*
+ * The chapter abstract and the per-section summaries below are chemistry
+ * source material written in English. They are deliberately NOT in the message
+ * catalogue — an unreviewed translation of chemistry is how a factual error
+ * ships — so the literal-text lint rule is disabled for this file. Every piece
+ * of interface chrome here (tab actions, the untranslated-content notice) does
+ * come from the catalogue.
+ */
+/* eslint-disable react/jsx-no-literals */
+
 import {
   ContentTab,
   type ContentTabItem,
 } from "@/components/customs/content-tab";
 import { useLocale, useTranslations } from "next-intl";
-import { defaultLocale, getPathname, useRouter } from "@/i18n/routing";
+import { defaultLocale } from "@/i18n/routing";
+import { getPathname, useRouter } from "@/i18n/navigation";
 
 const STUDYING_CHEMISTRY_PATH =
   "/lessons/introduction-basics/studying-chemistry";

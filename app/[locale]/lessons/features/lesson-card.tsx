@@ -1,7 +1,8 @@
 import React from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { Link, isRtl } from "@/i18n/routing";
+import { isRtl } from "@/i18n/routing";
+import { Link } from "@/i18n/navigation";
 
 interface LessonCardProps {
   index: number;

@@ -104,6 +104,34 @@ function slugify(str: string) {
     .replace(/[^\w-]/g, "");
 }
 
+const ARTICLE_STYLES = `
+  .article-toc-link {
+    color: var(--foreground);
+    border-radius: var(--radius-sm);
+    display: block;
+    padding-block: 0.375rem;
+    padding-inline: 0.5rem;
+    font-size: 0.875rem;
+    text-align: start;
+    transition: background 150ms, color 150ms;
+    text-decoration: none;
+  }
+  .article-toc-link:hover {
+    background: var(--accent);
+    color: var(--accent-foreground);
+  }
+  .article-prose {
+    text-align: start;
+    line-height: 1.85;
+  }
+  /* Arabic script sits taller on the line than Latin at the same size,
+     so the body copy needs extra leading to stay readable. */
+  [dir="rtl"] .article-prose,
+  .article-prose[dir="rtl"] {
+    line-height: 2.1;
+  }
+`;
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function SectionDivider() {
@@ -241,7 +269,10 @@ export default function ArticleLayout({
   const locale = useLocale();
   // Directional affordance — swapped per locale rather than CSS-flipped, so
   // non-directional icons elsewhere are never mirrored by accident.
-  const LinkArrow = isRtl(locale) ? ArrowLeft : ArrowRight;
+  // The arrow lives inside the article body, so it follows the body's own
+  // direction rather than the page's.
+  const bodyIsRtl = contentDir ? contentDir === "rtl" : isRtl(locale);
+  const LinkArrow = bodyIsRtl ? ArrowLeft : ArrowRight;
 
   const tocItems = sections
     .filter((s) => s.heading)
@@ -250,8 +281,7 @@ export default function ArticleLayout({
       label: s.heading!,
     }));
 
-  const formattedDate =
-    date != null ? formatShortDate(date, { locale }) : null;
+  const formattedDate = date != null ? formatShortDate(date, { locale }) : null;
 
   return (
     <div
@@ -259,33 +289,7 @@ export default function ArticleLayout({
       style={{ background: "var(--background)", color: "var(--foreground)" }}
     >
       {/* Scoped CSS — no JS event handlers needed */}
-      <style>{`
-        .article-toc-link {
-          color: var(--foreground);
-          border-radius: var(--radius-sm);
-          display: block;
-          padding-block: 0.375rem;
-          padding-inline: 0.5rem;
-          font-size: 0.875rem;
-          text-align: start;
-          transition: background 150ms, color 150ms;
-          text-decoration: none;
-        }
-        .article-toc-link:hover {
-          background: var(--accent);
-          color: var(--accent-foreground);
-        }
-        .article-prose {
-          text-align: start;
-          line-height: 1.85;
-        }
-        /* Arabic script sits taller on the line than Latin at the same size,
-           so the body copy needs extra leading to stay readable. */
-        [dir="rtl"] .article-prose,
-        .article-prose[dir="rtl"] {
-          line-height: 2.1;
-        }
-      `}</style>
+      <style>{ARTICLE_STYLES}</style>
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header
         className="px-6 py-12 md:px-16 lg:px-24"
@@ -294,7 +298,7 @@ export default function ArticleLayout({
           borderBottom: "1px solid var(--border)",
         }}
       >
-        <div className="mx-auto max-w-4xl">
+        <div className="mx-auto max-w-4xl" dir={contentDir}>
           {/* Tags */}
           {tags && tags.length > 0 && (
             <div className="mb-4 flex flex-wrap gap-2">
@@ -380,7 +384,7 @@ export default function ArticleLayout({
               <>
                 {author && (
                   <span style={{ color: "var(--border)" }} aria-hidden>
-                    |
+                    ·
                   </span>
                 )}
                 <time>{formattedDate}</time>

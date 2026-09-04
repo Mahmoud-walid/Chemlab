@@ -1,9 +1,53 @@
+/*
+ * The article on this page is chemistry source material adapted from an
+ * English textbook. It is deliberately NOT in the message catalogue: an
+ * unreviewed translation of chemistry is how a factual error ships. The page
+ * chrome is localised, and Arabic readers get the "not translated yet" notice
+ * below, so the lint rules that require catalogue text are disabled here for
+ * the article body only.
+ */
+/* eslint-disable react/jsx-no-literals */
 import React from "react";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import ArticleLayout from "@/components/customs/article-layout";
+import { defaultLocale, type Locale } from "@/i18n/routing";
 
-export default function StudyingChemistry() {
+export default async function StudyingChemistry({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  // Opts this route into static rendering for the active locale.
+  setRequestLocale(locale as Locale);
+
+  const t = await getTranslations("translation");
+
+  // Everything below is chemistry source material written in English. It is
+  // rendered unchanged on every locale — translating it is a separate,
+  // reviewed piece of work — with a notice so the reader knows why.
+  const contentIsTranslated = locale === defaultLocale;
+
   return (
     <ArticleLayout
+      contentDir={contentIsTranslated ? undefined : "ltr"}
+      notice={
+        contentIsTranslated ? undefined : (
+          <div
+            className="mb-8 rounded-lg border border-border bg-secondary px-4 py-3 text-sm"
+            role="note"
+            dir="auto"
+          >
+            <p className="font-semibold text-secondary-foreground">
+              {t("notAvailableTitle")}
+            </p>
+            <p className="mt-0.5 text-muted-foreground">
+              {t("notAvailableBody")}
+            </p>
+          </div>
+        )
+      }
+      // eslint-disable-next-line no-restricted-syntax -- lesson title, see the note above
       title="Studying Chemistry"
       description="Chemistry is the study of matter and the changes that material substances undergo — perhaps the most extensively connected of all scientific disciplines."
       author={{ name: "Brown et al.", role: "General Chemistry" }}
