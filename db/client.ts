@@ -1,7 +1,10 @@
 import "server-only";
-import { drizzle } from "drizzle-orm/neon-http";
+import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
+import { drizzle as drizzleNode } from "drizzle-orm/node-postgres";
 import { neon } from "@neondatabase/serverless";
+import { Pool } from "pg";
 import * as schema from "./schema";
+import { driverFor } from "./driver";
 import { getServerEnv } from "@/lib/env.server";
 
 /**
@@ -10,14 +13,27 @@ import { getServerEnv } from "@/lib/env.server";
  * Lazy on purpose: `pnpm build` runs with no database reachable, and a client
  * built at module scope would validate `DATABASE_URL` — and fail — simply
  * because a file imported this one.
+ *
+ * The driver is chosen from the URL; see `db/driver.ts`.
  */
-let cached: ReturnType<typeof drizzle<typeof schema>> | undefined;
+type NeonDb = ReturnType<typeof drizzleNeon<typeof schema>>;
+type NodeDb = ReturnType<typeof drizzleNode<typeof schema>>;
 
-export function getDb() {
-  cached ??= drizzle(neon(getServerEnv().DATABASE_URL), {
-    schema,
-    casing: "snake_case",
-  });
+let cached: NeonDb | NodeDb | undefined;
+
+export function getDb(): NeonDb | NodeDb {
+  if (cached) return cached;
+
+  const url = getServerEnv().DATABASE_URL;
+
+  cached =
+    driverFor(url) === "neon"
+      ? drizzleNeon(neon(url), { schema, casing: "snake_case" })
+      : drizzleNode(new Pool({ connectionString: url }), {
+          schema,
+          casing: "snake_case",
+        });
+
   return cached;
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseServerEnv } from "@/lib/env.server";
+import { parseServerEnv } from "@/lib/env.server.schema";
 
 const VALID = "postgresql://user:pw@ep-x-pooler.eu-central-1.aws.neon.tech/db";
 const VALID_DIRECT = "postgresql://user:pw@ep-x.eu-central-1.aws.neon.tech/db";
