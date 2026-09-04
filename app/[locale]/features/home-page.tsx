@@ -69,7 +69,7 @@ export default function HomePageSection() {
                 forward/back direction, so it is not mirrored per locale.
               */}
               <Smartphone
-                className="text-primary"
+                className="text-primary-text"
                 style={{ transform: "rotate(-90deg)" }}
                 size={28}
                 strokeWidth={1.5}
@@ -102,7 +102,7 @@ export default function HomePageSection() {
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           {/* App Title and Description */}
           <div className="flex flex-col">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-primary">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-primary-text">
               {tCommon("appName")}
             </h1>
             <p className="mt-1 text-sm sm:text-base text-muted-foreground max-w-md">

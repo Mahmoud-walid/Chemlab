@@ -72,7 +72,7 @@ function NavLink({
         className={cn(
           "relative z-10 transition-all duration-300 ease-out",
           isActive
-            ? "text-primary scale-110 -translate-y-0.5"
+            ? "text-primary-text scale-110 -translate-y-0.5"
             : "text-muted-foreground group-hover:text-foreground group-hover:scale-105",
         )}
       />
@@ -83,8 +83,8 @@ function NavLink({
           "relative z-10 text-[11px] font-medium leading-none tracking-wide",
           "truncate max-w-full px-1 transition-all duration-300 ease-out",
           isActive
-            ? "text-primary opacity-100 translate-y-0"
-            : "text-muted-foreground opacity-70 translate-y-0.5 group-hover:opacity-100",
+            ? "text-primary-text opacity-100 translate-y-0"
+            : "text-muted-foreground translate-y-0.5 group-hover:text-foreground",
         )}
       >
         {label}

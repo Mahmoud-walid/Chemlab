@@ -30,13 +30,13 @@ export default function LessonOverviewPage() {
     <div className="px-6 py-10 max-w-7xl mx-auto">
       {/* Page Header */}
       <div className="mb-10">
-        <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-primary mb-2">
+        <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-primary-text mb-2">
           {t("eyebrow")}
         </p>
         <h1 className="font-serif text-4xl font-bold leading-tight text-foreground mb-3">
           {t.rich("heading", {
             highlight: (chunks) => (
-              <span className="text-primary">{chunks}</span>
+              <span className="text-primary-text">{chunks}</span>
             ),
           })}
         </h1>
@@ -59,7 +59,7 @@ export default function LessonOverviewPage() {
             className={`text-xs font-bold tracking-wide px-4 py-1.5 rounded-full border transition-all duration-150 ${
               activeDiff === value
                 ? "bg-primary text-primary-foreground border-primary"
-                : "bg-transparent text-muted-foreground border-border hover:border-primary/50 hover:text-primary"
+                : "bg-transparent text-muted-foreground border-border hover:border-primary/50 hover:text-primary-text"
             }`}
           >
             {t(`difficulty.${value}`)}

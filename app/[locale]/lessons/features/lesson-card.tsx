@@ -43,7 +43,7 @@ const LessonCard: React.FC<LessonCardProps> = ({
 
       {/* Card header row */}
       <div className="flex items-start justify-between gap-2 mb-3">
-        <span className="text-[11px] font-bold tracking-widest uppercase text-primary bg-secondary px-2.5 py-1 rounded-full whitespace-nowrap">
+        <span className="text-[11px] font-bold tracking-widest uppercase text-primary-text bg-secondary px-2.5 py-1 rounded-full whitespace-nowrap">
           {/* The index is passed as a pre-padded string so the lesson numbering
               stays in Latin digits, matching the "1.1", "1.2" section numbers
               used throughout the chemistry material. */}
@@ -57,7 +57,7 @@ const LessonCard: React.FC<LessonCardProps> = ({
       </div>
 
       {/* Category eyebrow — comes from the lesson data, untranslated */}
-      <p className="text-[10.5px] font-bold tracking-widest uppercase text-primary mb-1.5">
+      <p className="text-[10.5px] font-bold tracking-widest uppercase text-primary-text mb-1.5">
         {category}
       </p>
 
@@ -78,7 +78,7 @@ const LessonCard: React.FC<LessonCardProps> = ({
         </span>
         <ArrowIcon
           aria-hidden
-          className="size-4 text-primary transition-transform duration-200 ltr:group-hover:translate-x-1 rtl:group-hover:-translate-x-1"
+          className="size-4 text-primary-text transition-transform duration-200 ltr:group-hover:translate-x-1 rtl:group-hover:-translate-x-1"
         />
       </div>
     </Link>

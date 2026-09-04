@@ -505,7 +505,7 @@ export default async function ChemicalPage({
                   href={el.source}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                  className="inline-flex items-center gap-1 text-sm text-primary-text hover:underline"
                 >
                   {t("wikipedia")}
                   <ForwardIcon className="w-3.5 h-3.5" aria-hidden />

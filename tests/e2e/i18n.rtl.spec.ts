@@ -59,7 +59,7 @@ test.describe("Arabic locale", () => {
    * color-contrast: periodic table cells and difficulty badges use a chart
    * token as text on a tint of itself — 107 nodes, issue #33.
    */
-  const KNOWN_VIOLATIONS = ["color-contrast"];
+  const KNOWN_VIOLATIONS: string[] = [];
 
   test("the Arabic home page has no violations beyond the tracked ones", async ({
     page,
