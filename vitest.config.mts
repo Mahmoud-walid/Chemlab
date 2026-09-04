@@ -56,7 +56,17 @@ export default defineConfig({
       reporter: ["text", "lcov"],
       reportsDirectory: "./coverage",
       include: ["lib/**/*.ts", "hooks/**/*.ts", "i18n/**/*.ts", "db/**/*.ts"],
-      exclude: ["**/*.d.ts", "db/migrations/**", "db/schema/**"],
+      exclude: [
+        "**/*.d.ts",
+        "db/migrations/**",
+        "db/schema/**",
+        // Framework glue with no logic of ours: navigation.ts re-exports
+        // next-intl's createNavigation, and request.ts is a config factory
+        // that only resolves the locale — logic which lives in routing.ts
+        // precisely so it can be tested without next-intl's server build.
+        "i18n/navigation.ts",
+        "i18n/request.ts",
+      ],
       // Deliberately per-area rather than one global gate. A single 80% number
       // drives people to write assertion-free tests over presentational code
       // to move it; the areas below are where a bug is expensive and the code

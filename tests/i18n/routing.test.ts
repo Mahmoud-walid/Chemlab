@@ -3,7 +3,9 @@ import {
   defaultLocale,
   direction,
   isRtl,
+  isSupportedLocale,
   locales,
+  resolveLocale,
   routing,
 } from "@/i18n/routing";
 
@@ -39,5 +41,39 @@ describe("direction", () => {
 
   it("treats an unknown locale as left-to-right rather than throwing", () => {
     expect(direction("fr")).toBe("ltr");
+  });
+});
+
+describe("resolveLocale", () => {
+  it("keeps a supported locale", () => {
+    expect(resolveLocale("ar")).toBe("ar");
+    expect(resolveLocale("en")).toBe("en");
+  });
+
+  it("falls back when the segment is missing", () => {
+    // Pages outside the [locale] segment render with no locale at all.
+    expect(resolveLocale(undefined)).toBe(defaultLocale);
+  });
+
+  it.each(["fr", "de", "unknown.txt", "", "AR", "ar-EG", "../etc/passwd"])(
+    "falls back for %o rather than throwing",
+    (requested) => {
+      // The [locale] segment is a catch-all, so anything can arrive here.
+      expect(resolveLocale(requested)).toBe(defaultLocale);
+    },
+  );
+});
+
+describe("isSupportedLocale", () => {
+  it("accepts configured locales only", () => {
+    expect(isSupportedLocale("en")).toBe(true);
+    expect(isSupportedLocale("ar")).toBe(true);
+    expect(isSupportedLocale("fr")).toBe(false);
+  });
+
+  it("rejects non-strings without throwing", () => {
+    for (const value of [undefined, null, 42, {}, [], true]) {
+      expect(isSupportedLocale(value)).toBe(false);
+    }
   });
 });
