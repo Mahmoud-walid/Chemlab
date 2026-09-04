@@ -1,5 +1,5 @@
 import React from "react";
-import { formatDate } from "@syntaxsentinel/date-utils";
+import { formatShortDate } from "@/lib/format-date";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -226,7 +226,7 @@ export default function ArticleLayout({
 
   const formattedDate =
     date != null
-      ? formatDate.shortDate(typeof date === "string" ? new Date(date) : date)
+      ? formatShortDate(date)
       : null;
 
   return (
