@@ -22,6 +22,20 @@
       "when": 1788561947254,
       "tag": "0002_last_grandmaster",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788564556656,
+      "tag": "0003_safe_ben_parker",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788564567624,
+      "tag": "0004_rbac_guards",
+      "breakpoints": true
     }
   ]
 }

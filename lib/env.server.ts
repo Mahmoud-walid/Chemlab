@@ -37,6 +37,7 @@ export function getServerEnv(): ServerEnv {
     BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+    SUPER_ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL,
   });
   return cached;
 }

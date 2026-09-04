@@ -17,6 +17,7 @@ import { and, eq, gte, sql } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
 
 import * as schema from "@/db/schema";
+import { DEFAULT_ROLE_KEY } from "@/db/schema/rbac";
 import { decide, hashIdentifier, WINDOW_MS } from "@/lib/auth-rate-limit";
 
 /** How long a signed session snapshot is trusted without touching the database. */
@@ -148,6 +149,22 @@ export function buildAuthOptions({
                 avatarSource: user.image ? "google" : "initials",
               })
               .onConflictDoNothing({ target: schema.profiles.userId });
+
+            // Every signup holds the default role, so "authenticated but
+            // unprivileged" is a real, inspectable state rather than an absence
+            // of rows — which is indistinguishable from a failed assignment.
+            const [defaultRole] = await db
+              .select({ id: schema.roles.id })
+              .from(schema.roles)
+              .where(eq(schema.roles.key, DEFAULT_ROLE_KEY))
+              .limit(1);
+
+            if (defaultRole) {
+              await db
+                .insert(schema.userRoles)
+                .values({ userId: user.id, roleId: defaultRole.id })
+                .onConflictDoNothing();
+            }
           },
         },
       },
