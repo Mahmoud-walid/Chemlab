@@ -8,6 +8,13 @@
       "when": 1788553144205,
       "tag": "0000_chief_wild_child",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788553688681,
+      "tag": "0001_stormy_photon",
+      "breakpoints": true
     }
   ]
 }

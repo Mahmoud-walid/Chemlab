@@ -122,3 +122,40 @@ with no database and no secret. That holds because:
 
 Keep it that way: a build that needs a database is a build that fails in CI, in
 preview, and on every contributor's first clone.
+
+## Content: JSON now, database later
+
+`data/*.json` is the **seed source of truth**: version-controlled, diffable and
+reviewable in a pull request. `pnpm db:seed` reads it; nothing else should.
+
+**The hand-over point:** once the admin panel can edit content (#16), the
+database becomes authoritative and the JSON drops to a bootstrap fixture used
+only for a fresh developer database. Until then, a content change is a JSON
+change plus a re-seed.
+
+Deleting the JSON now would throw away the only reviewable record of the
+initial dataset and turn "rebuild my dev database" into a database-dump
+problem instead of a one-command one. The cost of keeping both is drift, which
+the idempotent seed and its verification step contain.
+
+### Decisions taken with the content schema
+
+- **`elements.category` is `text`, not an enum.** Fifteen stable values today,
+  but under an enum a new category is a migration; as text it is a row.
+- **Arrays, not child tables**, for `shells` and `ionization_energies`. They are
+  ordered numeric vectors read whole and never queried by member; a child table
+  would turn 119 rows into ~1,500 plus a join, to buy a query nobody writes.
+- **Lesson bodies are ProseMirror JSON**, not HTML strings. The editor
+  round-trips losslessly and rendering is a pure function; HTML would need
+  sanitising on every read and re-parsing on every edit.
+- **The quiz answer is a foreign key**, not a copy of the option text. The JSON
+  stores `answer` as a string duplicating one of `options[]` — rename the option
+  and the answer silently orphans. `quiz_questions.correct_option_id` makes that
+  impossible.
+- **Translations are side-car tables**, not per-locale columns. A third language
+  becomes data rather than DDL, and a missing translation is an absent row
+  rather than a nullable column every query must remember to check. Only `en`
+  is seeded — Arabic content is commissioned, not machine-translated.
+- **The twelve body-less lessons seed as summary-only rows.** They have no
+  `sections` file; inventing placeholder sections would put fake content in
+  front of students.
