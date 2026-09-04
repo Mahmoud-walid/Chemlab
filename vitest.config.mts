@@ -90,6 +90,30 @@ export default defineConfig({
         // precisely so it can be tested without next-intl's server build.
         "i18n/navigation.ts",
         "i18n/request.ts",
+        // Auth glue the UNIT project cannot execute, each excluded for a
+        // stated reason rather than by lowering the bar. The logic these
+        // modules would otherwise contain was deliberately pulled out into
+        // pure modules that ARE measured here: auth-schemas, auth-rate-limit,
+        // safe-redirect, initials and env.server.schema all sit at 100%.
+        //
+        // auth-options.ts is the one worth arguing about. It is
+        // security-relevant configuration, and it is exercised — by the 33
+        // integration tests, which run the real options against real Postgres.
+        // It reads as 0% only because this gate runs the unit project alone,
+        // and the integration project needs a database the `verify` job has
+        // no reason to provision.
+        "lib/auth-options.ts",
+        // Constructs the instance from those options; needs the Next runtime.
+        "lib/auth.ts",
+        // One createAuthClient() call, in the browser.
+        "lib/auth-client.ts",
+        // next/headers, react cache and redirect — no logic of ours, and the
+        // behaviour that matters is proven end to end in tests/e2e/auth.spec.ts.
+        "lib/session.ts",
+        // A `server-only` guard over env.server.schema, which is measured.
+        "lib/env.server.ts",
+        // A dotenv side effect at import time.
+        "lib/load-env.ts",
       ],
       // Deliberately per-area rather than one global gate. A single 80% number
       // drives people to write assertion-free tests over presentational code

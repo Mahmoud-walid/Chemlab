@@ -140,6 +140,26 @@ container cannot quietly redirect your writes. Conventions, the driver split,
 the migration loop and the rollback rules are in
 [docs/DATABASE.md](docs/DATABASE.md).
 
+### Accounts
+
+Sign-in is optional: with no `BETTER_AUTH_SECRET` the site serves every public
+page and the account UI does not appear.
+
+```bash
+# in .env.local
+BETTER_AUTH_SECRET=$(openssl rand -base64 32)
+BETTER_AUTH_URL=http://localhost:3000
+```
+
+`pnpm env:check` then reports whether you have email/password only or Google as
+well. Google needs a client id and secret from the Google Cloud console, and a
+redirect URI registered verbatim as `/api/auth/callback/google` — the exact
+console settings, the security properties and the rules for building on top of
+this are in [docs/AUTH.md](docs/AUTH.md).
+
+Never give any of these a `NEXT_PUBLIC_` prefix; `pnpm env:check` fails if you
+do.
+
 ### UI components
 
 shadcn/ui components are vendored into `components/ui`. Add and update them

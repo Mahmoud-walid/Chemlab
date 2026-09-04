@@ -9,7 +9,11 @@
  */
 import "../lib/load-env";
 import { parseEnv } from "../lib/env";
-import { parseServerEnv } from "../lib/env.server.schema";
+import {
+  authConfigured,
+  googleConfigured,
+  parseServerEnv,
+} from "../lib/env.server.schema";
 import { driverFor } from "../db/driver";
 
 /** `postgresql://user:pw@host:5432/db` -> `postgresql://user:***@host:5432/db` */
@@ -71,7 +75,9 @@ if (!process.env.DATABASE_URL) {
       DATABASE_URL: process.env.DATABASE_URL,
       DATABASE_URL_UNPOOLED: process.env.DATABASE_URL_UNPOOLED,
     });
-    console.log(`  DATABASE_URL                  ${redact(env.DATABASE_URL)}`);
+    // Guarded above: this branch only runs when DATABASE_URL is set.
+    const databaseUrl = env.DATABASE_URL!;
+    console.log(`  DATABASE_URL                  ${redact(databaseUrl)}`);
     console.log(
       `  DATABASE_URL_UNPOOLED         ${
         env.DATABASE_URL_UNPOOLED
@@ -79,20 +85,77 @@ if (!process.env.DATABASE_URL) {
           : "(unset — migrations will use DATABASE_URL)"
       }`,
     );
-    console.log(
-      `  driver                        ${driverFor(env.DATABASE_URL)}`,
-    );
+    console.log(`  driver                        ${driverFor(databaseUrl)}`);
   } catch (error) {
     failed = true;
     console.error(error instanceof Error ? error.message : String(error));
   }
 }
 
+heading("Authentication");
+try {
+  const env = parseServerEnv({
+    DATABASE_URL: process.env.DATABASE_URL,
+    DATABASE_URL_UNPOOLED: process.env.DATABASE_URL_UNPOOLED,
+    BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
+    BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+  });
+
+  // Presence, never the value: this secret signs every session cookie.
+  console.log(
+    `  BETTER_AUTH_SECRET            ${
+      env.BETTER_AUTH_SECRET
+        ? `set (${env.BETTER_AUTH_SECRET.length} chars)`
+        : "(unset)"
+    }`,
+  );
+  console.log(
+    `  BETTER_AUTH_URL               ${env.BETTER_AUTH_URL ?? "(unset)"}`,
+  );
+  console.log(
+    `  GOOGLE_CLIENT_ID              ${env.GOOGLE_CLIENT_ID ? "set" : "(unset)"}`,
+  );
+  console.log(
+    `  GOOGLE_CLIENT_SECRET          ${env.GOOGLE_CLIENT_SECRET ? "set" : "(unset)"}`,
+  );
+
+  console.log(
+    `\n  sign-in                       ${
+      authConfigured(env)
+        ? googleConfigured(env)
+          ? "email/password and Google"
+          : "email/password only (no Google credentials)"
+        : "disabled (no BETTER_AUTH_SECRET / BETTER_AUTH_URL)"
+    }`,
+  );
+
+  // The auth origin must match the origin registered in the Google redirect
+  // URI. A mismatch surfaces as an opaque callback failure, so it is worth
+  // catching here.
+  if (env.BETTER_AUTH_URL) {
+    const authOrigin = new URL(env.BETTER_AUTH_URL).origin;
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    if (siteUrl && new URL(siteUrl).origin !== authOrigin) {
+      console.log(
+        `\n  note: BETTER_AUTH_URL (${authOrigin}) and NEXT_PUBLIC_SITE_URL\n` +
+          `        (${new URL(siteUrl).origin}) disagree. The OAuth callback is\n` +
+          "        registered against the auth origin, so a mismatch fails at\n" +
+          "        the Google callback rather than here.",
+      );
+    }
+  }
+} catch (error) {
+  failed = true;
+  console.error(error instanceof Error ? error.message : String(error));
+}
+
 heading("Leak check");
 const leaked = Object.keys(process.env).filter(
   (key) =>
     key.startsWith("NEXT_PUBLIC_") &&
-    /DATABASE|SECRET|TOKEN|PASSWORD|PRIVATE|API_KEY/i.test(key),
+    /DATABASE|SECRET|TOKEN|PASSWORD|PRIVATE|API_KEY|CLIENT_ID/i.test(key),
 );
 if (leaked.length > 0) {
   failed = true;

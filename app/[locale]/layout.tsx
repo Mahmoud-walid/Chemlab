@@ -13,6 +13,8 @@ import {
 import "../globals.css";
 import { Providers } from "@/providers/providers";
 import { FloatingNavBar } from "@/components/customs/floating-nav-bar";
+import { AccountMenu } from "@/components/customs/account-menu";
+import { Toaster } from "@/components/ui/sonner";
 import { absoluteUrl, env } from "@/lib/env";
 import { direction, locales, routing, type Locale } from "@/i18n/routing";
 
@@ -153,6 +155,13 @@ export default async function LocaleLayout({
       >
         <NextIntlClientProvider>
           <Providers>
+            {/* The account surface. A header slot rather than a sixth entry in
+                the floating nav bar: the nav bar is for places, this is for
+                who you are, and mixing them makes both harder to scan. */}
+            <div className="flex justify-end px-4 pt-4">
+              <AccountMenu />
+            </div>
+
             {/* pb-24 keeps content clear of the floating nav bar */}
             <main className="pb-24">
               {children}
@@ -162,6 +171,7 @@ export default async function LocaleLayout({
             </main>
 
             <FloatingNavBar />
+            <Toaster />
           </Providers>
         </NextIntlClientProvider>
       </body>
