@@ -1,5 +1,8 @@
 import React from "react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { formatShortDate } from "@/lib/format-date";
+import { isRtl } from "@/i18n/routing";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -64,8 +67,19 @@ export interface ArticleLayoutProps {
   videos?: ArticleVideo[];
   /** Further reading / reference links */
   links?: ArticleLink[];
-  /** Optional table-of-contents label override */
+  /** Optional table-of-contents label override (defaults to a translated label) */
   tocLabel?: string;
+  /**
+   * Notice rendered above the article body — used to flag content that has
+   * not been translated into the active locale yet.
+   */
+  notice?: React.ReactNode;
+  /**
+   * Writing direction of the article body. Pass `"ltr"` when the prose is
+   * English but the surrounding UI is right-to-left, so the source text keeps
+   * its own punctuation and number ordering.
+   */
+  contentDir?: "ltr" | "rtl";
   /** Hide the table of contents */
   hideToc?: boolean;
   /** Optional className to pass to the root element */
@@ -76,14 +90,11 @@ export interface ArticleLayoutProps {
 
 type CalloutType = NonNullable<ArticleSection["callout"]>["type"];
 
-const CALLOUT_META: Record<
-  CalloutType,
-  { icon: string; label: string; borderVar: string }
-> = {
-  note: { icon: "ℹ", label: "Note", borderVar: "var(--chart-4)" },
-  tip: { icon: "✦", label: "Tip", borderVar: "var(--chart-5)" },
-  warning: { icon: "⚠", label: "Warning", borderVar: "var(--chart-3)" },
-  important: { icon: "★", label: "Important", borderVar: "var(--primary)" },
+const CALLOUT_META: Record<CalloutType, { icon: string; borderVar: string }> = {
+  note: { icon: "ℹ", borderVar: "var(--chart-4)" },
+  tip: { icon: "✦", borderVar: "var(--chart-5)" },
+  warning: { icon: "⚠", borderVar: "var(--chart-3)" },
+  important: { icon: "★", borderVar: "var(--primary)" },
 };
 
 function slugify(str: string) {
@@ -133,6 +144,7 @@ function ImageBlock({ image }: { image: ArticleImage }) {
 }
 
 function VideoBlock({ video }: { video: ArticleVideo }) {
+  const t = useTranslations("article");
   return (
     <figure className="my-8">
       <div
@@ -147,7 +159,7 @@ function VideoBlock({ video }: { video: ArticleVideo }) {
         {video.embedUrl ? (
           <iframe
             src={video.embedUrl}
-            title={video.title ?? "Video"}
+            title={video.title ?? t("video")}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
             className="w-full h-full"
@@ -173,22 +185,28 @@ function CalloutBlock({
 }: {
   callout: NonNullable<ArticleSection["callout"]>;
 }) {
-  const { icon, label, borderVar } = CALLOUT_META[callout.type];
+  const t = useTranslations("article.callout");
+  const { icon, borderVar } = CALLOUT_META[callout.type];
   return (
     <aside
       className="my-6 px-5 py-4"
       style={{
-        borderLeft: `4px solid ${borderVar}`,
+        // Logical properties so the accent bar sits on the reading-start edge
+        // in both directions.
+        borderInlineStart: `4px solid ${borderVar}`,
         background: "var(--secondary)",
-        borderRadius: "0 var(--radius-md) var(--radius-md) 0",
+        borderStartStartRadius: 0,
+        borderEndStartRadius: 0,
+        borderStartEndRadius: "var(--radius-md)",
+        borderEndEndRadius: "var(--radius-md)",
       }}
     >
       <p
         className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest"
         style={{ color: "var(--secondary-foreground)" }}
       >
-        <span>{icon}</span>
-        {label}
+        <span aria-hidden>{icon}</span>
+        {t(callout.type)}
       </p>
       <div
         className="text-sm leading-relaxed"
@@ -213,10 +231,18 @@ export default function ArticleLayout({
   images,
   videos,
   links,
-  tocLabel = "On this page",
+  tocLabel,
+  notice,
+  contentDir,
   hideToc = false,
   className = "",
 }: ArticleLayoutProps) {
+  const t = useTranslations("article");
+  const locale = useLocale();
+  // Directional affordance — swapped per locale rather than CSS-flipped, so
+  // non-directional icons elsewhere are never mirrored by accident.
+  const LinkArrow = isRtl(locale) ? ArrowLeft : ArrowRight;
+
   const tocItems = sections
     .filter((s) => s.heading)
     .map((s) => ({
@@ -224,7 +250,8 @@ export default function ArticleLayout({
       label: s.heading!,
     }));
 
-  const formattedDate = date != null ? formatShortDate(date) : null;
+  const formattedDate =
+    date != null ? formatShortDate(date, { locale }) : null;
 
   return (
     <div
@@ -237,14 +264,26 @@ export default function ArticleLayout({
           color: var(--foreground);
           border-radius: var(--radius-sm);
           display: block;
-          padding: 0.375rem 0.5rem;
+          padding-block: 0.375rem;
+          padding-inline: 0.5rem;
           font-size: 0.875rem;
+          text-align: start;
           transition: background 150ms, color 150ms;
           text-decoration: none;
         }
         .article-toc-link:hover {
           background: var(--accent);
           color: var(--accent-foreground);
+        }
+        .article-prose {
+          text-align: start;
+          line-height: 1.85;
+        }
+        /* Arabic script sits taller on the line than Latin at the same size,
+           so the body copy needs extra leading to stay readable. */
+        [dir="rtl"] .article-prose,
+        .article-prose[dir="rtl"] {
+          line-height: 2.1;
         }
       `}</style>
       {/* ── Header ─────────────────────────────────────────────────────────── */}
@@ -328,7 +367,7 @@ export default function ArticleLayout({
                   </span>
                   {author.role && (
                     <span
-                      className="ml-1"
+                      className="ms-1"
                       style={{ color: "var(--muted-foreground)" }}
                     >
                       · {author.role}
@@ -355,7 +394,8 @@ export default function ArticleLayout({
       <div className="mx-auto max-w-7xl px-6 py-10 md:px-16 lg:px-24">
         <div className="flex flex-col gap-12 lg:flex-row lg:gap-16">
           {/* ── Main content ─────────────────────────────────────────────── */}
-          <main className="min-w-0 flex-1">
+          <main className="min-w-0 flex-1" dir={contentDir}>
+            {notice}
             {heroImage && <ImageBlock image={heroImage} />}
 
             {sections.map((section, idx) => {
@@ -382,7 +422,7 @@ export default function ArticleLayout({
                   {section.heading && <SectionDivider />}
 
                   <div
-                    className="prose max-w-none text-base leading-[1.85]"
+                    className="article-prose prose max-w-none text-base"
                     style={{ color: "var(--foreground)" }}
                   >
                     {section.content}
@@ -403,7 +443,7 @@ export default function ArticleLayout({
                   className="mb-2 text-2xl font-bold font-serif"
                   style={{ color: "var(--foreground)" }}
                 >
-                  Figures
+                  {t("figures")}
                 </h2>
                 <SectionDivider />
                 <div className="grid gap-6 sm:grid-cols-2">
@@ -421,7 +461,7 @@ export default function ArticleLayout({
                   className="mb-2 text-2xl font-bold font-serif"
                   style={{ color: "var(--foreground)" }}
                 >
-                  Videos
+                  {t("videos")}
                 </h2>
                 <SectionDivider />
                 {videos.map((v, i) => (
@@ -437,18 +477,17 @@ export default function ArticleLayout({
                   className="mb-2 text-2xl font-bold font-serif"
                   style={{ color: "var(--foreground)" }}
                 >
-                  Further Reading
+                  {t("furtherReading")}
                 </h2>
                 <SectionDivider />
                 <ul className="space-y-3">
                   {links.map((link, i) => (
                     <li key={i} className="flex items-start gap-3">
-                      <span
-                        className="mt-1"
+                      <LinkArrow
+                        aria-hidden
+                        className="mt-1 size-4 shrink-0"
                         style={{ color: "var(--primary)" }}
-                      >
-                        →
-                      </span>
+                      />
                       <div>
                         <a
                           href={link.href}
@@ -491,7 +530,7 @@ export default function ArticleLayout({
                   className="mb-4 text-xs font-semibold uppercase tracking-widest"
                   style={{ color: "var(--muted-foreground)" }}
                 >
-                  {tocLabel}
+                  {tocLabel ?? t("onThisPage")}
                 </p>
                 <nav>
                   <ul className="space-y-1">

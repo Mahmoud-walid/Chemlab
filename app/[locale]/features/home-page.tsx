@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import elements from "@/data/periodic-table-detailed.json";
 import { type Element } from "@/types/element";
 import { PeriodicTable } from "./periodic-table";
@@ -19,6 +20,11 @@ import SystemPageContent from "@/components/customs/system-page.content";
 const MOBILE_BREAKPOINT = 640;
 
 export default function HomePageSection() {
+  const t = useTranslations("home");
+  const tCommon = useTranslations("common");
+  const tSettings = useTranslations("settings");
+  const tTable = useTranslations("periodicTable");
+
   const [showWarning, setShowWarning] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -58,19 +64,23 @@ export default function HomePageSection() {
         <DialogContent className="max-w-xs rounded-2xl text-center">
           <DialogHeader className="items-center gap-3">
             <div className="flex items-center justify-center w-14 h-14 rounded-full bg-accent">
+              {/*
+                Decorative: the rotation illustrates the gesture rather than a
+                forward/back direction, so it is not mirrored per locale.
+              */}
               <Smartphone
                 className="text-primary"
                 style={{ transform: "rotate(-90deg)" }}
                 size={28}
                 strokeWidth={1.5}
+                aria-hidden
               />
             </div>
             <DialogTitle className="text-base font-semibold">
-              Rotate for best experience
+              {t("rotate.title")}
             </DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
-              The periodic table has 18 columns. Landscape mode gives you a much
-              better view — try rotating your device.
+              {t("rotate.body")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col gap-2 sm:flex-col mt-2">
@@ -80,7 +90,7 @@ export default function HomePageSection() {
               size="sm"
               className="w-full"
             >
-              Got it, continue anyway
+              {t("rotate.dismiss")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -90,20 +100,16 @@ export default function HomePageSection() {
       {/* ── Header row ── */}
       <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          {/* Logo */}
           {/* App Title and Description */}
           <div className="flex flex-col">
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-primary">
-              Chemlab
+              {tCommon("appName")}
             </h1>
             <p className="mt-1 text-sm sm:text-base text-muted-foreground max-w-md">
-              Explore chemistry in a simple, interactive way. Learn about atoms,
-              molecules, elements, and reactions—all in one kid-friendly app.
+              {t("heroDescription")}
             </p>
           </div>
         </div>
-
-        {/* Section Title */}
 
         {/* Settings trigger button */}
         <Button
@@ -111,7 +117,7 @@ export default function HomePageSection() {
           size="icon"
           className="shrink-0 mt-1"
           onClick={() => setShowSettings(true)}
-          aria-label="Open settings"
+          aria-label={tSettings("open")}
         >
           <Settings className="w-4 h-4" />
         </Button>
@@ -119,10 +125,10 @@ export default function HomePageSection() {
 
       <div className="mt-3 sm:mt-0 text-center">
         <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-foreground">
-          Periodic Table
+          {tTable("title")}
         </h2>
         <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-          Click any element to view full details
+          {tTable("hint")}
         </p>
       </div>
       {/* ── Periodic table ── */}

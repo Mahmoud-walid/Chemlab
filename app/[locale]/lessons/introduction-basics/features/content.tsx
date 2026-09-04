@@ -7,7 +7,8 @@ import {
 import { useLocale, useTranslations } from "next-intl";
 import { defaultLocale, getPathname, useRouter } from "@/i18n/routing";
 
-const STUDYING_CHEMISTRY_PATH = "/lessons/introduction-basics/studying-chemistry";
+const STUDYING_CHEMISTRY_PATH =
+  "/lessons/introduction-basics/studying-chemistry";
 
 export default function ContentPage() {
   // Locale-aware router — `next/navigation` would drop the `/ar` prefix.
@@ -129,7 +130,10 @@ export default function ContentPage() {
       <div className="w-full max-w-7xl space-y-8">
         {/* Chapter heading and abstract — chemistry source material, left in
             English on every locale (see the notice below). */}
-        <div className="space-y-3">
+        <div
+          className="space-y-3"
+          dir={contentIsTranslated ? undefined : "ltr"}
+        >
           <h1 className="text-2xl font-semibold tracking-tight">
             1: Introduction — Matter and Measurement
           </h1>
@@ -158,7 +162,24 @@ export default function ContentPage() {
           </div>
         )}
 
-        <ContentTab tabs={tabs} orientation="vertical" />
+        <ContentTab
+          tabs={
+            contentIsTranslated
+              ? tabs
+              : // Keep the English body text laid out left-to-right inside the
+                // otherwise right-to-left page, so its punctuation and numbers
+                // read correctly.
+                tabs.map((tab) => ({
+                  ...tab,
+                  content: (
+                    <div dir="ltr" className="text-start">
+                      {tab.content}
+                    </div>
+                  ),
+                }))
+          }
+          orientation="vertical"
+        />
       </div>
     </div>
   );
