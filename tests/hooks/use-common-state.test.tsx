@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import useCommonState from "@/hooks/use-common-state";
 
 const push = vi.fn();
-vi.mock("next/navigation", () => ({
+vi.mock("@/i18n/navigation", () => ({
   useRouter: () => ({ push, replace: vi.fn(), back: vi.fn() }),
 }));
 

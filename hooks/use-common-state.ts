@@ -1,5 +1,7 @@
 "use client";
-import { useRouter } from "next/navigation";
+// Locale-aware router: the plain next/navigation one drops the locale on
+// client-side navigation.
+import { useRouter } from "@/i18n/navigation";
 import { useState } from "react";
 
 export default function useCommonState() {

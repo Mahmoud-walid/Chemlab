@@ -58,6 +58,28 @@ Provide `SLACK_WEBHOOK_URL`, or say you want Web Push only for now.
 
 ## Product decisions
 
+### Q4b. Allow GitHub Actions to open pull requests (repo setting — BLOCKING releases)
+
+The release pipeline works: on the first run it parsed the commits, decided
+`0.1.0` → `0.2.0`, and created the branch and commit. It then failed on the last
+step with:
+
+> GitHub Actions is not permitted to create or approve pull requests.
+
+That is a repository setting, off by default, and I cannot change it:
+
+**Settings → Actions → General → Workflow permissions → tick _Allow GitHub
+Actions to create and approve pull requests_.**
+
+The next merge to `main` will then open the release PR. (The branch
+`release-please--branches--main` already exists from the failed run; it will be
+reused, not duplicated.)
+
+**Alternative:** store a fine-grained PAT as a secret and pass it to the action.
+**Recommendation:** use the checkbox. A PAT is a long-lived credential with your
+identity attached, for no benefit here — the setting is narrower and expires
+with nothing.
+
 ### Q5. Who may register, and is email verification required?
 
 Options: open registration; Google-only (no password to leak, no reset flow to
@@ -207,6 +229,45 @@ there are real users. Until then, deploying `main` is fine and faster.
 Do you want `beta`/`next` pre-releases (`0.3.0-beta.1`), or is `main` → release
 the only path until 1.0? **Recommendation:** no pre-release channel yet — it
 doubles the release surface for a project with one deployment target.
+
+### Q22. Arabic register — MSA, confirmed?
+
+The UI is written in **Modern Standard Arabic**, the default assumption for
+educational content and understood across every Arabic-speaking country.
+Egyptian-leaning phrasing would feel warmer to an Egyptian audience and foreign
+to a Gulf or Maghrebi one. Say if you want the register changed — it is a
+find-and-replace in `messages/ar.json`, not a code change.
+
+### Q23. Should Arabic ship publicly before the lessons are translated?
+
+The UI is fully Arabic. The **content** — 13 lessons, 60 exam questions,
+119 element summaries — is still English, and shows a "not yet available in
+Arabic" notice.
+
+**Recommendation:** ship it. A student who reads Arabic gets an Arabic
+interface immediately and English content with an honest label, which beats
+waiting months for a translation that has not been commissioned. Say the word
+and I will instead gate `ar` behind a feature flag until content is ready.
+
+### Q24. English at `/en/...` too?
+
+English currently lives on the unprefixed URLs (`/lessons`), Arabic at
+`/ar/lessons`. Full symmetry (`/en/lessons`) would mean redirecting every
+existing URL.
+
+**Recommendation:** keep `as-needed`. Nothing already published breaks, and no
+SEO history is lost. The asymmetry only becomes awkward if Arabic later becomes
+the default locale.
+
+### Q25. Element names in Arabic
+
+Element **symbols** (H, Na, Fe) are locale-invariant and stay Latin. Element
+**names** (Hydrogen → الهيدروجين) are standard, unambiguous chemistry
+terminology and could be translated safely, unlike the encyclopaedia summaries.
+Category names (Noble Gas → غاز نبيل) are already translated.
+
+**Question:** do you want the 119 element names translated? It is a bounded,
+low-risk data task — unlike the prose, where I will not guess.
 
 ---
 

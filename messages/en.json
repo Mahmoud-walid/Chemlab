@@ -1,0 +1,239 @@
+{
+  "common": {
+    "appName": "Chemlab",
+    "tagline": "Interactive Chemistry Learning for Kids",
+    "loading": "Loading…",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "close": "Close",
+    "cancel": "Cancel",
+    "save": "Save",
+    "search": "Search",
+    "madeWith": "Made with ❤️ by JayemScript"
+  },
+  "nav": {
+    "label": "Main navigation",
+    "home": "Home",
+    "lessons": "Lessons",
+    "quiz": "Quiz",
+    "experiments": "Experiments",
+    "games": "Games"
+  },
+  "locale": {
+    "switchLabel": "Change language",
+    "en": "English",
+    "ar": "العربية"
+  },
+  "underDevelopment": {
+    "title": "Page Under Development",
+    "body": "Sorry! This section of {appName} is still being cooked. Check back soon for more chemistry fun."
+  },
+  "settings": {
+    "title": "Settings",
+    "open": "Open settings",
+    "appearance": "Appearance",
+    "font": "Font",
+    "language": "Language",
+    "theme": {
+      "label": "Theme selection",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System",
+      "lightTooltip": "Use light theme",
+      "darkTooltip": "Use dark theme",
+      "systemTooltip": "Use system preference",
+      "section": "Theme"
+    },
+    "description": "Choose how Chemlab looks and which language it speaks.",
+    "fontSample": "Aa"
+  },
+  "quiz": {
+    "title": "Quizzes",
+    "start": "Start quiz",
+    "retake": "Retake quiz",
+    "myResults": "My results",
+    "seeAllResults": "See all results",
+    "browseQuizzes": "Browse quizzes",
+    "empty": "No quizzes found.",
+    "noResults": "No results yet",
+    "explanation": "Explanation:",
+    "questionProgress": "Question {current} of {total}",
+    "score": "Score",
+    "scoreValue": "{score} of {total}",
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard",
+      "all": "All"
+    },
+    "grade": {
+      "excellent": "Excellent",
+      "good": "Good",
+      "needsWork": "Needs work",
+      "keepStudying": "Keep studying"
+    },
+    "results": {
+      "title": "My Results",
+      "sessionOnly": "Results are saved for this session only",
+      "clear": "Clear results",
+      "quizzesTaken": "Quizzes taken",
+      "averageScore": "Average score",
+      "bestScore": "Best score",
+      "allQuizzes": "All quizzes",
+      "clearShort": "Clear",
+      "bestQuiz": "Best quiz",
+      "emptyBody": "Complete a quiz and your results will appear here for this session."
+    },
+    "scoreOf": "{score} / {total}",
+    "subtitle": "Test your knowledge across {count, plural, one {# quiz} other {# quizzes}}",
+    "questionCount": "{count, plural, one {# question} other {# questions}}",
+    "pagination": {
+      "page": "Page {current} of {total}",
+      "previous": "Previous page",
+      "next": "Next page"
+    },
+    "backToQuizzes": "Back to quizzes",
+    "result": "Result",
+    "correctOf": "{score} / {total} correct",
+    "progressShort": "{current} / {total}",
+    "yourAnswer": "Your answer:",
+    "correctAnswer": "Correct:",
+    "retry": "Retry",
+    "finish": "Finish quiz",
+    "nextQuestion": "Next question"
+  },
+  "lessons": {
+    "title": "Lessons",
+    "empty": "No lessons found.",
+    "readLesson": "Read lesson",
+    "references": "References",
+    "contents": "Contents",
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard",
+      "all": "All"
+    },
+    "eyebrow": "Course Curriculum",
+    "heading": "Chemistry <highlight>Fundamentals</highlight>",
+    "intro": "A structured journey through chemical principles — from atomic theory to organic molecules.",
+    "filterLabel": "Filter",
+    "lessonCount": "{count, plural, one {# lesson} other {# lessons}}",
+    "lessonNumber": "Lesson {number}",
+    "studyGuide": "Study guide available"
+  },
+  "element": {
+    "atomicNumber": "Atomic number",
+    "atomicMass": "Atomic mass",
+    "category": "Category",
+    "phase": "Phase",
+    "density": "Density",
+    "melt": "Melting point",
+    "boil": "Boiling point",
+    "discoveredBy": "Discovered by",
+    "namedBy": "Named by",
+    "electronConfiguration": "Electron configuration",
+    "summary": "Summary",
+    "source": "Source",
+    "categories": {
+      "diatomicNonmetal": "Diatomic Nonmetal",
+      "nobleGas": "Noble Gas",
+      "alkaliMetal": "Alkali Metal",
+      "alkalineEarthMetal": "Alkaline Earth Metal",
+      "metalloid": "Metalloid",
+      "polyatomicNonmetal": "Polyatomic Nonmetal",
+      "postTransitionMetal": "Post-Transition Metal",
+      "transitionMetal": "Transition Metal",
+      "lanthanide": "Lanthanide",
+      "actinide": "Actinide",
+      "unknownProbablyTransitionMetal": "Unknown, probably a transition metal",
+      "unknownProbablyPostTransitionMetal": "Unknown, probably a post-transition metal",
+      "unknownProbablyMetalloid": "Unknown, probably a metalloid",
+      "unknownPredictedToBeNobleGas": "Unknown, predicted to be a noble gas",
+      "unknownButPredictedToBeAnAlkaliMetal": "Unknown, predicted to be an alkali metal"
+    },
+    "phases": {
+      "gas": "Gas",
+      "solid": "Solid",
+      "liquid": "Liquid"
+    },
+    "backToTable": "Periodic table",
+    "appearance": "Appearance",
+    "period": "Period",
+    "molarHeat": "Molar heat",
+    "shells": "Shells",
+    "electronConfigurationSemantic": "Condensed configuration",
+    "electronAffinity": "Electron affinity",
+    "electronegativity": "Electronegativity (Pauling)",
+    "color": "Colour",
+    "ionizationEnergy": "IE{index}",
+    "electronShellDiagram": "Electron shell diagram for {name}",
+    "electronCount": "{count}e",
+    "sections": {
+      "physical": "Physical properties",
+      "chemical": "Chemical properties",
+      "discovery": "Discovery",
+      "ionization": "Ionization energies"
+    },
+    "wikipedia": "Wikipedia",
+    "metaTitle": "{name} ({symbol}) — {appName}",
+    "metaDescription": "{name} ({symbol}), atomic number {number}: properties, electron configuration and discovery of this {category}.",
+    "units": {
+      "atomicMass": "{value} u",
+      "density": "{value} g/cm³",
+      "kelvin": "{value} K",
+      "molarHeat": "{value} J/(mol·K)",
+      "kilojoulesPerMole": "{value} kJ/mol"
+    }
+  },
+  "a11y": {
+    "skipToContent": "Skip to content",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  },
+  "errors": {
+    "notFound": "Page not found",
+    "notFoundBody": "The page you are looking for does not exist.",
+    "goHome": "Go to the home page",
+    "generic": "Something went wrong"
+  },
+  "translation": {
+    "notAvailableTitle": "Not yet available in Arabic",
+    "notAvailableBody": "This content has not been translated yet, so it is shown in English."
+  },
+  "home": {
+    "heroDescription": "Explore chemistry in a simple, interactive way. Learn about atoms, molecules, elements, and reactions — all in one kid-friendly app.",
+    "rotate": {
+      "title": "Rotate for the best experience",
+      "body": "The periodic table has 18 columns. Landscape mode gives you a much better view — try rotating your device.",
+      "dismiss": "Got it, continue anyway"
+    }
+  },
+  "periodicTable": {
+    "title": "Periodic Table",
+    "hint": "Click any element to view full details",
+    "gridLabel": "Periodic table of the elements",
+    "lanthanides": "Lanthanides",
+    "actinides": "Actinides",
+    "legendLabel": "Element categories"
+  },
+  "article": {
+    "onThisPage": "On this page",
+    "figures": "Figures",
+    "videos": "Videos",
+    "furtherReading": "Further Reading",
+    "video": "Video",
+    "callout": {
+      "note": "Note",
+      "tip": "Tip",
+      "warning": "Warning",
+      "important": "Important"
+    }
+  },
+  "contentTab": {
+    "viewContent": "View content",
+    "openInCurrentTab": "Open in current tab",
+    "openInNewTab": "Open in new tab"
+  }
+}

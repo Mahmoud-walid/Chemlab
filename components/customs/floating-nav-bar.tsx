@@ -1,7 +1,7 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import {
   BookOpen,
@@ -16,23 +16,32 @@ import {
 //  NAV CONFIG  ← only touch this to add pages
 // ─────────────────────────────────────────────
 interface NavItem {
-  label: string;
+  /** Key into the `nav` message namespace, not a display string. */
+  labelKey: "home" | "lessons" | "quiz" | "experiments" | "games";
   href: string;
   icon: LucideIcon;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Home", href: "/", icon: HomeIcon },
-  { label: "Lessons", href: "/lessons", icon: BookOpen },
-  { label: "Quiz", href: "/quiz", icon: BrainCircuit },
-  { label: "Experiments", href: "/experiments", icon: FlaskConical },
-  { label: "Games", href: "/games", icon: Gamepad2 },
+  { labelKey: "home", href: "/", icon: HomeIcon },
+  { labelKey: "lessons", href: "/lessons", icon: BookOpen },
+  { labelKey: "quiz", href: "/quiz", icon: BrainCircuit },
+  { labelKey: "experiments", href: "/experiments", icon: FlaskConical },
+  { labelKey: "games", href: "/games", icon: Gamepad2 },
 ];
 
 // ─────────────────────────────────────────────
 //  SINGLE NAV ITEM
 // ─────────────────────────────────────────────
-function NavLink({ item, isActive }: { item: NavItem; isActive: boolean }) {
+function NavLink({
+  item,
+  isActive,
+  label,
+}: {
+  item: NavItem;
+  isActive: boolean;
+  label: string;
+}) {
   const Icon = item.icon;
 
   return (
@@ -78,7 +87,7 @@ function NavLink({ item, isActive }: { item: NavItem; isActive: boolean }) {
             : "text-muted-foreground opacity-70 translate-y-0.5 group-hover:opacity-100",
         )}
       >
-        {item.label}
+        {label}
       </span>
     </Link>
   );
@@ -89,12 +98,13 @@ function NavLink({ item, isActive }: { item: NavItem; isActive: boolean }) {
 // ─────────────────────────────────────────────
 export function FloatingNavBar() {
   const pathname = usePathname();
+  const t = useTranslations("nav");
 
   return (
     /* Outer positioner */
-    <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none px-4 pb-4 sm:pb-6">
+    <div className="fixed bottom-0 start-0 end-0 z-50 flex justify-center pointer-events-none px-4 pb-4 sm:pb-6">
       <nav
-        aria-label="Main navigation"
+        aria-label={t("label")}
         className={cn(
           "pointer-events-auto",
           "w-full max-w-sm sm:max-w-md",
@@ -107,6 +117,7 @@ export function FloatingNavBar() {
           <NavLink
             key={item.href}
             item={item}
+            label={t(item.labelKey)}
             isActive={
               pathname === item.href || pathname.startsWith(item.href + "/")
             }
