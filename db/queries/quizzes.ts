@@ -3,7 +3,8 @@ import { and, asc, eq, isNull } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { quizQuestions, quizTranslations, quizzes } from "@/db/schema/content";
-import { preferred } from "./_locale";
+import { chooseTranslation, pick, usesTranslation } from "./_locale";
+import { translationState } from "./translations";
 
 export interface QuizSummary {
   slug: string;
@@ -35,6 +36,7 @@ export async function listQuizzes(locale: string): Promise<QuizSummary[]> {
       category: quizzes.category,
       translatedTitle: quizTranslations.title,
       translatedDescription: quizTranslations.description,
+      ...translationState(quizTranslations, quizzes),
       questionCount: db.$count(
         quizQuestions,
         eq(quizQuestions.quizId, quizzes.id),
@@ -56,15 +58,38 @@ export async function listQuizzes(locale: string): Promise<QuizSummary[]> {
     // between requests rather than following Postgres' physical row order.
     .orderBy(asc(quizzes.position), asc(quizzes.slug));
 
-  return rows.map((row) => ({
-    slug: row.slug,
-    title: preferred(row.translatedTitle, row.title),
-    description: preferred(row.translatedDescription, row.description),
-    difficulty: row.difficulty,
-    category: row.category,
-    questionCount: Number(row.questionCount),
-    isTranslated: row.translatedTitle !== null,
-  }));
+  return rows.map((row) => {
+    // `assessed`, not `prose`, for everything a quiz shows. A quiz page has
+    // nowhere to put a "may be out of date" notice, and a stale question is a
+    // wrong question rather than a slightly old one — so quiz copy falls back
+    // to the default locale instead of being served with a caveat.
+    const state = {
+      status: row.translationStatus,
+      stale: row.translationStale,
+    };
+    // Computed once, so the flag the UI reads and the copy it renders can
+    // never disagree about which locale the reader is looking at.
+    const translated = usesTranslation(
+      chooseTranslation(
+        { present: row.translatedTitle !== null, ...state },
+        "assessed",
+      ),
+    );
+    return {
+      slug: row.slug,
+      title: pick(row.title, row.translatedTitle, state, "assessed"),
+      description: pick(
+        row.description,
+        row.translatedDescription,
+        state,
+        "assessed",
+      ),
+      difficulty: row.difficulty,
+      category: row.category,
+      questionCount: Number(row.questionCount),
+      isTranslated: translated,
+    };
+  });
 }
 
 /**

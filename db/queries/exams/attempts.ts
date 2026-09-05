@@ -12,7 +12,8 @@ import {
   quizTranslations,
   quizzes,
 } from "@/db/schema/content";
-import { preferred } from "../_locale";
+import { pick } from "../_locale";
+import { translationState } from "../translations";
 import { newSeed, optionSeed, shuffleWithSeed } from "@/lib/exams/shuffle";
 import {
   percentage,
@@ -102,6 +103,7 @@ export async function getPaper(
       quizSlug: quizzes.slug,
       quizTitle: quizzes.title,
       translatedTitle: quizTranslations.title,
+      ...translationState(quizTranslations, quizzes),
       shuffleQuestions: quizzes.shuffleQuestions,
       shuffleOptions: quizzes.shuffleOptions,
     })
@@ -127,6 +129,7 @@ export async function getPaper(
       type: quizQuestions.type,
       prompt: quizQuestions.prompt,
       translatedPrompt: quizQuestionTranslations.prompt,
+      ...translationState(quizQuestionTranslations, quizQuestions),
       points: quizQuestions.points,
       // NOT `explanation`. NOT `correctOptionId`. The translation join takes
       // only `prompt` for the same reason — `quizQuestionTranslations` also
@@ -186,7 +189,18 @@ export async function getPaper(
       id: question.id,
       position: index,
       type: question.type,
-      prompt: preferred(question.translatedPrompt, question.prompt),
+      prompt: pick(
+        question.prompt,
+        question.translatedPrompt,
+        {
+          status: question.translationStatus,
+          stale: question.translationStale,
+        },
+        // `assessed`: a prompt the source has moved on from may no longer
+        // match the options it is scored against, and a paper has nowhere
+        // to put a caveat. English is the honest answer.
+        "assessed",
+      ),
       points: question.points,
       options: (attempt.shuffleOptions
         ? // Seeded from the question's position in THIS paper, so two
@@ -202,7 +216,15 @@ export async function getPaper(
   return {
     attemptId: attempt.id,
     quizSlug: attempt.quizSlug,
-    quizTitle: preferred(attempt.translatedTitle, attempt.quizTitle),
+    quizTitle: pick(
+      attempt.quizTitle,
+      attempt.translatedTitle,
+      {
+        status: attempt.translationStatus,
+        stale: attempt.translationStale,
+      },
+      "assessed",
+    ),
     attemptNumber: attempt.attemptNumber,
     status: attempt.status,
     startedAt: attempt.startedAt,
@@ -768,6 +790,7 @@ export async function getReview(
       quizSlug: quizzes.slug,
       quizTitle: quizzes.title,
       translatedTitle: quizTranslations.title,
+      ...translationState(quizTranslations, quizzes),
       shuffleQuestions: quizzes.shuffleQuestions,
       shuffleOptions: quizzes.shuffleOptions,
       reviewPolicy: quizzes.reviewPolicy,
@@ -817,6 +840,7 @@ export async function getReview(
       position: quizQuestions.position,
       prompt: quizQuestions.prompt,
       translatedPrompt: quizQuestionTranslations.prompt,
+      ...translationState(quizQuestionTranslations, quizQuestions),
       explanation: quizQuestions.explanation,
       translatedExplanation: quizQuestionTranslations.explanation,
       points: quizQuestions.points,
@@ -878,10 +902,26 @@ export async function getReview(
     return {
       id: question.id,
       position: index,
-      prompt: preferred(question.translatedPrompt, question.prompt),
-      explanation: preferred(
-        question.translatedExplanation,
+      prompt: pick(
+        question.prompt,
+        question.translatedPrompt,
+        {
+          status: question.translationStatus,
+          stale: question.translationStale,
+        },
+        // `assessed`: a prompt the source has moved on from may no longer
+        // match the options it is scored against, and a paper has nowhere
+        // to put a caveat. English is the honest answer.
+        "assessed",
+      ),
+      explanation: pick(
         question.explanation,
+        question.translatedExplanation,
+        {
+          status: question.translationStatus,
+          stale: question.translationStale,
+        },
+        "assessed",
       ),
       points: question.points,
       pointsAwarded: answer?.pointsAwarded ?? 0,
@@ -907,7 +947,15 @@ export async function getReview(
     review: {
       attemptId: attempt.id,
       quizSlug: attempt.quizSlug,
-      quizTitle: preferred(attempt.translatedTitle, attempt.quizTitle),
+      quizTitle: pick(
+        attempt.quizTitle,
+        attempt.translatedTitle,
+        {
+          status: attempt.translationStatus,
+          stale: attempt.translationStale,
+        },
+        "assessed",
+      ),
       attemptNumber: attempt.attemptNumber,
       status: attempt.status,
       score: attempt.score ?? 0,
@@ -957,6 +1005,7 @@ export async function getQuizIntro(
       title: quizzes.title,
       description: quizzes.description,
       translatedTitle: quizTranslations.title,
+      ...translationState(quizTranslations, quizzes),
       translatedDescription: quizTranslations.description,
       difficulty: quizzes.difficulty,
       category: quizzes.category,
@@ -990,8 +1039,18 @@ export async function getQuizIntro(
 
   return {
     slug: quiz.slug,
-    title: preferred(quiz.translatedTitle, quiz.title),
-    description: preferred(quiz.translatedDescription, quiz.description),
+    title: pick(
+      quiz.title,
+      quiz.translatedTitle,
+      { status: quiz.translationStatus, stale: quiz.translationStale },
+      "assessed",
+    ),
+    description: pick(
+      quiz.description,
+      quiz.translatedDescription,
+      { status: quiz.translationStatus, stale: quiz.translationStale },
+      "assessed",
+    ),
     difficulty: quiz.difficulty,
     category: quiz.category,
     questionCount: quiz.questionCount,
@@ -1019,6 +1078,7 @@ export async function listAllAttempts(userId: string, locale: string) {
       quizSlug: quizzes.slug,
       quizTitle: quizzes.title,
       translatedTitle: quizTranslations.title,
+      ...translationState(quizTranslations, quizzes),
       reviewPolicy: quizzes.reviewPolicy,
     })
     .from(examAttempts)
@@ -1035,7 +1095,12 @@ export async function listAllAttempts(userId: string, locale: string) {
 
   return rows.map((row) => ({
     ...row,
-    quizTitle: preferred(row.translatedTitle, row.quizTitle),
+    quizTitle: pick(
+      row.quizTitle,
+      row.translatedTitle,
+      { status: row.translationStatus, stale: row.translationStale },
+      "assessed",
+    ),
     percent: percentage(row.score ?? 0, row.maxScore ?? 0),
   }));
 }

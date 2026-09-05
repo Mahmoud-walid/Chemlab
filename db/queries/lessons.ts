@@ -14,7 +14,13 @@ import {
   parseBlocks,
   type LessonBlock,
 } from "@/lib/lessons/blocks";
-import { preferred } from "./_locale";
+import {
+  chooseTranslation,
+  preferred,
+  showsStaleNotice,
+  usesTranslation,
+} from "./_locale";
+import { translationState } from "./translations";
 
 export interface LessonSummary {
   slug: string;
@@ -24,6 +30,12 @@ export interface LessonSummary {
   category: string;
   /** False when this locale has no translation row and the default copy is shown. */
   isTranslated: boolean;
+  /**
+   * True when the reader is being shown a translation the source has moved on
+   * from. Never true when `isTranslated` is false — a fallback cannot be out
+   * of date, it is the source.
+   */
+  translationOutOfDate: boolean;
 }
 
 export interface LessonSectionView {
@@ -77,6 +89,7 @@ export async function listLessons(locale: string): Promise<LessonSummary[]> {
       description: lessons.description,
       difficulty: lessons.difficulty,
       category: lessons.category,
+      ...translationState(lessonTranslations, lessons),
       translatedTitle: lessonTranslations.title,
       translatedDescription: lessonTranslations.description,
     })
@@ -97,14 +110,29 @@ export async function listLessons(locale: string): Promise<LessonSummary[]> {
     // Postgres' physical row order.
     .orderBy(asc(lessons.position), asc(lessons.slug));
 
-  return rows.map((row) => ({
-    slug: row.slug,
-    title: preferred(row.translatedTitle, row.title),
-    description: preferred(row.translatedDescription, row.description),
-    difficulty: row.difficulty,
-    category: row.category,
-    isTranslated: row.translatedTitle !== null,
-  }));
+  return rows.map((row) => {
+    const choice = chooseTranslation(
+      {
+        present: row.translatedTitle !== null,
+        status: row.translationStatus,
+        stale: row.translationStale,
+      },
+      "prose",
+    );
+    const translated = usesTranslation(choice);
+
+    return {
+      slug: row.slug,
+      title: translated ? preferred(row.translatedTitle, row.title) : row.title,
+      description: translated
+        ? preferred(row.translatedDescription, row.description)
+        : row.description,
+      difficulty: row.difficulty,
+      category: row.category,
+      isTranslated: translated,
+      translationOutOfDate: showsStaleNotice(choice),
+    };
+  });
 }
 
 /** One lesson with its ordered sections, or null when the slug matches nothing. */
@@ -125,8 +153,10 @@ export async function getLessonBySlug(
       references: lessons.references,
       readingTimeSeconds: lessons.readingTimeSeconds,
       position: lessons.position,
+      ...translationState(lessonTranslations, lessons),
       translatedTitle: lessonTranslations.title,
       translatedDescription: lessonTranslations.description,
+      ...translationState(lessonTranslations, lessons),
     })
     .from(lessons)
     .leftJoin(
@@ -155,6 +185,7 @@ export async function getLessonBySlug(
       body: lessonSections.body,
       translatedHeading: lessonSectionTranslations.heading,
       translatedBody: lessonSectionTranslations.body,
+      ...translationState(lessonSectionTranslations, lessonSections),
     })
     .from(lessonSections)
     .leftJoin(
@@ -167,20 +198,59 @@ export async function getLessonBySlug(
     .where(eq(lessonSections.lessonId, lesson.id))
     .orderBy(asc(lessonSections.position));
 
+  const lessonChoice = chooseTranslation(
+    {
+      present: lesson.translatedTitle !== null,
+      status: lesson.translationStatus,
+      stale: lesson.translationStale,
+    },
+    "prose",
+  );
+  const lessonTranslated = usesTranslation(lessonChoice);
+
+  // Each section decides for itself. A lesson whose summary is current can
+  // easily have one section rewritten in English and not yet in Arabic, and
+  // marking the whole article out of date for that would be as unhelpful as
+  // saying nothing.
+  const sectionChoices = sections.map((section) =>
+    chooseTranslation(
+      {
+        present: section.translatedHeading !== null,
+        status: section.translationStatus,
+        stale: section.translationStale,
+      },
+      "prose",
+    ),
+  );
+
   return {
     id: lesson.id,
     slug: lesson.slug,
-    title: preferred(lesson.translatedTitle, lesson.title),
-    description: preferred(lesson.translatedDescription, lesson.description),
+    title: lessonTranslated
+      ? preferred(lesson.translatedTitle, lesson.title)
+      : lesson.title,
+    description: lessonTranslated
+      ? preferred(lesson.translatedDescription, lesson.description)
+      : lesson.description,
     difficulty: lesson.difficulty,
     category: lesson.category,
     references: lesson.references,
     readingTimeSeconds: lesson.readingTimeSeconds,
     position: lesson.position,
-    isTranslated: lesson.translatedTitle !== null,
-    sections: sections.map((section) => {
-      const body = preferred(section.translatedBody, section.body);
-      const heading = preferred(section.translatedHeading, section.heading);
+    isTranslated: lessonTranslated,
+    // The notice is about the ARTICLE, so any out-of-date part earns it: a
+    // reader told "the summary is current" while section four is a year old
+    // has been told the wrong thing.
+    translationOutOfDate:
+      showsStaleNotice(lessonChoice) || sectionChoices.some(showsStaleNotice),
+    sections: sections.map((section, index) => {
+      const useTranslation = usesTranslation(sectionChoices[index]!);
+      const body = useTranslation
+        ? preferred(section.translatedBody, section.body)
+        : section.body;
+      const heading = useTranslation
+        ? preferred(section.translatedHeading, section.heading)
+        : section.heading;
       return {
         id: section.id,
         // Anchored on POSITION, not on the heading text: the anchor has to be
@@ -240,7 +310,9 @@ export async function relatedLessons(
       title: lessons.title,
       category: lessons.category,
       difficulty: lessons.difficulty,
+      ...translationState(lessonTranslations, lessons),
       translatedTitle: lessonTranslations.title,
+      ...translationState(lessonTranslations, lessons),
       score: sql<number>`
         (case when ${lessons.category} = ${current.category} then 2 else 0 end)
         + (case when ${lessons.difficulty} = ${current.difficulty} then 1 else 0 end)
@@ -271,7 +343,18 @@ export async function relatedLessons(
 
   return rows.map((row) => ({
     slug: row.slug,
-    title: preferred(row.translatedTitle, row.title),
+    title: usesTranslation(
+      chooseTranslation(
+        {
+          present: row.translatedTitle !== null,
+          status: row.translationStatus,
+          stale: row.translationStale,
+        },
+        "prose",
+      ),
+    )
+      ? preferred(row.translatedTitle, row.title)
+      : row.title,
     category: row.category,
     difficulty: row.difficulty,
   }));

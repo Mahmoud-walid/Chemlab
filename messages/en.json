@@ -240,7 +240,9 @@
   },
   "translation": {
     "notAvailableTitle": "Not yet available in Arabic",
-    "notAvailableBody": "This content has not been translated yet, so it is shown in English."
+    "notAvailableBody": "This content has not been translated yet, so it is shown in English.",
+    "outOfDateTitle": "This translation may be out of date",
+    "outOfDateBody": "The English version of this lesson has changed since it was translated. Some of what you are reading may be behind."
   },
   "home": {
     "heroDescription": "Explore chemistry in a simple, interactive way. Learn about atoms, molecules, elements, and reactions — all in one kid-friendly app.",

@@ -5,6 +5,8 @@ import { uuidv7 } from "uuidv7";
 import { connect, seedUrl, type SeedDatabase } from "@/db/seed/connect";
 import * as schema from "@/db/schema";
 import { isStale } from "@/db/queries/translations";
+import { getLessonBySlug, listLessons } from "@/db/queries/lessons";
+import { listQuizzes } from "@/db/queries/quizzes";
 import { allPermissionNames } from "@/db/seed/rbac";
 
 /**
@@ -286,5 +288,188 @@ describe("permissions", () => {
       "translation:read",
       "translation:write",
     ]);
+  });
+});
+
+/**
+ * What a reader actually gets — the half of #62 that is a decision about
+ * people rather than about data.
+ *
+ * These go through the real public queries rather than asserting on the
+ * columns, because the bug worth catching is a query that selects the
+ * staleness comparison and then forgets to act on it. The columns would look
+ * perfect.
+ */
+describe("what the reader is served", () => {
+  let readableSlug: string;
+  let readableId: string;
+
+  beforeAll(async () => {
+    readableId = uuidv7();
+    readableSlug = `reader-${readableId}`;
+    await db.insert(schema.lessons).values({
+      id: readableId,
+      slug: readableSlug,
+      title: "Bonding",
+      description: "How atoms hold on.",
+      difficulty: "easy",
+      category: "Testing",
+      // Published, or the public query will not return it at all and every
+      // assertion below would pass for the wrong reason.
+      status: "published",
+    });
+    await db.insert(schema.lessonSections).values({
+      id: uuidv7(),
+      lessonId: readableId,
+      position: 1,
+      heading: "Ionic bonds",
+      body: [
+        { id: "s1", type: "paragraph", text: [{ text: "Give and take." }] },
+      ],
+    });
+  });
+
+  afterAll(async () => {
+    await db.delete(schema.lessons).where(eq(schema.lessons.id, readableId));
+  });
+
+  async function translate(status: "draft" | "in_review" | "published") {
+    await db
+      .insert(schema.lessonTranslations)
+      .values({
+        lessonId: readableId,
+        locale: "ar",
+        title: "الروابط",
+        description: "كيف تتماسك الذرات.",
+        status,
+        sourceHash: sql`(select source_hash from lessons where id = ${readableId})`,
+      })
+      .onConflictDoUpdate({
+        target: [
+          schema.lessonTranslations.lessonId,
+          schema.lessonTranslations.locale,
+        ],
+        set: {
+          status,
+          sourceHash: sql`(select source_hash from lessons where id = ${readableId})`,
+        },
+      });
+  }
+
+  it("does not serve a draft translation", async () => {
+    await translate("draft");
+    const lesson = await getLessonBySlug(readableSlug, "ar");
+
+    // The workflow columns are decorative if a reader sees the draft anyway.
+    expect(lesson?.title).toBe("Bonding");
+    expect(lesson?.isTranslated).toBe(false);
+    expect(lesson?.translationOutOfDate).toBe(false);
+  });
+
+  it("does not serve one that is still in review", async () => {
+    await translate("in_review");
+    expect((await getLessonBySlug(readableSlug, "ar"))?.title).toBe("Bonding");
+  });
+
+  it("serves a published, current translation with no notice", async () => {
+    await translate("published");
+    const lesson = await getLessonBySlug(readableSlug, "ar");
+
+    expect(lesson?.title).toBe("الروابط");
+    expect(lesson?.isTranslated).toBe(true);
+    expect(lesson?.translationOutOfDate).toBe(false);
+  });
+
+  it("keeps serving it once the English moves on, and says so", async () => {
+    await db
+      .update(schema.lessons)
+      .set({ description: "How atoms hold on, revised." })
+      .where(eq(schema.lessons.id, readableId));
+
+    const lesson = await getLessonBySlug(readableSlug, "ar");
+
+    // Still Arabic: yanking a reader back to English mid-article is worse
+    // than telling them the translation may be behind.
+    expect(lesson?.title).toBe("الروابط");
+    expect(lesson?.isTranslated).toBe(true);
+    expect(lesson?.translationOutOfDate).toBe(true);
+  });
+
+  it("applies the same rule to the catalogue", async () => {
+    const summary = (await listLessons("ar")).find(
+      (row) => row.slug === readableSlug,
+    );
+
+    expect(summary?.title).toBe("الروابط");
+    expect(summary?.translationOutOfDate).toBe(true);
+  });
+
+  it("never marks the default locale out of date", async () => {
+    // The `en` mirror row moves with the source, so English readers must
+    // never see the notice — it would appear on every lesson, forever.
+    const lesson = await getLessonBySlug(readableSlug, "en");
+    expect(lesson?.translationOutOfDate).toBe(false);
+    expect(lesson?.title).toBe("Bonding");
+  });
+});
+
+/**
+ * The other half of the §4 decision, and the reason it is two policies rather
+ * than one: the same staleness that earns a lesson a notice takes a quiz back
+ * to English.
+ */
+describe("assessed content is treated differently", () => {
+  let quizId: string;
+  let quizSlug: string;
+
+  beforeAll(async () => {
+    quizId = uuidv7();
+    quizSlug = `reader-quiz-${quizId}`;
+    await db.insert(schema.quizzes).values({
+      id: quizId,
+      slug: quizSlug,
+      title: "Bonding quiz",
+      description: "Six questions.",
+      difficulty: "easy",
+      category: "Testing",
+      status: "published",
+    });
+    await db.insert(schema.quizTranslations).values({
+      quizId,
+      locale: "ar",
+      title: "اختبار الروابط",
+      description: "ستة أسئلة.",
+      status: "published",
+      sourceHash: sql`(select source_hash from quizzes where id = ${quizId})`,
+    });
+  });
+
+  afterAll(async () => {
+    await db.delete(schema.quizzes).where(eq(schema.quizzes.id, quizId));
+  });
+
+  const arabicRow = async () =>
+    (await listQuizzes("ar")).find((row) => row.slug === quizSlug);
+
+  it("serves a current translation, same as a lesson", async () => {
+    const row = await arabicRow();
+    expect(row?.title).toBe("اختبار الروابط");
+    expect(row?.isTranslated).toBe(true);
+  });
+
+  it("falls back to English once the source moves on", async () => {
+    await db
+      .update(schema.quizzes)
+      .set({ description: "Six questions, revised." })
+      .where(eq(schema.quizzes.id, quizId));
+
+    const row = await arabicRow();
+
+    // No notice, no stale Arabic: a quiz page has nowhere to put a caveat,
+    // and a stale question may no longer match the options it is scored
+    // against. This is the same database state that leaves a LESSON in Arabic
+    // with a notice — the policy is what differs, not the data.
+    expect(row?.title).toBe("Bonding quiz");
+    expect(row?.isTranslated).toBe(false);
   });
 });

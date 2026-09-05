@@ -45,3 +45,20 @@ export function isStale(
 ): SQL<boolean> {
   return sql<boolean>`${translationHash} is distinct from ${sourceHash}`;
 }
+
+/**
+ * The two columns every reader query needs alongside the translated text.
+ *
+ * Spread into a `.select()` so the status check and the staleness comparison
+ * travel together with the join that produced them. Selecting one and
+ * forgetting the other is how a draft translation reaches a reader.
+ */
+export function translationState(
+  translation: { status: PgColumn; sourceHash: PgColumn },
+  source: { sourceHash: PgColumn },
+) {
+  return {
+    translationStatus: translation.status,
+    translationStale: isStale(translation.sourceHash, source.sourceHash),
+  };
+}
