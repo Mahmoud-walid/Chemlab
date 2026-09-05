@@ -347,8 +347,32 @@
     "dashboard": {
       "title": "Dashboard",
       "subtitle": "Everything you can manage, in one place.",
-      "comingSoon": "Arrives with its own issue.",
-      "noSections": "Your role does not open any admin sections yet."
+      "noSections": "Your role does not open any admin sections yet.",
+      "charts": {
+        "signups": "New accounts",
+        "signupsLabel": "Sign-ups",
+        "active": "Sign-ins",
+        "activeLabel": "Sign-ins",
+        "activeNote": "Sign-ins per day, not distinct people: the daily rollup is grouped by verb and object, so somebody who did two things is counted twice here. Distinct people are counted in the funnel below.",
+        "quizzes": "Quiz sittings",
+        "attempts": "Sittings",
+        "passRate": "pass rate",
+        "topLessons": "Most-viewed lessons",
+        "numbers": "Read the numbers instead"
+      },
+      "funnel": {
+        "heading": "Engagement funnel",
+        "caveat": "The funnel starts at REGISTERED, not at visitors. Anonymous page views are not recorded, so a visitor stage would be an invented denominator. Each stage counts distinct people over the last 30 days.",
+        "ofPrevious": "of the stage before",
+        "stages": {
+          "registered": "Registered",
+          "lessonRead": "Read a lesson",
+          "examStarted": "Started a quiz",
+          "examSubmitted": "Finished a quiz",
+          "passed": "Passed a quiz"
+        },
+        "notRecorded": "not recorded yet"
+      }
     },
     "error": {
       "title": "Something went wrong",
