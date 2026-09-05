@@ -297,16 +297,34 @@ test("switches to a windowed list once enough is loaded, showing the same commen
     ).toBeVisible({ timeout: 15_000 });
   }
 
-  // Two more pages take it past the threshold. Beyond this point, asserting a
+  // More pages take it past the threshold. Beyond this point, asserting a
   // specific row's visibility would be asserting the PLAIN branch's invariant
   // on the windowed one — off-screen rows are deliberately not in the DOM,
   // which is the entire point of windowing.
-  for (let i = 0; i < 2; i++) {
+  //
+  // Each click waits for the page to ARRIVE rather than for a fixed 500ms.
+  // The sleep was a flake: under the load of the full suite a page can take
+  // longer than it, the threshold is never crossed, and the container
+  // assertion below then fails for a reason that has nothing to do with
+  // windowing. What "arrived" means differs either side of the threshold —
+  // more rows on the plain branch, a scroll container on the windowed one —
+  // so both count.
+  for (let i = 0; i < 4; i++) {
+    if ((await feed.locator("div.overflow-y-auto").count()) > 0) break;
     // Guarded: the button unmounts when the last page arrives, and clicking a
     // control that is on its way out waits for the full test budget.
     if ((await loadMore.count()) === 0) break;
+
+    const rowsBefore = await feed.locator("article").count();
     await loadMore.click();
-    await page.waitForTimeout(500);
+    await expect
+      .poll(
+        async () =>
+          (await feed.locator("div.overflow-y-auto").count()) > 0 ||
+          (await feed.locator("article").count()) !== rowsBefore,
+        { timeout: 15_000 },
+      )
+      .toBe(true);
   }
 
   // Past the threshold, the windowed branch takes over — and still renders

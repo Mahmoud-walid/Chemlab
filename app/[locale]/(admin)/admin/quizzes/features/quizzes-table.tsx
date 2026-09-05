@@ -62,6 +62,7 @@ export function QuizzesTable({
 }) {
   return (
     <DataTable
+      tableId="quizzes"
       rows={rows}
       page={page}
       pages={pages}
@@ -71,28 +72,33 @@ export function QuizzesTable({
       columns={[
         {
           key: "position",
+          id: "position",
           header: labels.position,
           numeric: true,
           cell: (row) => row.position,
         },
         {
           key: "title",
+          id: "title",
           header: labels.title,
           link: true,
           cell: (row) => row.title,
         },
         {
           key: "category",
+          id: "category",
           header: labels.category,
           cell: (row) => row.category,
         },
         {
           key: "difficulty",
+          id: "difficulty",
           header: labels.difficulty,
           cell: (row) => row.difficulty,
         },
         {
           key: "status",
+          id: "status",
           header: labels.status,
           cell: (row) => (
             <Badge variant={STATUS_VARIANT[row.status]}>
@@ -101,6 +107,7 @@ export function QuizzesTable({
           ),
         },
         {
+          id: "questions",
           header: labels.questions,
           numeric: true,
           // Shown in the list because zero is the one value that stops a quiz
@@ -121,6 +128,7 @@ export function QuizzesTable({
           ? [
               {
                 key: "translation",
+                id: "translation",
                 header: labels.translation,
                 cell: (row: QuizTableRow) =>
                   row.translation ? (
@@ -132,7 +140,11 @@ export function QuizzesTable({
               },
             ]
           : []),
-        { header: labels.updated, cell: (row) => row.updatedLabel },
+        {
+          id: "updated",
+          header: labels.updated,
+          cell: (row) => row.updatedLabel,
+        },
       ]}
     />
   );

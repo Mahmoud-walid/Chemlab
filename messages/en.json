@@ -418,7 +418,10 @@
       "previous": "Previous",
       "next": "Next",
       "pageStatus": "Page {page} of {pages}",
-      "sortBy": "Sort by"
+      "sortBy": "Sort by",
+      "columns": "Columns",
+      "columnsHint": "Hidden columns are remembered on this device only.",
+      "loading": "Loading"
     },
     "elements": {
       "title": "Elements",

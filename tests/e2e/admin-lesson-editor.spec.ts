@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
 import { connect, seedUrl, type SeedDatabase } from "@/db/seed/connect";
 import * as schema from "@/db/schema";
@@ -75,7 +75,12 @@ async function body() {
       body: schema.lessonSections.body,
     })
     .from(schema.lessonSections)
-    .where(eq(schema.lessonSections.lessonId, lesson!.id));
+    .where(eq(schema.lessonSections.lessonId, lesson!.id))
+    // Ordered, or this reads back Postgres' PHYSICAL row order — which
+    // changes the moment a save updates one section and moves its row. The
+    // id test then compares two differently ordered lists and fails, having
+    // asserted the storage layout rather than the ids it means to check.
+    .orderBy(asc(schema.lessonSections.position));
 
   return { lesson: lesson!, sections };
 }
