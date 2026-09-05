@@ -267,3 +267,93 @@ test.describe("the API", () => {
     expect(after!.readAt).toBeNull();
   });
 });
+
+test.describe("preferences", () => {
+  test("a switch is written down, not only flipped on screen", async ({
+    page,
+  }) => {
+    const userId = await signedInMember(page);
+    await db
+      .delete(schema.notificationPreferences)
+      .where(eq(schema.notificationPreferences.userId, userId));
+
+    await page.goto("/profile/settings");
+
+    const label = "Somebody likes a lesson you wrote";
+    const toggle = page.getByRole("switch", { name: label });
+
+    // On by default, and reachable by its label rather than its position: a
+    // switch nobody can name is a switch a screen reader cannot use.
+    await expect(toggle).toBeVisible();
+    await expect(toggle).toBeChecked();
+
+    await toggle.click();
+    await expect(toggle).not.toBeChecked();
+
+    await page.reload();
+    await expect(page.getByRole("switch", { name: label })).not.toBeChecked();
+
+    // And in the row the fan-out actually reads.
+    const [row] = await db
+      .select({ categories: schema.notificationPreferences.categories })
+      .from(schema.notificationPreferences)
+      .where(eq(schema.notificationPreferences.userId, userId));
+    expect(row!.categories).toMatchObject({ "lesson.liked": false });
+  });
+
+  test("sends only the switch that moved", async ({ page }) => {
+    // Two tabs open on this page must not have the later save undo the
+    // earlier one's unrelated switch, so the request carries one key.
+    const userId = await signedInMember(page);
+    await db
+      .delete(schema.notificationPreferences)
+      .where(eq(schema.notificationPreferences.userId, userId));
+
+    await page.goto("/profile/settings");
+
+    const request = page.waitForRequest(
+      (candidate) =>
+        candidate.url().includes("/api/notifications/preferences") &&
+        candidate.method() === "PATCH",
+    );
+    await page
+      .getByRole("switch", { name: "Somebody likes your comment" })
+      .click();
+
+    const body = JSON.parse((await request).postData() ?? "{}") as {
+      categories: Record<string, boolean>;
+    };
+    expect(Object.keys(body.categories)).toEqual(["comment.liked"]);
+  });
+});
+
+test("older notifications load as the list is scrolled", async ({ page }) => {
+  const userId = await signedInMember(page);
+  const slug = await someLessonSlug();
+
+  // One more than the page size, so there IS a second page. Distinct subjects:
+  // the aggregate index folds unread rows sharing one.
+  for (let i = 0; i < 25; i++) {
+    await seedNotification(userId, {
+      type: "lesson.liked",
+      subjectId: `lesson-page-${i}`,
+      data: { lessonSlug: slug },
+    });
+  }
+
+  await page.goto("/notifications");
+
+  const rows = page.getByRole("listitem");
+  await expect(rows).toHaveCount(20);
+
+  // Scrolling to the end is what a reader does; the observer does the rest.
+  await page
+    .getByRole("button", { name: /load older/i })
+    .scrollIntoViewIfNeeded();
+  await expect(rows).toHaveCount(25);
+
+  // And it stops rather than asking for a page that is not there.
+  await expect(page.getByRole("button", { name: /load older/i })).toHaveCount(
+    0,
+  );
+});

@@ -3,6 +3,12 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { requireUser } from "@/lib/session";
 import { env } from "@/lib/env";
 import { PushToggle } from "./features/push-toggle";
+import { NotificationPreferences } from "./features/notification-preferences";
+import {
+  NOTIFICATION_SPECS,
+  NOTIFICATION_TYPES,
+  type NotificationType,
+} from "@/lib/notifications/types";
 import type { Locale } from "@/i18n/routing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -30,6 +36,14 @@ export default async function ProfileSettingsPage({
 
   const user = await requireUser();
   const t = await getTranslations("auth");
+  const tPreferences = await getTranslations("notifications.preferences");
+
+  const defaults = Object.fromEntries(
+    NOTIFICATION_TYPES.map((type) => [
+      type,
+      NOTIFICATION_SPECS[type].defaultOn,
+    ]),
+  ) as Record<NotificationType, boolean>;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-4 py-10">
@@ -74,6 +88,20 @@ export default async function ProfileSettingsPage({
               failed: t("pushFailed"),
             }}
           />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            <h2>{tPreferences("title")}</h2>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* The defaults come from the catalogue rather than the client, so
+              a switch a person has never touched shows what the platform
+              would actually do. */}
+          <NotificationPreferences defaults={defaults} />
         </CardContent>
       </Card>
     </div>

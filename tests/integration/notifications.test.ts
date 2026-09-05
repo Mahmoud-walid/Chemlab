@@ -10,11 +10,13 @@ import {
   markRead,
   preferencesFor,
   recordNotification,
+  savePreferences,
   unreadCount,
 } from "@/db/queries/notifications";
 import { emitNotificationEvent } from "@/lib/notifications/emit";
 import { fanOut } from "@/lib/notifications/fanout";
-import { DEFAULT_PREFERENCES } from "@/lib/notifications/rules";
+import { DEFAULT_PREFERENCES, decidePush } from "@/lib/notifications/rules";
+import { toUpdate } from "@/lib/notifications/preferences-input";
 
 /**
  * Notifications, against real Postgres.
@@ -380,5 +382,79 @@ describe("the inbox", () => {
     ]) {
       expect(serialised, phrase).not.toContain(phrase);
     }
+  });
+});
+
+describe("saving preferences", () => {
+  it("creates the row on first change, rather than needing one", async () => {
+    // Most people have none: preferences are DEFAULTS until somebody changes
+    // something, so a missing row is a normal state and not one the settings
+    // page should have to create first.
+    const before = await preferencesFor(db, LIKER_A);
+    expect(before).toEqual(DEFAULT_PREFERENCES);
+
+    const saved = await savePreferences(
+      db,
+      LIKER_A,
+      toUpdate({ categories: { "comment.liked": false } }, before),
+    );
+
+    expect(saved.categories).toEqual({ "comment.liked": false });
+    // Untouched by a patch that never mentioned them.
+    expect(saved.pushEnabled).toBe(true);
+    expect(saved.timezone).toBe("UTC");
+  });
+
+  it("leaves alone what the patch did not carry", async () => {
+    // The property the whole patch shape exists for: two tabs open on the
+    // settings page, and the later save must not undo the earlier one.
+    const first = await preferencesFor(db, LIKER_B);
+    await savePreferences(
+      db,
+      LIKER_B,
+      toUpdate(
+        { categories: { "comment.liked": false }, timezone: "Africa/Cairo" },
+        first,
+      ),
+    );
+
+    const second = await preferencesFor(db, LIKER_B);
+    const after = await savePreferences(
+      db,
+      LIKER_B,
+      toUpdate({ categories: { "lesson.published": false } }, second),
+    );
+
+    expect(after.categories).toEqual({
+      "comment.liked": false,
+      "lesson.published": false,
+    });
+    expect(after.timezone).toBe("Africa/Cairo");
+  });
+
+  it("stops the push and keeps the record", async () => {
+    // The distinction that runs through the whole feature: muting stops
+    // DELIVERY, never the record. Somebody who muted the category still needs
+    // to be able to find out that it happened.
+    const current = await preferencesFor(db, AUTHOR);
+    const muted = await savePreferences(
+      db,
+      AUTHOR,
+      toUpdate({ categories: { "comment.liked": false } }, current),
+    );
+
+    expect(decidePush("comment.liked", muted, new Date()).send).toBe(false);
+
+    const result = await recordNotification(db, {
+      recipientId: AUTHOR,
+      type: "comment.liked",
+      subjectType: "comment",
+      subjectId: SUBJECT,
+      actorId: LIKER_A,
+      data: {},
+    });
+
+    expect(result.recorded).toBe(true);
+    expect(await unreadCount(db, AUTHOR)).toBeGreaterThan(0);
   });
 });

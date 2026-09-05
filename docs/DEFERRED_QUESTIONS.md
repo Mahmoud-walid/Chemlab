@@ -475,6 +475,36 @@ scored?
 
 ---
 
+### Q37 — should a push subscription survive sign-out, and how long do delivery rows live?
+
+**Raised by:** #17, now closed. Neither answer blocks anything: both have a
+working default, and both are cheap to change later. Recorded because they are
+policy calls rather than technical ones.
+
+**a. Sign-out.** A subscription is stored per (user, endpoint), and the
+endpoint is unique — so re-subscribing the same browser UPDATES the row,
+including its `user_id`. A shared device signed into a second account
+therefore stops pushing the first account's notifications, which is the
+property that matters. What is _not_ done today is deleting the subscription
+at sign-out: a device the person signs back into keeps working without asking
+permission again.
+
+**Recommendation: leave it.** Dropping it at sign-out means every sign-in
+needs a fresh subscribe, and on a browser that has already granted permission
+that is invisible — until it silently fails on the one that has not. The risk
+it would address (a shared computer pushing to somebody who has left) is
+already covered by the `user_id` update on re-subscribe.
+
+**b. Delivery retention.** `push_deliveries` rows are kept 7 days, which is
+what makes "I never got it" answerable — the row says whether it was sent,
+what the push service replied, and how many attempts it took.
+
+**Recommendation: leave it at 7 days** unless you want longer for support. It
+is a queue table, not a history: at any real volume it is the fastest-growing
+table in the database, and nothing reads a fortnight-old delivery.
+
+---
+
 ## Per-issue open questions
 
 Each planning issue carries its own `## Open questions` section for decisions
