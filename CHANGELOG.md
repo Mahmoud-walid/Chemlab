@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.6.0...v0.7.0) (2026-09-05)
+
+
+### Features
+
+* **admin:** lesson metadata and publication lifecycle ([#58](https://github.com/Mahmoud-walid/Chemlab/issues/58)) ([6a8184c](https://github.com/Mahmoud-walid/Chemlab/commit/6a8184ce31525b0f7a554e638b21e2abca7c88c3))
+
 ## [0.6.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.5.0...v0.6.0) (2026-09-05)
 
 
