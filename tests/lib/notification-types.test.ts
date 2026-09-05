@@ -3,7 +3,10 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  NOTIFICATION_SPECS,
   NOTIFICATION_TYPES,
+  aggregatingTypesSql,
+  aggregationPredicate,
   isNotificationType,
   specFor,
 } from "@/lib/notifications/types";
@@ -64,5 +67,26 @@ describe("the aggregation index matches the catalogue", () => {
     // applied to every type the database would REJECT the second rather than
     // collapse it — a constraint error where a notification should have been.
     expect(specFor("comment.replied").aggregates).toBe(false);
+  });
+});
+
+describe("the SQL the index and the upsert share", () => {
+  it("lists exactly the aggregating types, quoted", () => {
+    // The migration writes this predicate by hand; deriving the upsert's copy
+    // from the catalogue means there is only ever one hand-written copy.
+    const sql = aggregatingTypesSql();
+    for (const type of NOTIFICATION_TYPES) {
+      const expected = NOTIFICATION_SPECS[type].aggregates;
+      expect(sql.includes(`'${type}'`), type).toBe(expected);
+    }
+  });
+
+  it("builds the predicate the arbiter index is inferred from", () => {
+    // A near-miss is not a slow path: Postgres cannot infer the index and
+    // answers 42P10 at query time, on the first aggregating event.
+    expect(aggregationPredicate()).toBe(
+      `read_at is null and type in (${aggregatingTypesSql()})`,
+    );
+    expect(aggregationPredicate().startsWith("read_at is null and")).toBe(true);
   });
 });
