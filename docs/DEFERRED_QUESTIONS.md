@@ -505,6 +505,43 @@ table in the database, and nothing reads a fortnight-old delivery.
 
 ---
 
+### Q38 — the four policy calls in #25 (comments)
+
+None of these blocks the schema or the API, so the work proceeds on the
+recommendation below and changing any of them later is a small patch, not a
+rewrite. Say the word on any you disagree with.
+
+**a. Default sort — newest, or top?** _Proceeding with newest._ This is lesson
+Q&A: a question posted an hour ago needs an answer, and `top` buries it under
+last month's best joke. `top` is available as a choice; it is just not the
+default. (`top` is also not stable under concurrent voting, so it is a
+snapshot sort — the sort key is captured at first page load and kept for the
+session's later pages, or a comment could move between pages while you
+scroll.)
+
+**b. Can anonymous visitors read comments?** _Proceeding with yes — read
+public, write signed-in._ The lessons themselves are public, and a discussion
+nobody can read until they have an account is a discussion that never starts.
+Posting, reacting and reporting all require a session.
+
+**c. Do dislike counts stay visible?** _Proceeding with visible, because you
+asked for likes and dislikes explicitly._ Worth knowing what the evidence says
+though: public dislike counts measurably suppress participation, which is why
+YouTube stopped showing them. The alternative — collect them, show the count
+only to the author and to moderators, keep the button's own state for the
+reader — gives the moderation signal without the chilling effect. That is a
+display change and one query, if you want it.
+
+**d. A minimum account age or verified email before a first comment?**
+_Proceeding with neither._ Email verification is not required to sign in
+today, so requiring it to comment would silently block everybody. The spam
+controls are the rate limit (1 per 15s, 10 per hour, burst 3), a minimum body
+length, a duplicate-body check, and link-count heuristics that flag rather
+than block. If spam becomes real, an account-age gate is the cheapest next
+lever.
+
+---
+
 ## Per-issue open questions
 
 Each planning issue carries its own `## Open questions` section for decisions
