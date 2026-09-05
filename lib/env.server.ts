@@ -1,5 +1,9 @@
 import "server-only";
-import { parseServerEnv, type ServerEnv } from "./env.server.schema";
+import {
+  parseServerEnv,
+  serverEnvSchema,
+  type ServerEnv,
+} from "./env.server.schema";
 
 /**
  * Server-only configuration, for application code.
@@ -28,17 +32,34 @@ export {
 
 let cached: ServerEnv | undefined;
 
+/**
+ * Every key the schema declares, read from `process.env`.
+ *
+ * Derived from the schema rather than listed by hand, and that is not a
+ * tidiness preference — the hand-written list silently went stale. The VAPID
+ * variables were added to the schema and never added here, so
+ * `getServerEnv().VAPID_PRIVATE_KEY` was `undefined` in a correctly configured
+ * deployment, `pushConfigured()` answered false, and **no push would ever have
+ * been sent**. Nothing failed: the sender simply declined, which is exactly
+ * how the notification pipeline was proven working end to end while being
+ * unable to send at all.
+ *
+ * A list you must remember to update is a list that will be forgotten. This
+ * cannot be, and `tests/lib/env-server.test.ts` fails if the derivation is
+ * replaced by another one.
+ *
+ * `process.env` is read by literal key rather than spread whole: Next inlines
+ * `process.env.X` at build time only for literal accesses, and a bundler that
+ * cannot see the key cannot keep it.
+ */
+function readEnv(): Record<string, string | undefined> {
+  const keys = Object.keys(serverEnvSchema.shape) as (keyof ServerEnv)[];
+  return Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+}
+
 /** Memoised so repeated calls in one request do not re-validate. */
 export function getServerEnv(): ServerEnv {
-  cached ??= parseServerEnv({
-    DATABASE_URL: process.env.DATABASE_URL,
-    DATABASE_URL_UNPOOLED: process.env.DATABASE_URL_UNPOOLED,
-    BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
-    BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
-    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
-    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
-    SUPER_ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL,
-  });
+  cached ??= parseServerEnv(readEnv());
   return cached;
 }
 

@@ -1,8 +1,14 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   authConfigured,
+  ciNotifyConfigured,
   googleConfigured,
   parseServerEnv,
+  pushConfigured,
+  serverEnvSchema,
+  slackConfigured,
 } from "@/lib/env.server.schema";
 
 const VALID = "postgresql://user:pw@ep-x-pooler.eu-central-1.aws.neon.tech/db";
@@ -151,5 +157,92 @@ describe("authConfigured / googleConfigured", () => {
         /BETTER_AUTH_URL/,
       );
     }
+  });
+});
+
+describe("reading the environment", () => {
+  /**
+   * The regression this exists for.
+   *
+   * `getServerEnv()` used to read a HAND-WRITTEN list of keys. The VAPID
+   * variables were added to the schema and never added to that list, so
+   * `getServerEnv().VAPID_PRIVATE_KEY` was undefined in a correctly configured
+   * deployment and `pushConfigured()` answered false — no push would ever have
+   * been sent, and nothing failed while that was true. The sender simply
+   * declined.
+   *
+   * The source is asserted rather than the behaviour because the behaviour is
+   * `process.env` at module scope in a `server-only` module: the failure mode
+   * is somebody reintroducing the list, and this is what catches that.
+   */
+  it("derives its keys from the schema, not from a list somebody maintains", () => {
+    const source = readFileSync(
+      path.join(process.cwd(), "lib/env.server.ts"),
+      "utf8",
+    );
+
+    expect(source).toContain("Object.keys(serverEnvSchema.shape)");
+    // A literal key list in this file is the bug, whatever it is named.
+    expect(source).not.toMatch(/DATABASE_URL: process\.env\.DATABASE_URL/);
+  });
+
+  it("declares every variable the app actually reads", () => {
+    // Anything missing here is a variable that can be set correctly in a
+    // deployment and still arrive undefined.
+    const keys = Object.keys(serverEnvSchema.shape);
+
+    for (const name of [
+      "DATABASE_URL",
+      "BETTER_AUTH_SECRET",
+      "VAPID_PRIVATE_KEY",
+      "VAPID_SUBJECT",
+      "CI_NOTIFY_SECRET",
+      "SLACK_WEBHOOK_URL",
+    ]) {
+      expect(keys, name).toContain(name);
+    }
+  });
+});
+
+describe("the CI alert configuration", () => {
+  it("is unconfigured without a secret, so the endpoint trusts nobody", () => {
+    // No secret means no caller can be authenticated. Refusing everything is
+    // the safe default; accepting everything is the one that ends in a
+    // stranger buzzing somebody's phone.
+    expect(ciNotifyConfigured({})).toBe(false);
+    expect(ciNotifyConfigured({ CI_NOTIFY_SECRET: "x".repeat(32) })).toBe(true);
+  });
+
+  it("refuses a secret too short to be an HMAC key worth having", () => {
+    // Loudly, not by dropping it: an HMAC is only as strong as its key, and
+    // silently ignoring a short one would leave the endpoint refusing every
+    // real request while the operator believes it is configured.
+    expect(() => parseServerEnv({ CI_NOTIFY_SECRET: "short" })).toThrow(
+      /CI_NOTIFY_SECRET/,
+    );
+  });
+
+  it("refuses a webhook URL that is not Slack's", () => {
+    // The URL is the credential, and one pointing elsewhere is either a
+    // mistake or an exfiltration route for every CI alert.
+    expect(() =>
+      parseServerEnv({ SLACK_WEBHOOK_URL: "https://example.test/hook" }),
+    ).toThrow();
+    expect(
+      slackConfigured({
+        SLACK_WEBHOOK_URL: "https://hooks.slack.com/services/T/B/x",
+      }),
+    ).toBe(true);
+    expect(slackConfigured({})).toBe(false);
+  });
+
+  it("treats half a push configuration as none", () => {
+    expect(pushConfigured({ VAPID_PRIVATE_KEY: "k" }, undefined)).toBe(false);
+    expect(
+      pushConfigured(
+        { VAPID_PRIVATE_KEY: "k", VAPID_SUBJECT: "mailto:a@b.test" },
+        "public",
+      ),
+    ).toBe(true);
   });
 });
