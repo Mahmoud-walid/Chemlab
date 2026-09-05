@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.10.0...v0.11.0) (2026-09-05)
+
+
+### Features
+
+* **lessons:** typed content blocks and a database-driven lesson page ([#78](https://github.com/Mahmoud-walid/Chemlab/issues/78)) ([604b8b4](https://github.com/Mahmoud-walid/Chemlab/commit/604b8b4b293ff42047b5e74b7e92a4a191b865ae))
+
 ## [0.10.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.9.0...v0.10.0) (2026-09-05)
 
 
