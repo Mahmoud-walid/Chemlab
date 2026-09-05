@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.18.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.17.0...v0.18.0) (2026-09-05)
+
+
+### Features
+
+* **comments:** conditional windowing and the moderation queue ([#98](https://github.com/Mahmoud-walid/Chemlab/issues/98)) ([67bd727](https://github.com/Mahmoud-walid/Chemlab/commit/67bd72743dba9c900b3765f9ded8667808956555))
+* **db:** bound admin analytics to their own client, pool and timeout ([#101](https://github.com/Mahmoud-walid/Chemlab/issues/101)) ([01472f6](https://github.com/Mahmoud-walid/Chemlab/commit/01472f6a5e9255691f5f64c292ca3ad63230240b))
+* **presence:** a polled heartbeat, derived state, and a switch to turn it off ([#100](https://github.com/Mahmoud-walid/Chemlab/issues/100)) ([45b326e](https://github.com/Mahmoud-walid/Chemlab/commit/45b326e83c6716d64e3fb773228eadcfe935ca6d))
+
 ## [0.17.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.16.0...v0.17.0) (2026-09-05)
 
 
