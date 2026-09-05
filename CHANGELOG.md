@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.12.0...v0.13.0) (2026-09-05)
+
+
+### Features
+
+* **lessons:** the TipTap editor, autosave and a preview that cannot lie ([#82](https://github.com/Mahmoud-walid/Chemlab/issues/82)) ([041bb20](https://github.com/Mahmoud-walid/Chemlab/commit/041bb20a790c0025631cfbf5f0ae1293a0083cb8))
+
 ## [0.12.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.11.0...v0.12.0) (2026-09-05)
 
 
