@@ -41,6 +41,7 @@ export const ACTIONS = [
   "impersonate",
   "export",
   "toggle",
+  "bypass",
   "access",
 ] as const;
 
@@ -139,6 +140,15 @@ export const PERMISSIONS: PermissionSpec[] = [
     resource: "page",
     action: "toggle",
     description: "Open and close pages to visitors",
+  },
+  {
+    resource: "page",
+    action: "bypass",
+    // Separate from `toggle` on purpose: verifying a fix on a closed page and
+    // deciding to close it are different acts, and the person checking is
+    // often not the person who closed it. Without a bypass the only way to
+    // confirm a repair is to reopen the page to everyone and hope.
+    description: "See a closed page, with a banner, while visitors cannot",
   },
 
   { resource: "user", action: "read", description: "View user accounts" },
@@ -255,6 +265,7 @@ export const ROLES: RoleSpec[] = [
       p("comment", "delete"),
       p("page", "read"),
       p("page", "toggle"),
+      p("page", "bypass"),
       p("user", "read"),
       p("user", "update"),
       p("role", "read"),

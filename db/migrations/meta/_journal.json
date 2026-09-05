@@ -50,6 +50,13 @@
       "when": 1788573638503,
       "tag": "0006_quiz_lifecycle",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788576556907,
+      "tag": "0007_page_switch",
+      "breakpoints": true
     }
   ]
 }

@@ -28,6 +28,9 @@ jobs:
       - run: pnpm run format:check
       - run: pnpm run typecheck
       - run: pnpm run lint
+      # Fails when a route ships with no kill switch and no documented reason
+      # to be always-open. Filesystem only — no database needed.
+      - run: pnpm run pages:check
       - run: pnpm run test:coverage
 
   build:

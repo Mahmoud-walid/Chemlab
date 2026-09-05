@@ -363,11 +363,14 @@ no section content — asserted in `tests/e2e/admin-elements.spec.ts`. What is
 wrong is only the status line, which matters for monitoring and for crawlers
 rather than for access.
 
-The fix is probably to decide in middleware, which is the only place the status
-is still open — but middleware runs on the edge and cannot reach the database
-cheaply, so it needs a cached permission map rather than a query per request.
-That is the same caching problem the page open/close switch has, so the two are
-worth solving together.
+The fix is probably to decide in the proxy, which is the only place the status
+is still open. **Half of the obstacle is now gone:** Next 16 renamed
+`middleware.ts` to `proxy.ts` and moved it to the Node.js runtime, so it can
+reach the database — the page open/close switch does exactly that, with a
+short-TTL cache (see Q34). What remains is that a permission check is per-user
+where the page map is global, so it cannot be cached the same way; the
+per-request session lookup the switch does on a closed page would become a
+lookup on every admin request.
 
 **Question:** worth a dedicated task, or is "correct body, wrong status"
 acceptable while `/admin` itself still 404s?
@@ -395,6 +398,31 @@ until #20 lands.
 **My default is to leave it**, because the alternative is publishing pages with
 nothing on them. **Question:** do you want an editor to be able to republish a
 body-less lesson before #20?
+
+### Q34 — the page switch is enforced in the proxy, and caches for 15 seconds
+
+The open/closed map is read in `proxy.ts` and cached in module memory for 15
+seconds. That TTL is the ceiling on how long a closed page stays reachable
+across processes: writes call `invalidatePageCache()`, so in the process that
+handled the click the switch is immediate, but a second instance keeps serving
+the old answer until its own copy expires.
+
+Fifteen seconds is a guess, chosen because the map is seven rows that change
+rarely and the proxy runs ahead of every request. It is deliberately not zero:
+a database read per request, in front of every page, is what the cache exists
+to avoid.
+
+The Next docs warn that a proxy may be deployed separately from the app and
+should not rely on shared caches, so a shared store is not a drop-in fix — it
+would be a second piece of infrastructure in the request path.
+
+**Question:** is a worst case of ~15 seconds acceptable for "I closed this page
+and a visitor could still see it"? If not, the options are a shorter TTL (more
+queries), or a shared cache with a revalidation channel (more moving parts).
+My default is to leave it until the site runs on more than one instance, where
+the question actually bites.
+
+---
 
 ### Q33 — should a question be allowed more than one correct answer?
 
@@ -436,23 +464,24 @@ Worth reading before the relevant phase starts: #10 and #14 (data modelling),
 
 ## Resolved decisions
 
-| Date       | Question           | Decision                                                                                                                                                                                            |
-| ---------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-09-04 | Auth stack         | **Better Auth** — TypeScript-first, Drizzle-native, roles/permissions plugins fit dynamic RBAC                                                                                                      |
-| 2026-09-04 | Media storage      | **Cloudinary** — signed uploads, image and video transforms, CDN                                                                                                                                    |
-| 2026-09-04 | Production push    | **Self-hosted Web Push / VAPID** — standard, no vendor, subscriptions in our DB                                                                                                                     |
-| 2026-09-04 | CI alerts          | **Web Push** through the same pipeline, **plus Slack**                                                                                                                                              |
-| 2026-09-04 | Database           | **Neon Postgres + Drizzle ORM**                                                                                                                                                                     |
-| 2026-09-04 | i18n library       | **next-intl** — already a dependency, App Router native                                                                                                                                             |
-| 2026-09-04 | UI components      | **shadcn/ui via its CLI**, never hand-copied                                                                                                                                                        |
-| 2026-09-04 | Local database     | **Local PostgreSQL in development**, Neon kept as the hosted option; the driver is chosen from the connection string                                                                                |
-| 2026-09-04 | Content rendering  | **`/`, `/lessons` and `/quiz` render on demand**, so `pnpm build` still works with no database; detail routes prerender when one is present. Revisit with ISR once the admin panel exists           |
-| 2026-09-04 | Email verification | **Not required to sign in**, but required for Google account linking. Requiring it needs an email provider, which is not chosen yet                                                                 |
-| 2026-09-04 | Cookie cache       | **5 minutes** (`COOKIE_CACHE_SECONDS`). Bounds how long a revoked session — and later a revoked permission — keeps working                                                                          |
-| 2026-09-04 | Anonymous attempts | **Discarded at sign-in**, not adopted. Adopting them means trusting a client-supplied score                                                                                                         |
-| 2026-09-04 | Deny rules         | **None.** Pure allow-lists; an exception like "editor but cannot delete" is a narrower role. Deny rules make effective permissions impossible to display honestly                                   |
-| 2026-09-04 | Page open/close    | **Its own `page:toggle` permission** under a `page` resource, not `setting:update`. Keeps the admin nav's `page:read` meaningful and separates "change a setting" from "take a page offline"        |
-| 2026-09-05 | Admin landing      | **A dashboard**, not a redirect to the first accessible section. A redirect makes `/admin` mean something different per role, so a bookmark lands somewhere unpredictable                           |
-| 2026-09-05 | Admin locale       | **Follows the visitor's locale**, like the rest of the site. Pinning the panel to English would make Arabic the second-class half of a bilingual product                                            |
-| 2026-09-05 | Admin styling      | **Visual continuity** with the public site, distinguished by the sidebar chrome rather than a separate accent. Revisit if operators report confusing the two                                        |
-| 2026-09-05 | Quizzes vs exams   | **"Quizzes" everywhere** — the table, the public `/quiz` route, the seed data and the `quiz:*` permissions all say quiz. #16 says "exams", but `exam:read` already means _view attempts and scores_ |
+| Date       | Question             | Decision                                                                                                                                                                                                   |
+| ---------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-04 | Auth stack           | **Better Auth** — TypeScript-first, Drizzle-native, roles/permissions plugins fit dynamic RBAC                                                                                                             |
+| 2026-09-04 | Media storage        | **Cloudinary** — signed uploads, image and video transforms, CDN                                                                                                                                           |
+| 2026-09-04 | Production push      | **Self-hosted Web Push / VAPID** — standard, no vendor, subscriptions in our DB                                                                                                                            |
+| 2026-09-04 | CI alerts            | **Web Push** through the same pipeline, **plus Slack**                                                                                                                                                     |
+| 2026-09-04 | Database             | **Neon Postgres + Drizzle ORM**                                                                                                                                                                            |
+| 2026-09-04 | i18n library         | **next-intl** — already a dependency, App Router native                                                                                                                                                    |
+| 2026-09-04 | UI components        | **shadcn/ui via its CLI**, never hand-copied                                                                                                                                                               |
+| 2026-09-04 | Local database       | **Local PostgreSQL in development**, Neon kept as the hosted option; the driver is chosen from the connection string                                                                                       |
+| 2026-09-04 | Content rendering    | **`/`, `/lessons` and `/quiz` render on demand**, so `pnpm build` still works with no database; detail routes prerender when one is present. Revisit with ISR once the admin panel exists                  |
+| 2026-09-04 | Email verification   | **Not required to sign in**, but required for Google account linking. Requiring it needs an email provider, which is not chosen yet                                                                        |
+| 2026-09-04 | Cookie cache         | **5 minutes** (`COOKIE_CACHE_SECONDS`). Bounds how long a revoked session — and later a revoked permission — keeps working                                                                                 |
+| 2026-09-04 | Anonymous attempts   | **Discarded at sign-in**, not adopted. Adopting them means trusting a client-supplied score                                                                                                                |
+| 2026-09-04 | Deny rules           | **None.** Pure allow-lists; an exception like "editor but cannot delete" is a narrower role. Deny rules make effective permissions impossible to display honestly                                          |
+| 2026-09-04 | Page open/close      | **Its own `page:toggle` permission** under a `page` resource, not `setting:update`. Keeps the admin nav's `page:read` meaningful and separates "change a setting" from "take a page offline"               |
+| 2026-09-05 | Admin landing        | **A dashboard**, not a redirect to the first accessible section. A redirect makes `/admin` mean something different per role, so a bookmark lands somewhere unpredictable                                  |
+| 2026-09-05 | Admin locale         | **Follows the visitor's locale**, like the rest of the site. Pinning the panel to English would make Arabic the second-class half of a bilingual product                                                   |
+| 2026-09-05 | Admin styling        | **Visual continuity** with the public site, distinguished by the sidebar chrome rather than a separate accent. Revisit if operators report confusing the two                                               |
+| 2026-09-05 | Quizzes vs exams     | **"Quizzes" everywhere** — the table, the public `/quiz` route, the seed data and the `quiz:*` permissions all say quiz. #16 says "exams", but `exam:read` already means _view attempts and scores_        |
+| 2026-09-05 | Pages with no switch | **`/admin`, `/sign-in`, `/sign-up`, `/profile` and `/maintenance` can never be closed.** Closing them would close the page that reopens them; `pnpm pages:check` fails when a route belongs to neither set |

@@ -139,7 +139,16 @@ export default async function LocaleLayout({
   // Opts every route in this segment into static rendering.
   setRequestLocale(locale);
 
-  const { admin: _admin, ...publicMessages } = await getMessages();
+  // `admin` and `pages` are withheld from the client bundle: every consumer of
+  // both is a server component using `getTranslations`, so serialising them
+  // would put an admin catalogue and seven maintenance messages into the
+  // payload of every public page for nobody to read. The admin layout puts
+  // `admin` back for its own subtree.
+  const {
+    admin: _admin,
+    pages: _pages,
+    ...publicMessages
+  } = await getMessages();
 
   const dir = direction(locale);
   const isArabic = locale === "ar";

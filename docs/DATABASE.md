@@ -258,6 +258,12 @@ exists and content changes have a known cadence.
   without a deferrable constraint. A dangling answer is therefore possible and
   is _detected_ rather than prevented: publishing refuses a quiz with one, and
   `getQuizBySlug` throws rather than serving an unanswerable question.
+- **`pages` is keyed by the route pattern, not by an id.** The thing being
+  switched is a URL and the proxy has only a URL to match on, so a surrogate
+  key would mean a lookup before the decision could be made. It is also what
+  makes `pnpm pages:check` possible: a route under `app/` either has a row or
+  it does not. Admin and auth routes deliberately have no row — closing them
+  would close the page that reopens them.
 - **`lessons.position` orders the curriculum.** Lessons build on each other, so
   the catalogue is a sequence; ordering by slug put "acids-bases" before
   "atomic-structure". Seeded in tens, so a lesson can be moved between two
