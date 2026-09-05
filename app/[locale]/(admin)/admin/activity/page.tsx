@@ -13,6 +13,7 @@ import { parseListParams } from "@/db/queries/admin/list-params";
 import { requireAdminPermission } from "@/lib/admin/guard";
 import { verbGroups } from "@/lib/activity/verbs";
 import { hasPermission } from "@/lib/authz";
+import { ExportButton } from "@/components/admin/export-button";
 import { StatusFilter } from "@/components/admin/status-filter";
 import type { Locale } from "@/i18n/routing";
 import { ActivityTable } from "./features/activity-table";
@@ -32,6 +33,10 @@ export default async function AdminActivityPage({
   const actor = await requireAdminPermission("activity:read");
   // The permission decides what the QUERY selects, not what the table renders.
   const canSeePii = hasPermission(actor, "activity:read_pii");
+  // Reading the stream and taking a copy of it away are separate grants: the
+  // file leaves the building, and the retention window stops applying to it
+  // the moment it does.
+  const canExport = hasPermission(actor, "activity:export");
 
   const raw = await searchParams;
   const list = parseListParams(raw, ACTIVITY_LIST_SPEC);
@@ -67,17 +72,27 @@ export default async function AdminActivityPage({
         </p>
       )}
 
-      <StatusFilter
-        label={t("filterByGroup")}
-        current={group ?? "all"}
-        options={[
-          { value: "all", label: t("allGroups") },
-          ...groups.map((value) => ({
-            value,
-            label: t(`groups.${value}` as never),
-          })),
-        ]}
-      />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <StatusFilter
+          label={t("filterByGroup")}
+          current={group ?? "all"}
+          options={[
+            { value: "all", label: t("allGroups") },
+            ...groups.map((value) => ({
+              value,
+              label: t(`groups.${value}` as never),
+            })),
+          ]}
+        />
+        {canExport && (
+          <ExportButton
+            dataset="events"
+            label={t("export")}
+            hint={canSeePii ? t("exportHintPii") : t("exportHint")}
+            carryFilters
+          />
+        )}
+      </div>
 
       <ActivityTable
         canSeePii={canSeePii}

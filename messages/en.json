@@ -371,7 +371,9 @@
           "examSubmitted": "Finished a quiz",
           "passed": "Passed a quiz"
         },
-        "notRecorded": "not recorded yet"
+        "notRecorded": "not recorded yet",
+        "export": "Export CSV",
+        "exportHint": "Downloads the funnel for the last 30 days."
       }
     },
     "error": {
@@ -764,7 +766,10 @@
           "settings_changed": "Changed settings",
           "exported": "Exported data"
         }
-      }
+      },
+      "export": "Export CSV",
+      "exportHint": "Downloads the events matching the filters above, without personal data.",
+      "exportHintPii": "Downloads the events matching the filters above, including IP addresses."
     },
     "settings": {
       "title": "Settings",
@@ -962,7 +967,9 @@
         "cancel": "Cancel",
         "deletedUser": "an account since deleted",
         "empty": "No sittings yet."
-      }
+      },
+      "export": "Export CSV",
+      "exportHint": "Downloads every sitting of this exam, with candidate names and marks."
     },
     "users": {
       "title": "Users",
