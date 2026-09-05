@@ -4,6 +4,10 @@ import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { useLocale } from "next-intl";
 
 import { AccountMenu } from "@/components/customs/account-menu";
+import {
+  CommandPalette,
+  type PaletteGroup,
+} from "@/components/admin/command-palette";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -23,8 +27,20 @@ export function AdminHeader({
   labels,
   crumbLabels,
   titles,
+  palette,
 }: {
   labels: { toggleSidebar: string; backToSite: string; breadcrumb: string };
+  /** The same permission-filtered groups the sidebar renders. */
+  palette: {
+    groups: PaletteGroup[];
+    labels: {
+      open: string;
+      placeholder: string;
+      empty: string;
+      title: string;
+      description: string;
+    };
+  };
   /** Message key -> translated label, resolved on the server. */
   crumbLabels: Record<string, string>;
   /** Dynamic segment -> the record's title, supplied by the page. */
@@ -85,6 +101,8 @@ export function AdminHeader({
           })}
         </ol>
       </nav>
+
+      <CommandPalette groups={palette.groups} labels={palette.labels} />
 
       <Button variant="ghost" size="sm" asChild>
         <Link href="/">

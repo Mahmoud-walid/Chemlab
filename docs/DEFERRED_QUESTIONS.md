@@ -351,76 +351,35 @@ resolving client-side? Nothing is blocked either way.
 
 ---
 
-### Q31 — a section-level permission refusal answers 200, not 404
+### Q31 — a section-level permission refusal answers 200, not 404 — RESOLVED
 
-Refusing `admin:access` in the admin layout produces a real 404. Refusing a
-SECTION permission — `element:read` on `/admin/elements`, say — renders the same
-not-found page but with a **200**: Next has committed the response status by the
-time that check can run, and reordering the awaits does not move it.
+**Resolved 2026-09-05. It was a bug, not a constraint.**
 
-The boundary itself holds. The refusal leaks nothing: no element data, no table,
-no section content — asserted in `tests/e2e/admin-elements.spec.ts`. What is
-wrong is only the status line, which matters for monitoring and for crawlers
-rather than for access.
+The reasoning in the original note was sound and the diagnosis was wrong. The
+admin layout resolves the section's permission from the `x-pathname` header the
+proxy forwards — and that header had not been arriving since #56. With it
+absent the layout fell back to `"/admin"`, so `permissionForPath` only ever
+returned `admin:access`, which the layout had already checked. The section check
+was inert, the refusal fell through to the page, and by the time a page can call
+`notFound()` Next has committed a 200.
 
-The fix is probably to decide in the proxy, which is the only place the status
-is still open. **Half of the obstacle is now gone:** Next 16 renamed
-`middleware.ts` to `proxy.ts` and moved it to the Node.js runtime, so it can
-reach the database — the page open/close switch does exactly that, with a
-short-TTL cache (see Q34). What remains is that a permission check is per-user
-where the page map is global, so it cannot be cached the same way; the
-per-request session lookup the switch does on a closed page would become a
-lookup on every admin request.
+So the status was wrong because the check was running in the wrong place, not
+because the right place was unreachable.
 
-**Question:** worth a dedicated task, or is "correct body, wrong status"
-acceptable while `/admin` itself still 404s?
+The cause: `withPathname` copied next-intl's response headers wholesale, and
+Next encodes `request: { headers }` as `x-middleware-override-headers` plus one
+`x-middleware-request-<name>` per header. Copying next-intl's copy of that
+machinery over ours replaced our override list with theirs. Nothing failed —
+`headers().get("x-pathname")` simply returned null and every reader took its
+fallback. Skipping every `x-middleware-*` header when copying fixes it.
 
-### Q32 — unpublishing a body-less lesson is currently one-way
+`/admin/quizzes` for a moderator now answers **404**, asserted in four e2e
+specs. `/admin` still answers 200 for anyone holding `admin:access`, which is
+correct: the dashboard is theirs to see.
 
-#16 asks that a lesson with an empty body cannot be published, and the lesson
-admin enforces it. Twelve of the thirteen seeded lessons have no sections: they
-are summary-only rows, published since the migration, and they are the
-catalogue people see today.
-
-So the rule bites in one direction only. Those twelve stay live, but the moment
-an editor takes one back to draft — to fix a typo in its description, say — the
-publish button refuses until somebody writes a body. The rich body editor is
-#20, so today that means "until #20 ships".
-
-The list screen shows the "No content yet" state up front so nobody discovers
-this by clicking publish and being refused. But the trap is real.
-
-Three ways out: leave it (the rule is right, and the twelve should have bodies);
-grandfather rows that have a `published_at` (weakens the rule exactly where it
-is least verifiable); or downgrade the empty body from a blocker to a warning
-until #20 lands.
-
-**My default is to leave it**, because the alternative is publishing pages with
-nothing on them. **Question:** do you want an editor to be able to republish a
-body-less lesson before #20?
-
-### Q34 — the page switch is enforced in the proxy, and caches for 15 seconds
-
-The open/closed map is read in `proxy.ts` and cached in module memory for 15
-seconds. That TTL is the ceiling on how long a closed page stays reachable
-across processes: writes call `invalidatePageCache()`, so in the process that
-handled the click the switch is immediate, but a second instance keeps serving
-the old answer until its own copy expires.
-
-Fifteen seconds is a guess, chosen because the map is seven rows that change
-rarely and the proxy runs ahead of every request. It is deliberately not zero:
-a database read per request, in front of every page, is what the cache exists
-to avoid.
-
-The Next docs warn that a proxy may be deployed separately from the app and
-should not rely on shared caches, so a shared store is not a drop-in fix — it
-would be a second piece of infrastructure in the request path.
-
-**Question:** is a worst case of ~15 seconds acceptable for "I closed this page
-and a visitor could still see it"? If not, the options are a shorter TTL (more
-queries), or a shared cache with a revalidation channel (more moving parts).
-My default is to leave it until the site runs on more than one instance, where
-the question actually bites.
+Two other things that were quietly broken by the same header and now work: the
+maintenance page can find the closed route's own message, and signing in from a
+deep admin link returns you to the page you asked for rather than to `/admin`.
 
 ---
 

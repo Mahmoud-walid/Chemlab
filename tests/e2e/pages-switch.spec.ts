@@ -160,13 +160,11 @@ test.describe("the page switch", () => {
   }) => {
     // `editor` publishes content but holds no `page:*` permission at all.
     await signInAs(page, db, "editor");
-    await page.goto("/admin/pages");
+    const response = await page.goto("/admin/pages");
 
-    // Asserted on the CONTENT, not the status — see the note in the admin
-    // layout and Q31.
-    await expect(
-      page.getByRole("heading", { name: /not found/i }),
-    ).toBeVisible();
+    // A real 404 — see the note in tests/e2e/admin-elements.spec.ts. Q31 is
+    // closed by the proxy's header forwarding being fixed.
+    expect(response?.status()).toBe(404);
 
     // Asserted on DATA, not on a UI string. The admin layout serialises the
     // whole admin message catalogue for anyone holding `admin:access`, so

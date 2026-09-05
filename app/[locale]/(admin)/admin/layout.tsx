@@ -10,6 +10,7 @@ import {
 import { AdminHeader } from "@/components/admin/admin-header";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { crumbTitlesFor } from "@/lib/admin/crumb-title";
 import { permissionForPath, visibleNav } from "@/lib/admin/nav";
 import {
   ForbiddenError,
@@ -45,16 +46,20 @@ export default async function AdminLayout({
 
   /**
    * Both permission decisions happen first, before anything else is awaited.
+   * Refusing either produces a real 404, asserted on the STATUS in four e2e
+   * specs rather than on the rendered body.
    *
-   * KNOWN DISCREPANCY, measured rather than assumed. Refusing `admin:access`
-   * here produces a real 404. Refusing a SECTION permission renders the same
-   * not-found body but with a 200 — Next has committed the status by then, and
-   * reordering the awaits does not move it. What the refusal does NOT do is
-   * leak: the response carries no element data, no table, no section content.
+   * That was not always true, and the reason is worth keeping: this header had
+   * not been arriving since #56, so `pathname` fell back to "/admin" and the
+   * section check below could only ever re-ask for `admin:access` — a
+   * permission the line above has already established. The check was inert and
+   * looked fine. It was recorded as a Next.js limitation (Q31) until the real
+   * cause turned up in the proxy's header copying.
    *
-   * So the boundary holds and the status is wrong. Recorded as Q31; the fix is
-   * likely to decide in middleware, which cannot reach the database cheaply on
-   * the edge, so it is not a one-line change.
+   * The fallback stays, because a header that does not arrive must not throw.
+   * What guards against it silently going missing again is the breadcrumb test
+   * in tests/e2e/admin.spec.ts, which fails the moment the layout stops seeing
+   * the real path.
    */
   const pathname = (await headers()).get("x-pathname") ?? "/admin";
 
@@ -95,6 +100,9 @@ export default async function AdminLayout({
   // width the viewer last chose instead of expanding and then snapping shut.
   const sidebarOpen = (await cookies()).get("sidebar_state")?.value !== "false";
 
+  // Only queries on a record route; every other admin path returns {}.
+  const crumbTitles = await crumbTitlesFor(pathname);
+
   // The root layout withholds the admin namespace from the public bundle, so
   // it is provided again here — for this subtree only, and only to viewers who
   // have already passed the gate above.
@@ -125,6 +133,26 @@ export default async function AdminLayout({
                 group.items.map((item) => [item.labelKey, t(item.labelKey)]),
               ),
             )}
+            // So `/admin/elements/26` reads "Iron" rather than "26".
+            titles={crumbTitles}
+            palette={{
+              // The same filtered groups the sidebar gets: the palette must
+              // not offer a jump the guard would then refuse.
+              groups: groups.map((group) => ({
+                label: t(group.labelKey),
+                items: group.items.map((item) => ({
+                  segment: item.segment,
+                  label: t(item.labelKey),
+                })),
+              })),
+              labels: {
+                open: t("palette.open"),
+                placeholder: t("palette.placeholder"),
+                empty: t("palette.empty"),
+                title: t("palette.title"),
+                description: t("palette.description"),
+              },
+            }}
           />
           <main className="flex-1 p-4 sm:p-6">{children}</main>
         </SidebarInset>

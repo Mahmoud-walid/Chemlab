@@ -197,7 +197,7 @@ async function closedResponse(
   // Carry next-intl's own headers across — the NEXT_LOCALE cookie among them,
   // without which visiting a closed page would forget the locale choice.
   for (const [key, value] of intlResponse.headers) {
-    if (key === "x-middleware-rewrite") continue;
+    if (key.startsWith("x-middleware-")) continue;
     rewrite.headers.set(key, value);
   }
 
@@ -237,8 +237,16 @@ function withPathname(
 
   // Carry next-intl's own headers across — the NEXT_LOCALE cookie among them,
   // without which the locale choice is forgotten on the next request.
+  //
+  // Every `x-middleware-*` header is skipped, not just the rewrite. Next
+  // encodes `request: { headers }` as `x-middleware-override-headers` plus one
+  // `x-middleware-request-<name>` per header, so copying next-intl's copy of
+  // that machinery over ours replaced our override list with theirs — and
+  // `x-pathname` silently never arrived. The symptom was a breadcrumb showing
+  // a record id and a maintenance page unable to find its own message, with
+  // nothing failing anywhere.
   for (const [key, value] of response.headers) {
-    if (key === "x-middleware-rewrite") continue;
+    if (key.startsWith("x-middleware-")) continue;
     next.headers.set(key, value);
   }
   return next;
