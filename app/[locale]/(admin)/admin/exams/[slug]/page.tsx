@@ -16,6 +16,7 @@ import { hasPermission } from "@/lib/authz";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
+import { ExportButton } from "@/components/admin/export-button";
 import { ScoreDistribution } from "./features/score-distribution";
 import { AttemptsTable } from "./features/attempts-table";
 
@@ -35,6 +36,9 @@ export default async function AdminExamDetailPage({
   // Voiding is its own grant: reading the scores and striking one out are
   // different levels of trust. The table renders read-only without it.
   const canVoid = hasPermission(actor, "exam:void");
+  // A file of marks with candidate names in it is a different act from reading
+  // them on screen, and `exam:export` is the grant for it.
+  const canExport = hasPermission(actor, "exam:export");
 
   const list = parseListParams<AttemptSort>(
     await searchParams,
@@ -61,6 +65,16 @@ export default async function AdminExamDetailPage({
         <p className="text-sm text-muted-foreground">
           {t("attemptTotal", { count: detail.total })}
         </p>
+        {canExport && (
+          <div className="mt-3">
+            <ExportButton
+              dataset="attempts"
+              label={t("export")}
+              hint={t("exportHint")}
+              params={{ quiz: detail.slug }}
+            />
+          </div>
+        )}
       </div>
 
       <section className="space-y-3 rounded-lg border p-4">

@@ -16,6 +16,7 @@ import { requireAdminPermission } from "@/lib/admin/guard";
 import { visibleNav } from "@/lib/admin/nav";
 import { hasPermission } from "@/lib/authz";
 import { Link } from "@/i18n/navigation";
+import { ExportButton } from "@/components/admin/export-button";
 import {
   Card,
   CardDescription,
@@ -57,6 +58,7 @@ export default async function AdminDashboardPage({
   // The charts are activity data and need their own grant. Somebody who can
   // open the panel is not automatically owed a view of what everybody did.
   const canSeeActivity = hasPermission(context, "activity:read");
+  const canExportActivity = hasPermission(context, "activity:export");
 
   // Thirty days back, and the range is deliberately fixed for v1: a date
   // picker that nobody has asked for is a control to maintain, and every
@@ -133,7 +135,16 @@ export default async function AdminDashboardPage({
           </section>
 
           <section className="space-y-3 rounded-lg border p-4">
-            <h2 className="font-semibold">{t("dashboard.funnel.heading")}</h2>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="font-semibold">{t("dashboard.funnel.heading")}</h2>
+              {canExportActivity && (
+                <ExportButton
+                  dataset="funnel"
+                  label={t("dashboard.funnel.export")}
+                  hint={t("dashboard.funnel.exportHint")}
+                />
+              )}
+            </div>
             {/* The caveat belongs on the screen, not only in the code. A
                 funnel whose first stage we cannot measure would have an
                 invented denominator, so it starts where counting starts. */}
