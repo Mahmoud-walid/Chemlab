@@ -245,6 +245,23 @@ async function main() {
       .from(schema.quizQuestions)
       .where(sql`${schema.quizQuestions.correctOptionId} is null`);
 
+    /**
+     * Scoring reads `quiz_options.is_correct`, not `correct_option_id`. The
+     * trigger added in 0010 keeps the two in step for single-choice
+     * questions, and this is the assertion that the trigger actually ran —
+     * without it a broken sync ships as "every candidate scored zero", which
+     * looks like a scoring bug and is not one.
+     */
+    const [{ count: unmarked }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(schema.quizQuestions)
+      .where(
+        sql`not exists (
+          select 1 from ${schema.quizOptions} o
+          where o.question_id = ${schema.quizQuestions.id} and o.is_correct
+        )`,
+      );
+
     console.log(`elements   ${elementCount}`);
     console.log(`lessons    ${lessonCount}`);
     console.log(`quizzes    ${quizCount}`);
@@ -278,6 +295,10 @@ async function main() {
       );
     if (unresolved > 0)
       problems.unshift(`${unresolved} question(s) have no correct option`);
+    if (unmarked > 0)
+      problems.unshift(
+        `${unmarked} question(s) have no option marked is_correct — the answer-sync trigger did not run`,
+      );
 
     if (problems.length > 0) {
       console.error("\nVerification failed:");
