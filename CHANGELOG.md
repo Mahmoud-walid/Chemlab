@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.9.0...v0.10.0) (2026-09-05)
+
+
+### Features
+
+* **admin:** streaming CSV exports and the activity retention job ([#75](https://github.com/Mahmoud-walid/Chemlab/issues/75)) ([c069480](https://github.com/Mahmoud-walid/Chemlab/commit/c069480e0a37b99e4434abce798cbc3d26c8771e))
+
 ## [0.9.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.8.0...v0.9.0) (2026-09-05)
 
 
