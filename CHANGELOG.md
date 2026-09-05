@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.20.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.19.0...v0.20.0) (2026-09-05)
+
+
+### Features
+
+* **admin:** show and filter how translated each lesson and quiz is ([#105](https://github.com/Mahmoud-walid/Chemlab/issues/105)) ([f56ba6d](https://github.com/Mahmoud-walid/Chemlab/commit/f56ba6dabe64d4a6ac1510afd322636ef044d1fe))
+* **admin:** the translation editor, behind write and review permissions ([#106](https://github.com/Mahmoud-walid/Chemlab/issues/106)) ([783bdcd](https://github.com/Mahmoud-walid/Chemlab/commit/783bdcde8b892ccf1503c0a33ec43ae7a39237e6))
+
 ## [0.19.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.18.0...v0.19.0) (2026-09-05)
 
 
