@@ -153,6 +153,28 @@ export default async function LessonPage({
           </div>
         )}
 
+        {/* A translated lesson the English has moved on from. Said rather than
+            hidden, and rather than yanking the reader back to English
+            mid-article: an out-of-date translation is still mostly the
+            lesson, and a reader who knows it may be behind can decide for
+            themselves. Quiz questions are handled the opposite way — a stale
+            question is a wrong question, so those fall back. See
+            db/queries/_locale.ts. */}
+        {bodyIsTranslated && lesson.translationOutOfDate && (
+          <div
+            role="note"
+            dir="auto"
+            className="mt-6 max-w-[68ch] rounded-lg border bg-secondary px-4 py-3 text-sm"
+          >
+            <p className="font-semibold text-secondary-foreground">
+              {tTranslation("outOfDateTitle")}
+            </p>
+            <p className="mt-0.5 text-muted-foreground">
+              {tTranslation("outOfDateBody")}
+            </p>
+          </div>
+        )}
+
         <div className="mt-10 gap-10 lg:grid lg:grid-cols-[1fr_16rem]">
           {/* The measure is capped for the prose only. A 68ch column is the
               readable range for long-form text; the chrome around it is not
