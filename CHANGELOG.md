@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.11.0...v0.12.0) (2026-09-05)
+
+
+### Features
+
+* **lessons:** likes, saves and shares that only count what happened ([#80](https://github.com/Mahmoud-walid/Chemlab/issues/80)) ([b837a04](https://github.com/Mahmoud-walid/Chemlab/commit/b837a044a426356ed2c9014f3ddba228b1cb1b70))
+
 ## [0.11.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.10.0...v0.11.0) (2026-09-05)
 
 
