@@ -114,6 +114,15 @@ test.describe("the manifest", () => {
 });
 
 test.describe("permission", () => {
+  /**
+   * The toggle renders nothing when the deployment has no VAPID keys — a
+   * control that cannot work is worse than no control — so these two assert
+   * CONFIGURED behaviour and need a key. CI sets a throwaway pair; a
+   * contributor without one gets a skip rather than a failure about a feature
+   * they cannot run.
+   */
+  const configured = Boolean(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
+
   test("is never requested on page load", async ({ page }) => {
     // The single most reliable way to be refused for ever. Asserted by
     // replacing the API and checking nobody called it.
@@ -137,6 +146,7 @@ test.describe("permission", () => {
   });
 
   test("is offered on the settings page, behind a button", async ({ page }) => {
+    test.skip(!configured, "needs NEXT_PUBLIC_VAPID_PUBLIC_KEY");
     await signInAs(page, db, "member");
     await page.goto("/profile/settings");
 
@@ -152,6 +162,7 @@ test.describe("permission", () => {
   });
 
   test("shows no enable button once permission is denied", async ({ page }) => {
+    test.skip(!configured, "needs NEXT_PUBLIC_VAPID_PUBLIC_KEY");
     // The browser will not show its dialog again, so a button that "asks"
     // would do nothing and look broken.
     await page.addInitScript(() => {
