@@ -71,11 +71,47 @@ export default function middleware(request: NextRequest) {
     }
   }
 
-  const response = intlMiddleware(request);
-  // Server components cannot read their own URL. This lets `requireUser()`
-  // build an accurate `next` parameter instead of guessing.
-  response.headers.set("x-pathname", request.nextUrl.pathname);
-  return response;
+  return withPathname(request, intlMiddleware(request));
+}
+
+/**
+ * Forwards the request path to the server components.
+ *
+ * A server component cannot read its own URL, and two things need it: the
+ * `next` parameter `requireUser()` builds, and the admin layout's check of the
+ * section permission — which has to happen at the layout, because once it has
+ * streamed, a `notFound()` deeper in the tree can change the BODY but not the
+ * status.
+ *
+ * `response.headers.set()` does not do this. That sets a header on the
+ * response going to the BROWSER; `headers()` in a server component reads the
+ * request. The value has to be attached with `request: { headers }`, which
+ * means re-issuing whatever next-intl decided rather than mutating it.
+ */
+function withPathname(
+  request: NextRequest,
+  response: NextResponse,
+): NextResponse {
+  const headers = new Headers(request.headers);
+  headers.set("x-pathname", request.nextUrl.pathname);
+
+  // A redirect has no downstream render, so there is nothing to forward to.
+  if (response.headers.has("Location")) return response;
+
+  const rewrite = response.headers.get("x-middleware-rewrite");
+  const next = rewrite
+    ? NextResponse.rewrite(new URL(rewrite, request.url), {
+        request: { headers },
+      })
+    : NextResponse.next({ request: { headers } });
+
+  // Carry next-intl's own headers across — the NEXT_LOCALE cookie among them,
+  // without which the locale choice is forgotten on the next request.
+  for (const [key, value] of response.headers) {
+    if (key === "x-middleware-rewrite") continue;
+    next.headers.set(key, value);
+  }
+  return next;
 }
 
 export const config = {

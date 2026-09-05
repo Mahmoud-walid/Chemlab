@@ -326,6 +326,72 @@
       "title": "غير موجود",
       "body": "لا يوجد شيء على هذا العنوان.",
       "back": "العودة إلى لوحة المعلومات"
+    },
+    "table": {
+      "search": "بحث",
+      "empty": "لا توجد نتائج مطابقة.",
+      "previous": "السابق",
+      "next": "التالي",
+      "pageStatus": "صفحة {page} من {pages}",
+      "sortBy": "ترتيب حسب"
+    },
+    "elements": {
+      "title": "العناصر",
+      "subtitle": "{count} عنصرًا. الجدول الدوري مكتمل، لذا تُحرَّر الصفوف ولا تُضاف.",
+      "searchPlaceholder": "الاسم أو الرمز أو التصنيف",
+      "columns": {
+        "number": "العدد الذري",
+        "symbol": "الرمز",
+        "name": "الاسم",
+        "category": "التصنيف",
+        "atomicMass": "الكتلة الذرية",
+        "updated": "آخر تعديل"
+      },
+      "editTitle": "تعديل {name}",
+      "editSubtitle": "العنصر رقم {number}. لا يمكن تغيير العدد الذري.",
+      "backToList": "العودة إلى العناصر",
+      "tabs": {
+        "identity": "الهوية",
+        "physical": "الخصائص الفيزيائية",
+        "electronic": "التركيب الإلكتروني",
+        "editorial": "المحتوى"
+      },
+      "fields": {
+        "symbol": "الرمز",
+        "name": "الاسم",
+        "category": "التصنيف",
+        "period": "الدورة",
+        "xpos": "العمود",
+        "ypos": "الصف",
+        "atomicMass": "الكتلة الذرية",
+        "density": "الكثافة",
+        "melt": "درجة الانصهار",
+        "boil": "درجة الغليان",
+        "phase": "الحالة",
+        "molarHeat": "السعة الحرارية المولية",
+        "appearance": "المظهر",
+        "color": "اللون",
+        "electronConfiguration": "التوزيع الإلكتروني",
+        "electronConfigurationSemantic": "التوزيع الإلكتروني المختصر",
+        "shells": "الأغلفة",
+        "electronAffinity": "الألفة الإلكترونية",
+        "electronegativityPauling": "الكهروسلبية (باولنغ)",
+        "ionizationEnergies": "طاقات التأيّن",
+        "summary": "نبذة",
+        "discoveredBy": "اكتشفه",
+        "namedBy": "سمّاه",
+        "source": "المصدر",
+        "spectralImg": "رابط صورة الطيف"
+      },
+      "hints": {
+        "optional": "اتركه فارغًا إذا كانت القيمة غير معروفة — الفراغ يعني غير معروف وليس صفرًا.",
+        "vector": "أرقام بالترتيب، مفصولة بفواصل أو مسافات."
+      },
+      "save": "حفظ التغييرات",
+      "saving": "جارٍ الحفظ…",
+      "saved": "تم الحفظ.",
+      "saveFailed": "لم يُحفظ أي شيء.",
+      "notFound": "لا يوجد عنصر بهذا العدد الذري."
     }
   }
 }

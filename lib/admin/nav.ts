@@ -170,6 +170,29 @@ export function flattenNav(groups: AdminNavGroup[]): AdminNavItem[] {
   return groups.flatMap((group) => group.items);
 }
 
+/**
+ * The permission a path under `/admin` requires, or null when the nav does not
+ * claim it.
+ *
+ * The nav declaration already records what each section needs, so enforcement
+ * reads the same line the filtering does — one place to change, and no way for
+ * a link to be shown that the guard would then refuse.
+ *
+ * Matched on the first segment: `/admin/lessons/abc` needs what `/admin/lessons`
+ * needs. A deeper route wanting something stricter says so in its own page.
+ */
+export function permissionForPath(pathname: string): string | null {
+  const path = pathname
+    .replace(/^\/(en|ar)(?=\/|$)/, "")
+    .replace(/^\/admin\/?/, "");
+  const segment = path.split("/").filter(Boolean)[0] ?? "";
+
+  const item = flattenNav(ADMIN_NAV).find(
+    (candidate) => candidate.segment === segment,
+  );
+  return item?.permission ?? null;
+}
+
 export interface Crumb {
   href: string;
   /** A message key, when the segment is a known nav item. */

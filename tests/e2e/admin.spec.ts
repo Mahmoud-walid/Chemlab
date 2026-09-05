@@ -1,8 +1,7 @@
-import { expect, test, type Page } from "@playwright/test";
-import { eq } from "drizzle-orm";
+import { expect, test } from "@playwright/test";
 
 import { connect, seedUrl, type SeedDatabase } from "@/db/seed/connect";
-import * as schema from "@/db/schema";
+import { signInAs } from "./support/accounts";
 
 /**
  * The admin gate, in a real browser.
@@ -13,7 +12,13 @@ import * as schema from "@/db/schema";
  * may use.
  */
 
-const PASSWORD = "correct-horse-battery";
+/**
+ * Every test here signs up a real account, and the password hash is
+ * deliberately slow — that is the point of it. With several workers on a small
+ * runner the default 30s test budget is not enough, and shortening the hash to
+ * suit the tests would weaken the thing being tested.
+ */
+test.describe.configure({ timeout: 90_000 });
 
 let db: SeedDatabase;
 let close: () => Promise<void>;
@@ -27,38 +32,6 @@ test.beforeAll(() => {
 test.afterAll(async () => {
   await close?.();
 });
-
-function uniqueEmail(role: string): string {
-  return `e2e-${role}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@admin-e2e.invalid`;
-}
-
-async function signUp(page: Page, email: string) {
-  await page.goto("/sign-up");
-  await page.getByLabel("Name").fill("Admin Probe");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign up", exact: true }).click();
-  await expect(
-    page.getByRole("button", { name: /open the account menu/i }),
-  ).toBeVisible({ timeout: 15_000 });
-}
-
-/** Grants a role directly: the admin UI for doing so is a later issue. */
-async function grantRole(email: string, roleKey: string) {
-  const [user] = await db
-    .select({ id: schema.users.id })
-    .from(schema.users)
-    .where(eq(schema.users.email, email));
-  const [role] = await db
-    .select({ id: schema.roles.id })
-    .from(schema.roles)
-    .where(eq(schema.roles.key, roleKey));
-
-  await db
-    .insert(schema.userRoles)
-    .values({ userId: user!.id, roleId: role!.id })
-    .onConflictDoNothing();
-}
 
 test.describe("the admin gate", () => {
   test("sends an anonymous visitor to sign in, keeping the locale", async ({
@@ -75,7 +48,7 @@ test.describe("the admin gate", () => {
   test("gives a signed-in user without admin:access a 404 with no admin markup", async ({
     page,
   }) => {
-    await signUp(page, uniqueEmail("member"));
+    await signInAs(page, db, "member");
 
     const response = await page.goto("/admin");
     // 404, not 403: a 403 confirms /admin exists and is worth attacking.
@@ -95,9 +68,7 @@ test.describe("the admin gate", () => {
   });
 
   test("shows a narrow role only the sections it holds", async ({ page }) => {
-    const email = uniqueEmail("editor");
-    await signUp(page, email);
-    await grantRole(email, "editor");
+    await signInAs(page, db, "editor");
 
     await page.goto("/admin");
     await expect(
@@ -120,9 +91,7 @@ test.describe("the admin gate", () => {
   });
 
   test("shows a Super Admin every section", async ({ page }) => {
-    const email = uniqueEmail("super");
-    await signUp(page, email);
-    await grantRole(email, "super_admin");
+    await signInAs(page, db, "super_admin");
 
     await page.goto("/admin");
     const nav = page.getByRole("navigation", { name: /admin navigation/i });
@@ -141,9 +110,7 @@ test.describe("the admin gate", () => {
   test("is operable by keyboard, and the sidebar toggle is reachable", async ({
     page,
   }) => {
-    const email = uniqueEmail("kbd");
-    await signUp(page, email);
-    await grantRole(email, "editor");
+    await signInAs(page, db, "editor");
     await page.goto("/admin");
 
     const toggle = page.getByRole("button", { name: /toggle the sidebar/i });

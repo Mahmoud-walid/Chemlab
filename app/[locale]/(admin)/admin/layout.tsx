@@ -1,5 +1,5 @@
 import { NextIntlClientProvider } from "next-intl";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 import {
   getMessages,
@@ -10,10 +10,11 @@ import {
 import { AdminHeader } from "@/components/admin/admin-header";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { visibleNav } from "@/lib/admin/nav";
+import { permissionForPath, visibleNav } from "@/lib/admin/nav";
 import {
   ForbiddenError,
   UnauthenticatedError,
+  hasPermission,
   requirePermission,
 } from "@/lib/authz";
 import { redirect } from "@/i18n/navigation";
@@ -42,6 +43,21 @@ export default async function AdminLayout({
   const { locale } = await params;
   setRequestLocale(locale as Locale);
 
+  /**
+   * Both permission decisions happen first, before anything else is awaited.
+   *
+   * KNOWN DISCREPANCY, measured rather than assumed. Refusing `admin:access`
+   * here produces a real 404. Refusing a SECTION permission renders the same
+   * not-found body but with a 200 — Next has committed the status by then, and
+   * reordering the awaits does not move it. What the refusal does NOT do is
+   * leak: the response carries no element data, no table, no section content.
+   *
+   * So the boundary holds and the status is wrong. Recorded as Q31; the fix is
+   * likely to decide in middleware, which cannot reach the database cheaply on
+   * the edge, so it is not a one-line change.
+   */
+  const pathname = (await headers()).get("x-pathname") ?? "/admin";
+
   let context;
   try {
     context = await requirePermission("admin:access");
@@ -50,12 +66,22 @@ export default async function AdminLayout({
       // The locale-aware redirect: `next/navigation`'s would drop the /ar
       // prefix and send an Arabic-speaking admin to the English sign-in page.
       redirect({
-        href: { pathname: "/sign-in", query: { next: "/admin" } },
+        href: { pathname: "/sign-in", query: { next: pathname } },
         locale: locale as Locale,
       });
     }
     if (error instanceof ForbiddenError) notFound();
     throw error;
+  }
+
+  /**
+   * The SECTION's permission, from the same nav declaration that decides what
+   * to show. The pages check again anyway — that is defence in depth, and a
+   * route the nav does not declare gets nothing from here.
+   */
+  const sectionPermission = permissionForPath(pathname);
+  if (sectionPermission && !hasPermission(context, sectionPermission)) {
+    notFound();
   }
 
   const t = await getTranslations("admin");

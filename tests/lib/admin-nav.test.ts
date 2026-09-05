@@ -5,6 +5,7 @@ import {
   breadcrumbsFor,
   flattenNav,
   hrefFor,
+  permissionForPath,
   visibleNav,
 } from "@/lib/admin/nav";
 import { isKnownPermission } from "@/lib/authz-core";
@@ -145,5 +146,32 @@ describe("the nav's message keys", () => {
         }
       }
     }
+  });
+});
+
+describe("permissionForPath", () => {
+  it("maps a section to the permission its nav entry declares", () => {
+    expect(permissionForPath("/admin/elements")).toBe("element:read");
+    expect(permissionForPath("/admin/settings")).toBe("setting:read");
+    expect(permissionForPath("/admin/roles")).toBe("role:read");
+  });
+
+  it("uses the section's permission for a record beneath it", () => {
+    expect(permissionForPath("/admin/elements/10")).toBe("element:read");
+  });
+
+  it("maps the dashboard itself", () => {
+    expect(permissionForPath("/admin")).toBe("admin:access");
+    expect(permissionForPath("/admin/")).toBe("admin:access");
+  });
+
+  it("ignores the locale prefix", () => {
+    expect(permissionForPath("/ar/admin/elements")).toBe("element:read");
+    expect(permissionForPath("/en/admin")).toBe("admin:access");
+  });
+
+  it("claims nothing for a section the nav does not declare", () => {
+    // Such a route is protected by its own page, not by this.
+    expect(permissionForPath("/admin/not-a-section")).toBeNull();
   });
 });

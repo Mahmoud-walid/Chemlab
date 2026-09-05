@@ -16,7 +16,16 @@ import { auditLog } from "@/db/schema/rbac";
 export interface AuditInput {
   /** `role.create`, `user_role.revoke`, … */
   action: string;
-  targetType: "role" | "permission" | "user" | "role_permission" | "user_role";
+  targetType:
+    | "role"
+    | "permission"
+    | "user"
+    | "role_permission"
+    | "user_role"
+    | "element"
+    | "lesson"
+    | "quiz"
+    | "page";
   targetId?: string | null;
   /** The state before and after, for reconstructing what changed. */
   before?: unknown;
