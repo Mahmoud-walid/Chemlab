@@ -13,7 +13,18 @@ import { signInAs } from "./support/accounts";
  * the page with a banner, and that a closed route disappears from the nav.
  */
 
-test.describe.configure({ timeout: 90_000 });
+/**
+ * Serial, and with a long budget.
+ *
+ * Serial because these share one row in a seven-row table: a parallel test that
+ * reopened the route mid-assertion would fail for a reason that has nothing to
+ * do with what it is testing. The budget is long because each state change
+ * waits out the proxy's cache TTL.
+ *
+ * One call, not two — a second `configure` at file scope replaces the first,
+ * and losing the timeout here would fail every test at the default 30s.
+ */
+test.describe.configure({ timeout: 90_000, mode: "serial" });
 
 /** The proxy caches the open/closed map; a change is only certain after this. */
 const CACHE_TTL_MS = 15_000;
@@ -56,10 +67,6 @@ async function openRoute() {
     .where(eq(schema.pages.routeKey, ROUTE));
   await new Promise((resolve) => setTimeout(resolve, CACHE_TTL_MS + 1_000));
 }
-
-// Serial: these share one row in a seven-row table, and a parallel test that
-// reopened the route mid-assertion would fail for the wrong reason.
-test.describe.configure({ mode: "serial" });
 
 test.describe("the page switch", () => {
   test("closes a page for visitors and reopens it without a deploy", async ({
@@ -136,16 +143,39 @@ test.describe("the page switch", () => {
     await openRoute();
   });
 
-  test("shows the switches to an operator and refuses them to an editor", async ({
-    page,
-  }) => {
+  test("shows the switches to an operator", async ({ page }) => {
     await signInAs(page, db, "admin");
     await page.goto("/admin/pages");
 
     await expect(page.getByRole("heading", { name: "Pages" })).toBeVisible();
     await expect(page.getByLabel(/close games/i)).toBeVisible();
     // The routes with no switch are explained on the screen rather than simply
-    // absent.
+    // absent, so an operator looking for one learns why instead of assuming a
+    // bug.
     await expect(page.getByText(/have no switch on purpose/i)).toBeVisible();
+  });
+
+  test("shows a role without page permissions nothing of the section", async ({
+    page,
+  }) => {
+    // `editor` publishes content but holds no `page:*` permission at all.
+    await signInAs(page, db, "editor");
+    await page.goto("/admin/pages");
+
+    // Asserted on the CONTENT, not the status — see the note in the admin
+    // layout and Q31.
+    await expect(
+      page.getByRole("heading", { name: /not found/i }),
+    ).toBeVisible();
+
+    // Asserted on DATA, not on a UI string. The admin layout serialises the
+    // whole admin message catalogue for anyone holding `admin:access`, so
+    // grepping the HTML for a label finds the catalogue and fails for a reason
+    // that has nothing to do with the guard. Route keys only appear if the
+    // table actually rendered.
+    const html = await page.content();
+    expect(html).not.toContain("/quiz/results");
+    expect(html).not.toContain("/chemical");
+    await expect(page.getByLabel(/close games/i)).toHaveCount(0);
   });
 });
