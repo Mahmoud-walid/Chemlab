@@ -4,8 +4,10 @@ import {
   DataTable,
   type DataTableLabels,
 } from "@/components/admin/data-table/data-table";
+import { TranslationBadge } from "@/components/admin/translation-badge";
 import { Badge } from "@/components/ui/badge";
 import type { ContentStatus } from "@/db/schema/content";
+import type { TranslationState } from "@/lib/translations/state";
 
 export interface LessonTableRow {
   id: string;
@@ -18,6 +20,8 @@ export interface LessonTableRow {
   sectionCount: number;
   /** Already pluralised on the server — "5 sections", or the empty label. */
   contentLabel: string;
+  /** Absent when no locale is being tracked — then the column is not shown. */
+  translation?: TranslationState;
   updatedLabel: string;
 }
 
@@ -30,6 +34,9 @@ export interface LessonTableLabels {
   content: string;
   updated: string;
   statusNames: Record<ContentStatus, string>;
+  /** Column header — the language's own name, e.g. "Arabic". */
+  translation?: string;
+  translationNames?: Record<TranslationState, string>;
   table: DataTableLabels;
 }
 
@@ -112,6 +119,24 @@ export function LessonsTable({
               row.contentLabel
             ),
         },
+        // Conditional, not hidden with CSS: when there is no second locale
+        // there is no question to answer, and an empty column is worse than
+        // no column.
+        ...(labels.translation && labels.translationNames
+          ? [
+              {
+                key: "translation",
+                header: labels.translation,
+                cell: (row: LessonTableRow) =>
+                  row.translation ? (
+                    <TranslationBadge
+                      state={row.translation}
+                      label={labels.translationNames![row.translation]}
+                    />
+                  ) : null,
+              },
+            ]
+          : []),
         { header: labels.updated, cell: (row) => row.updatedLabel },
       ]}
     />

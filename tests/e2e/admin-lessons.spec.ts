@@ -99,6 +99,40 @@ test.describe("the lesson admin", () => {
     ).toHaveCount(0);
   });
 
+  test("shows how translated each lesson is, and filters on it", async ({
+    page,
+  }) => {
+    await signInAs(page, db, "editor");
+    await page.goto("/admin/lessons");
+
+    // The seeded catalogue is English only, so every lesson is untranslated.
+    // Asserting on the column rather than on a count: the point of the column
+    // is that an editor can see the state without opening anything.
+    const table = page.getByRole("table");
+    await expect(table.getByText("Not translated").first()).toBeVisible();
+
+    // The two filter rows use different words on purpose — "Draft" would mean
+    // the lesson in one and its translation in the other — and each row is
+    // captioned, so this can name one unambiguously.
+    await page
+      .getByLabel("Filter by translation")
+      .getByRole("link", { name: "Not translated", exact: true })
+      .click();
+
+    await expect(page).toHaveURL(/translation=missing/);
+    // Linkable, like every other piece of list state.
+    await expect(table.getByText("Not translated").first()).toBeVisible();
+
+    // And the opposite filter is empty rather than showing the same rows
+    // under a different heading.
+    await page
+      .getByLabel("Filter by translation")
+      .getByRole("link", { name: "Translated", exact: true })
+      .click();
+    await expect(page).toHaveURL(/translation=published/);
+    await expect(table.getByText("Not translated")).toHaveCount(0);
+  });
+
   test("creates a draft that the public catalogue does not show", async ({
     page,
   }) => {

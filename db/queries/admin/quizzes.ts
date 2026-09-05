@@ -13,14 +13,24 @@ import {
   type SQL,
 } from "drizzle-orm";
 
+import type { PgSelectQueryBuilder } from "drizzle-orm/pg-core";
+
 import { getDb } from "@/db/client";
 import {
   quizOptions,
+  quizQuestionTranslations,
   quizQuestions,
+  quizTranslations,
   quizzes,
   type ContentStatus,
 } from "@/db/schema/content";
 import { offsetFor, pageCount, type ListParams } from "./list-params";
+import { childRankExpression, rowRank, worstRank } from "./translation-rank";
+import {
+  TRANSLATION_RANK,
+  stateFromRank,
+  type TranslationState,
+} from "@/lib/translations/state";
 
 /**
  * Quizzes for the admin list and editor.
@@ -63,6 +73,11 @@ export interface QuizRow {
   status: ContentStatus;
   position: number;
   questionCount: number;
+  /**
+   * How translated this quiz is into the target locale, counting its
+   * questions — worst part wins. Absent when no locale was asked about.
+   */
+  translation?: TranslationState;
   updatedAt: Date;
 }
 
@@ -110,20 +125,108 @@ function filters(params: ListParams<QuizSort>, status?: ContentStatus) {
   return and(...clauses.filter(Boolean));
 }
 
+/**
+ * The worst translation rank across a quiz's questions, per quiz.
+ *
+ * A derived table for the same reason the lessons list uses one: inside a
+ * correlated subquery drizzle renders columns unqualified, and an
+ * unqualified `"id"` binds to the inner table. A quiz with no questions gets
+ * no row here, and the caller's coalesce reads that as nothing outstanding.
+ */
+function questionTranslationRanks(
+  db: ReturnType<typeof getDb>,
+  locale: string,
+) {
+  return db
+    .select({
+      quizId: quizQuestions.quizId,
+      rank: childRankExpression(quizQuestionTranslations, quizQuestions).as(
+        "rank",
+      ),
+    })
+    .from(quizQuestions)
+    .leftJoin(
+      quizQuestionTranslations,
+      and(
+        eq(quizQuestionTranslations.questionId, quizQuestions.id),
+        eq(quizQuestionTranslations.locale, locale),
+      ),
+    )
+    .groupBy(quizQuestions.quizId)
+    .as("question_translation_ranks");
+}
+
+export interface AdminQuizListOptions {
+  status?: ContentStatus;
+  /** Which locale the translation column is about. Omitted means no column. */
+  translationLocale?: string;
+  /** Narrow to quizzes in one translation state. */
+  translationState?: TranslationState;
+}
+
 export async function listQuizzesForAdmin(
   params: ListParams<QuizSort>,
-  status?: ContentStatus,
+  options: ContentStatus | AdminQuizListOptions = {},
 ): Promise<QuizPage> {
+  // The second argument used to be the status alone; both shapes are accepted
+  // rather than rewriting every call site for one new field.
+  const { status, translationLocale, translationState } =
+    typeof options === "string" ? { status: options } : options;
+
   const db = getDb();
-  const where = filters(params, status);
   const order = params.direction === "desc" ? desc : asc;
 
-  const [{ total }] = await db
-    .select({ total: count() })
-    .from(quizzes)
-    .where(where);
+  const wantsTranslation = Boolean(translationLocale);
+  const questionRanks = translationLocale
+    ? questionTranslationRanks(db, translationLocale)
+    : undefined;
 
-  const rows = await db
+  // Built once and used for both the column and the filter, so the number an
+  // editor reads and the predicate that selected the row cannot disagree.
+  const rank =
+    questionRanks && translationLocale
+      ? worstRank(
+          rowRank(quizTranslations, quizzes),
+          sql<number>`${questionRanks.rank}`,
+        )
+      : undefined;
+
+  function joinTranslations<T extends PgSelectQueryBuilder>(query: T): T {
+    if (!translationLocale || !questionRanks) return query;
+    return (
+      query
+        .leftJoin(
+          quizTranslations,
+          and(
+            eq(quizTranslations.quizId, quizzes.id),
+            eq(quizTranslations.locale, translationLocale),
+          ),
+        )
+        // The cast: a left join widens the builder's type, but nothing
+        // downstream selects from the joined tables — the rank expression
+        // already carries their columns.
+        .leftJoin(
+          questionRanks,
+          eq(questionRanks.quizId, quizzes.id),
+        ) as unknown as T
+    );
+  }
+
+  const where =
+    rank && translationState !== undefined
+      ? and(
+          filters(params, status),
+          sql`${rank} = ${TRANSLATION_RANK[translationState]}`,
+        )
+      : filters(params, status);
+
+  // `$dynamic()` on both, so the count and the rows carry the same joins.
+  // One of them missing them is how a pager promises pages that do not exist.
+  const [{ total }] = await joinTranslations(
+    db.select({ total: count() }).from(quizzes).$dynamic(),
+  ).where(where);
+
+  const rowsQuery = db
     .select({
       id: quizzes.id,
       slug: quizzes.slug,
@@ -140,9 +243,13 @@ export async function listQuizzesForAdmin(
         quizQuestions,
         eq(quizQuestions.quizId, quizzes.id),
       ),
+      translationRank: rank ?? sql<number | null>`null::int`,
       updatedAt: quizzes.updatedAt,
     })
     .from(quizzes)
+    .$dynamic();
+
+  const rows = await joinTranslations(rowsQuery)
     .where(where)
     .orderBy(
       order(orderColumn(params.sort)),
@@ -154,9 +261,12 @@ export async function listQuizzesForAdmin(
     .offset(offsetFor(params.page, params.pageSize, total ?? 0));
 
   return {
-    rows: rows.map((row) => ({
+    rows: rows.map(({ translationRank, ...row }) => ({
       ...row,
       questionCount: Number(row.questionCount),
+      translation: wantsTranslation
+        ? stateFromRank(Number(translationRank ?? 0))
+        : undefined,
     })),
     total: total ?? 0,
     pages: pageCount(total ?? 0, params.pageSize),

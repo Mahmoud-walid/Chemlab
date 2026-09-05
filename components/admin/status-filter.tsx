@@ -16,18 +16,26 @@ export function StatusFilter({
   current,
   options,
   label,
+  param = "status",
 }: {
   current: string;
   options: { value: string; label: string }[];
   label: string;
+  /**
+   * Which query parameter this row of links controls. Defaults to `status`,
+   * which is what it was built for; a list can carry a second row over a
+   * different parameter — the translation state, say — without a second
+   * component that would drift from this one's URL handling.
+   */
+  param?: string;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const hrefFor = (value: string) => {
     const next = new URLSearchParams(searchParams.toString());
-    if (value === "all") next.delete("status");
-    else next.set("status", value);
+    if (value === "all") next.delete(param);
+    else next.set(param, value);
     // Back to the first page: staying on page 3 of a narrowed result is how a
     // filter appears to return nothing.
     next.delete("page");

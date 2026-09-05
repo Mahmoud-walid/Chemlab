@@ -4,7 +4,9 @@ import {
   DataTable,
   type DataTableLabels,
 } from "@/components/admin/data-table/data-table";
+import { TranslationBadge } from "@/components/admin/translation-badge";
 import { Badge } from "@/components/ui/badge";
+import type { TranslationState } from "@/lib/translations/state";
 import type { ContentStatus } from "@/db/schema/content";
 
 export interface QuizTableRow {
@@ -18,6 +20,8 @@ export interface QuizTableRow {
   questionCount: number;
   /** Already pluralised on the server — a formatter cannot cross this boundary. */
   questionsLabel: string;
+  /** Absent when no locale is being tracked — then the column is not shown. */
+  translation?: TranslationState;
   updatedLabel: string;
 }
 
@@ -30,6 +34,9 @@ export interface QuizTableLabels {
   questions: string;
   updated: string;
   statusNames: Record<ContentStatus, string>;
+  /** Column header — the language's own name, e.g. "Arabic". */
+  translation?: string;
+  translationNames?: Record<TranslationState, string>;
   table: DataTableLabels;
 }
 
@@ -108,6 +115,23 @@ export function QuizzesTable({
               row.questionsLabel
             ),
         },
+        // Conditional, not hidden with CSS: with no second locale there is
+        // no question to answer, and an empty column is worse than none.
+        ...(labels.translation && labels.translationNames
+          ? [
+              {
+                key: "translation",
+                header: labels.translation,
+                cell: (row: QuizTableRow) =>
+                  row.translation ? (
+                    <TranslationBadge
+                      state={row.translation}
+                      label={labels.translationNames![row.translation]}
+                    />
+                  ) : null,
+              },
+            ]
+          : []),
         { header: labels.updated, cell: (row) => row.updatedLabel },
       ]}
     />
