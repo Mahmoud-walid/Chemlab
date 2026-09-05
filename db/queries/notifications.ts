@@ -14,6 +14,7 @@ import {
   shouldRecord,
   type Preferences,
 } from "@/lib/notifications/rules";
+import type { PreferencesUpdate } from "@/lib/notifications/preferences-input";
 import {
   aggregationPredicate,
   specFor,
@@ -111,6 +112,31 @@ export async function preferencesFor(
     quietHoursEnd: row.quietHoursEnd,
     timezone: row.timezone,
   };
+}
+
+/**
+ * Writes the columns a patch touches, and returns the whole preferences.
+ *
+ * An upsert, because most people have no row: preferences are DEFAULTS until
+ * somebody changes something, so a missing row is a normal state and not one
+ * the settings page should have to create first.
+ */
+export async function savePreferences(
+  db: AnyDatabase,
+  userId: string,
+  update: PreferencesUpdate,
+): Promise<Preferences> {
+  await db
+    .insert(notificationPreferences)
+    .values({ userId, ...update, updatedAt: new Date() })
+    .onConflictDoUpdate({
+      target: notificationPreferences.userId,
+      // Only the columns the patch carried. Spreading the whole object would
+      // reset a field this request never mentioned to its default.
+      set: { ...update, updatedAt: new Date() },
+    });
+
+  return preferencesFor(db, userId);
 }
 
 export interface RecordResult {
