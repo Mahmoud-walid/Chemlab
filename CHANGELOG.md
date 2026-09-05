@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.9.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.8.0...v0.9.0) (2026-09-05)
+
+
+### Features
+
+* **activity:** the activity stream, its recorder, and the admin screen ([#67](https://github.com/Mahmoud-walid/Chemlab/issues/67)) ([85ab7ba](https://github.com/Mahmoud-walid/Chemlab/commit/85ab7ba5abf7735d56ed66aaeec6df296ddf749d))
+* **admin:** dashboards, the engagement funnel, and daily rollups ([#74](https://github.com/Mahmoud-walid/Chemlab/issues/74)) ([ae8ed12](https://github.com/Mahmoud-walid/Chemlab/commit/ae8ed12951a5c08e9578b1b8e26e20e03e371152))
+* **admin:** page open/close switch, and migrate middleware to proxy ([#63](https://github.com/Mahmoud-walid/Chemlab/issues/63)) ([54881b2](https://github.com/Mahmoud-walid/Chemlab/commit/54881b2e4633f84484e31bf6b2c0718fb59db54b)), closes [#16](https://github.com/Mahmoud-walid/Chemlab/issues/16)
+* **admin:** settings registry, read path, and the General and Features sections ([#68](https://github.com/Mahmoud-walid/Chemlab/issues/68)) ([f580c8e](https://github.com/Mahmoud-walid/Chemlab/commit/f580c8e1834332e86b87fce26ae103527d18dc01))
+* **admin:** the Content, Notifications, Security and Localisation settings ([#69](https://github.com/Mahmoud-walid/Chemlab/issues/69)) ([31714ae](https://github.com/Mahmoud-walid/Chemlab/commit/31714ae497195e1a88e3f99c907a0447b39cac2d))
+* **admin:** the people section, and one person's whole record ([#73](https://github.com/Mahmoud-walid/Chemlab/issues/73)) ([e0f70f0](https://github.com/Mahmoud-walid/Chemlab/commit/e0f70f0ac8d852670e424c0d15a99c80362b9c45))
+* **exams:** sitting a quiz, resuming it, and reviewing the answers ([#71](https://github.com/Mahmoud-walid/Chemlab/issues/71)) ([817e9a5](https://github.com/Mahmoud-walid/Chemlab/commit/817e9a58599efa0bdbd3222ad192019dca97109f))
+* **exams:** the admin view of sittings, and voiding one with a reason ([#72](https://github.com/Mahmoud-walid/Chemlab/issues/72)) ([24239ce](https://github.com/Mahmoud-walid/Chemlab/commit/24239ce1fc207f3caf5f36dd0879f7d493ccbe41))
+* **exams:** the server-authoritative attempt engine ([#70](https://github.com/Mahmoud-walid/Chemlab/issues/70)) ([48d2064](https://github.com/Mahmoud-walid/Chemlab/commit/48d20644ae5fe8a9d8f1155302ba0245583ebb03))
+
+
+### Bug Fixes
+
+* **proxy:** forward x-pathname again, and close [#12](https://github.com/Mahmoud-walid/Chemlab/issues/12)'s remaining gaps ([#66](https://github.com/Mahmoud-walid/Chemlab/issues/66)) ([eaf6e8b](https://github.com/Mahmoud-walid/Chemlab/commit/eaf6e8b3d97759a318c74f5b26da82ae9f6166b0))
+
 ## [0.8.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.7.0...v0.8.0) (2026-09-05)
 
 
