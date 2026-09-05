@@ -17,6 +17,7 @@
     "db:studio": "drizzle-kit studio",
     "db:check": "tsx scripts/db-check.ts",
     "db:seed": "tsx scripts/seed.ts",
+    "rollup": "tsx scripts/rollup.ts",
     "db:verify": "tsx scripts/db-verify.ts",
     "pages:check": "tsx scripts/pages-check.ts",
     "db:bootstrap-admin": "tsx scripts/bootstrap-admin.ts",

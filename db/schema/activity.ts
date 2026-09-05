@@ -1,8 +1,11 @@
 import {
+  date,
   index,
+  integer,
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
@@ -97,3 +100,43 @@ export const activityEvents = pgTable(
 
 export type ActivityEvent = typeof activityEvents.$inferSelect;
 export type NewActivityEvent = typeof activityEvents.$inferInsert;
+
+/**
+ * Pre-aggregated activity, so dashboards never scan the raw event table.
+ *
+ * `activity_events` will out-grow every other table by an order of magnitude,
+ * and a dashboard that counts over it on every load gets slower every day it
+ * is used. This is written once per closed day and read for every chart; the
+ * current day is the only thing queried live, and it is bounded by definition.
+ *
+ * A rollup TABLE rather than a materialised view, deliberately. `REFRESH
+ * MATERIALIZED VIEW CONCURRENTLY` re-computes everything on a schedule we do
+ * not control and holds a chunk of the compute budget while it does; a table
+ * is incrementally updatable with `ON CONFLICT DO UPDATE`, cheap to backfill,
+ * and re-runnable for one day without touching the rest.
+ *
+ * `objectId` is part of the key so "most-viewed lessons" is answerable from
+ * here too. It is NOT null-able for that reason: Postgres treats NULLs in a
+ * primary key as distinct, which would let the same day/verb pair be inserted
+ * repeatedly and quietly break idempotency. The empty string is the "no
+ * object" value instead.
+ */
+export const activityDailyRollup = pgTable(
+  "activity_daily_rollup",
+  {
+    day: date("day").notNull(),
+    verb: activityVerb("verb").notNull(),
+    objectType: text("object_type").notNull().default(""),
+    objectId: text("object_id").notNull().default(""),
+    eventCount: integer("event_count").notNull(),
+    /** Distinct signed-in actors. Anonymous events count in neither. */
+    uniqueActors: integer("unique_actors").notNull(),
+    computedAt: timestamp("computed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.day, t.verb, t.objectType, t.objectId] }),
+    index("activity_rollup_day_idx").on(t.day),
+  ],
+);
