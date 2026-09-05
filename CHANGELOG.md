@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.15.0...v0.16.0) (2026-09-05)
+
+
+### Features
+
+* **ci:** a red main that reaches a phone, not one that waits to be noticed ([#90](https://github.com/Mahmoud-walid/Chemlab/issues/90)) ([054da84](https://github.com/Mahmoud-walid/Chemlab/commit/054da842777095bd50ac399e4d3c12dbcdfd64e2))
+
 ## [0.15.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.14.0...v0.15.0) (2026-09-05)
 
 
