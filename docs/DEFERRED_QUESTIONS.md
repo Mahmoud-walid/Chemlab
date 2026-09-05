@@ -383,6 +383,72 @@ deep admin link returns you to the page you asked for rather than to `/admin`.
 
 ---
 
+### Q34 — the page switch is enforced in the proxy, and caches for 15 seconds
+
+The open/closed map is read in `proxy.ts` and cached in module memory for 15
+seconds. That TTL is the ceiling on how long a closed page stays reachable
+across processes: writes call `invalidatePageCache()`, so in the process that
+handled the click the switch is immediate, but a second instance keeps serving
+the old answer until its own copy expires.
+
+Fifteen seconds is a guess, chosen because the map is seven rows that change
+rarely and the proxy runs ahead of every request. It is deliberately not zero:
+a database read per request, in front of every page, is what the cache exists
+to avoid.
+
+The Next docs warn that a proxy may be deployed separately from the app and
+should not rely on shared caches, so a shared store is not a drop-in fix — it
+would be a second piece of infrastructure in the request path.
+
+**Question:** is a worst case of ~15 seconds acceptable for "I closed this page
+and a visitor could still see it"? If not, the options are a shorter TTL (more
+queries), or a shared cache with a revalidation channel (more moving parts).
+My default is to leave it until the site runs on more than one instance, where
+the question actually bites.
+
+---
+
+### Q35 — does `exam_attempts` belong to #19 or to #26?
+
+#19 scope §3 says attempts and server-side grading belong to the activity
+issue. #16's "out of scope" says taking an exam, timers, scoring and attempt
+storage belong to #26. Both cannot own it, and building it twice is worse than
+either.
+
+**My default: #26 owns the tables and the grading, #19 owns everything that
+reads them.** The score is produced by the same server action that receives the
+answers, so splitting the write from the read means #19 ships a table nothing
+fills and #26 ships a runtime with nowhere to put its results.
+
+That makes #19's attempts slice depend on #26 rather than precede it. The
+activity spine and the dashboards-minus-attempt-charts are unaffected either
+way, which is why this did not block the first slice.
+
+**Question:** agreed, or would you rather #19 own the schema and #26 fill it?
+
+---
+
+### Q36 — `activity:read_pii`, because the model has two segments
+
+#19 asks for `activity:read:pii`. The permission vocabulary is
+`resource:action`, two parts, checked by a regex and drawn from two closed
+lists. A third segment would mean teaching the whole model to parse one — every
+`requirePermission` call, the seed, the admin UI — for a single permission.
+
+Shipped as **`activity:read_pii`**, an action of its own. The shape test in
+`tests/lib/authz-core.test.ts` had to be loosened to allow an underscore in the
+action half; it already allowed one in the resource half, so the restriction
+looks incidental rather than intended. A stronger check went in alongside:
+every action must appear in the declared `ACTIONS` list, so a typo still cannot
+invent a permission.
+
+Flagging it because loosening a test to fit new code is exactly the move worth
+being suspicious of, and it should be your decision rather than mine alone. If
+you would rather have the three-segment form, it is a contained change now and
+a much larger one later.
+
+---
+
 ### Q33 — should a question be allowed more than one correct answer?
 
 #16 asks for "options with one or more correct answers". The stored model has

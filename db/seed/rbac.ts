@@ -28,6 +28,7 @@ export const RESOURCES = [
   "media",
   "notification",
   "audit",
+  "activity",
 ] as const;
 
 export const ACTIONS = [
@@ -43,6 +44,10 @@ export const ACTIONS = [
   "toggle",
   "bypass",
   "access",
+  // `activity:read_pii`. The catalogue is `resource:action`, two parts, so
+  // #19's `activity:read:pii` becomes an action of its own rather than a
+  // third segment the whole model would have to grow to carry.
+  "read_pii",
 ] as const;
 
 export type Resource = (typeof RESOURCES)[number];
@@ -209,6 +214,25 @@ export const PERMISSIONS: PermissionSpec[] = [
   },
 
   { resource: "audit", action: "read", description: "Read the audit log" },
+
+  {
+    resource: "activity",
+    action: "read",
+    description: "Read the activity stream, with personal data withheld",
+  },
+  {
+    resource: "activity",
+    action: "read_pii",
+    // Separate from `read` because IP address and user agent are personal
+    // data. Someone reviewing what a feature is used for needs the stream;
+    // they do not need to know where each person was sitting.
+    description: "See IP addresses and user agents in the activity stream",
+  },
+  {
+    resource: "activity",
+    action: "export",
+    description: "Export activity data",
+  },
 ];
 
 export interface RoleSpec {
@@ -279,6 +303,9 @@ export const ROLES: RoleSpec[] = [
       p("notification", "read"),
       p("notification", "create"),
       p("audit", "read"),
+      p("activity", "read"),
+      p("activity", "read_pii"),
+      p("activity", "export"),
     ],
   },
   {

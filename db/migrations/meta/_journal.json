@@ -57,6 +57,13 @@
       "when": 1788576556907,
       "tag": "0007_page_switch",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788583322186,
+      "tag": "0008_activity_events",
+      "breakpoints": true
     }
   ]
 }

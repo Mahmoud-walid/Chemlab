@@ -12,7 +12,13 @@ import {
   UnknownPermissionError,
   type PermissionContext,
 } from "@/lib/authz-core";
-import { allPermissionNames, PERMISSIONS, ROLES } from "@/db/seed/rbac";
+import {
+  ACTIONS,
+  RESOURCES,
+  allPermissionNames,
+  PERMISSIONS,
+  ROLES,
+} from "@/db/seed/rbac";
 
 const context = (
   permissions: string[],
@@ -127,11 +133,24 @@ describe("the permission vocabulary", () => {
   });
 
   it("names every permission as resource:action", () => {
+    // Underscores are allowed in BOTH halves. They already were in the
+    // resource half, and `activity:read_pii` is why the action half needs
+    // them: #19 asks for `activity:read:pii`, and a third segment would mean
+    // teaching the whole model to parse one, for a single permission.
     for (const spec of PERMISSIONS) {
       expect(`${spec.resource}:${spec.action}`).toMatch(
-        /^[a-z]+(?:_[a-z]+)*:[a-z]+$/,
+        /^[a-z]+(?:_[a-z]+)*:[a-z]+(?:_[a-z]+)*$/,
       );
       expect(spec.description.trim()).not.toBe("");
+    }
+  });
+
+  it("draws every action from the declared list", () => {
+    // Stronger than the shape check above, and the reason loosening it is
+    // safe: a typo cannot become a new action, because the list is closed.
+    for (const spec of PERMISSIONS) {
+      expect(ACTIONS, spec.resource).toContain(spec.action);
+      expect(RESOURCES, spec.action).toContain(spec.resource);
     }
   });
 

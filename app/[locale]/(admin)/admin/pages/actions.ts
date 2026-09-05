@@ -8,6 +8,7 @@ import { invalidatePageCache } from "@/db/queries/pages";
 import { pages } from "@/db/schema/content";
 import { auditLog } from "@/db/schema/rbac";
 import { isAlwaysOpen } from "@/lib/pages/routes";
+import { recordActivity } from "@/lib/activity/record";
 import { requirePermission } from "@/lib/authz";
 
 export interface PageToggleResult {
@@ -85,6 +86,13 @@ export async function setPageEnabled(
     });
   });
 
+  await recordActivity({
+    verb: "admin.page_toggled",
+    objectType: "page",
+    objectId: routeKey,
+    metadata: { isEnabled },
+  });
+
   afterWrite(routeKey);
   return { ok: true };
 }
@@ -119,6 +127,13 @@ export async function setPageInNav(
       before: { showInNav: before.showInNav },
       after: { showInNav },
     });
+  });
+
+  await recordActivity({
+    verb: "admin.page_toggled",
+    objectType: "page",
+    objectId: routeKey,
+    metadata: { showInNav },
   });
 
   afterWrite(routeKey);
@@ -168,6 +183,15 @@ export async function setMaintenanceMessage(
       before: { maintenanceMessage: before.maintenanceMessage },
       after: { maintenanceMessage: value },
     });
+  });
+
+  await recordActivity({
+    verb: "admin.updated",
+    objectType: "page",
+    objectId: routeKey,
+    // The message text itself is not recorded: it is operator prose, it can be
+    // long, and the audit entry already holds the before/after.
+    metadata: { maintenanceMessage: value === null ? "cleared" : "set" },
   });
 
   afterWrite(routeKey);

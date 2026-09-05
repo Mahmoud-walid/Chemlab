@@ -258,6 +258,22 @@ exists and content changes have a known cadence.
   without a deferrable constraint. A dangling answer is therefore possible and
   is _detected_ rather than prevented: publishing refuses a quiz with one, and
   `getQuizBySlug` throws rather than serving an unanswerable question.
+- **`activity_events` and `audit_log` are two tables on purpose.** They look
+  alike and answer different questions. `audit_log` is a security record:
+  append-only by trigger, never pruned, deliberately narrow. `activity_events`
+  is analytics: high volume, personal data, pruned on a retention schedule. One
+  table means either the retention job deletes the audit trail or the analytics
+  table can never be pruned. The `admin.*` verbs are written to both.
+- **`activity_events` is immutable but redactable.** A trigger refuses any
+  UPDATE that changes a value, and permits one that sets `actor_id`,
+  `ip_address` or `user_agent` to NULL. Both exceptions are required: deleting
+  an account nulls the actor through `ON DELETE SET NULL` — itself an UPDATE —
+  and the 90-day purge empties the personal-data columns. Redaction only ever
+  removes; an actor cannot be put back.
+- **IP addresses are truncated before they are stored**, never after: IPv4 to
+  its /24, IPv6 to its /48. An address that cannot be parsed is stored as NULL
+  rather than verbatim, because an unparsed string in a column documented as
+  truncated looks anonymised and is not.
 - **`pages` is keyed by the route pattern, not by an id.** The thing being
   switched is a URL and the proxy has only a URL to match on, so a surrogate
   key would mean a lookup before the decision could be made. It is also what

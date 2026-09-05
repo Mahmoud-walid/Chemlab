@@ -653,6 +653,57 @@
       "messageSaved": "تم حفظ الرسالة",
       "alwaysOpen": "تسجيل الدخول ولوحة التحكم وصفحات الملف الشخصي بلا مفتاح عن قصد — إغلاقها يغلق الصفحة التي تعيد فتحها.",
       "neverEmpty": "لا توجد صفحات مُهيأة. هذا يعني أنه لا يمكن إغلاق شيء، لا أن كل شيء مغلق."
+    },
+    "activity": {
+      "title": "النشاط",
+      "subtitle": "{count} حدثًا مسجّلًا.",
+      "searchPlaceholder": "ابحث بالشخص أو الكائن",
+      "filterByGroup": "التصفية حسب النوع",
+      "allGroups": "الكل",
+      "columns": {
+        "when": "الوقت",
+        "actor": "الشخص",
+        "verb": "الإجراء",
+        "object": "على",
+        "ip": "عنوان IP",
+        "agent": "العميل"
+      },
+      "anonymous": "زائر",
+      "deletedActor": "حساب محذوف",
+      "noObject": "—",
+      "piiWithheld": "عناوين IP وتفاصيل العميل محجوبة — تحتاج صلاحية activity:read_pii.",
+      "empty": "لم يُسجَّل أي نشاط بعد.",
+      "groups": {
+        "auth": "الحسابات",
+        "lesson": "الدروس",
+        "comment": "التعليقات",
+        "exam": "الاختبارات",
+        "admin": "الإدارة"
+      },
+      "verbs": {
+        "auth.signed_in": "سجّل الدخول",
+        "auth.signed_up": "أنشأ حسابًا",
+        "auth.signed_out": "سجّل الخروج",
+        "lesson.viewed": "شاهد درسًا",
+        "lesson.completed": "أكمل درسًا",
+        "lesson.liked": "أعجب بدرس",
+        "lesson.unliked": "ألغى إعجابه بدرس",
+        "lesson.saved": "حفظ درسًا",
+        "lesson.shared": "شارك درسًا",
+        "comment.posted": "نشر تعليقًا",
+        "comment.liked": "أعجب بتعليق",
+        "comment.deleted": "حذف تعليقًا",
+        "exam.started": "بدأ اختبارًا",
+        "exam.submitted": "سلّم اختبارًا",
+        "exam.abandoned": "ترك اختبارًا",
+        "admin.created": "أنشأ",
+        "admin.updated": "حدّث",
+        "admin.deleted": "حذف",
+        "admin.published": "نشر",
+        "admin.page_toggled": "فتح أو أغلق صفحة",
+        "admin.settings_changed": "غيّر الإعدادات",
+        "admin.exported": "صدّر بيانات"
+      }
     }
   },
   "pages": {

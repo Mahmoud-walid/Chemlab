@@ -134,7 +134,10 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         segment: "activity",
         labelKey: "items.activity",
         icon: ScrollText,
-        permission: "audit:read",
+        // The activity stream, not the audit log. `audit:read` still exists
+        // and still guards the audit log, which is a different table for a
+        // different purpose — see db/schema/activity.ts.
+        permission: "activity:read",
       },
       {
         segment: "settings",
