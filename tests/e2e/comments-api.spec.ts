@@ -26,12 +26,27 @@ test.beforeAll(async () => {
   if (!url) throw new Error("no database URL");
   ({ db, close } = connect(url));
 
-  const [lesson] = await db
+  /**
+   * A lesson nobody else is using.
+   *
+   * Both this file and `comments.spec.ts` clear their subject's comments, and
+   * `fullyParallel` means tests from one file run in different workers. Taking
+   * "the first lesson" in both meant two specs and two workers all clearing
+   * the same discussion out from under each other.
+   *
+   * This file counts from the END of the list and the UI spec counts from the
+   * start, so the two cannot meet for any plausible worker count without
+   * either file having to know what the other chose. Ordered by slug so the
+   * choice is deterministic rather than whatever the planner returns.
+   */
+  const lessons = await db
     .select({ id: schema.lessons.id })
     .from(schema.lessons)
-    .limit(1);
-  expect(lesson, "the seed produced no lessons").toBeTruthy();
-  lessonId = lesson!.id;
+    .orderBy(schema.lessons.slug);
+  expect(lessons.length, "the seed produced no lessons").toBeGreaterThan(1);
+
+  const worker = Number(process.env.TEST_WORKER_INDEX ?? "0");
+  lessonId = lessons[lessons.length - 1 - (worker % lessons.length)]!.id;
 });
 
 test.afterAll(async () => {
