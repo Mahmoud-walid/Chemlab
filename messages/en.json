@@ -653,6 +653,57 @@
       "messageSaved": "Message saved",
       "alwaysOpen": "Sign-in, the admin panel and personal profile pages have no switch on purpose — closing them would close the page that reopens them.",
       "neverEmpty": "No pages are configured. That means nothing can be closed, not that everything is."
+    },
+    "activity": {
+      "title": "Activity",
+      "subtitle": "{count} recorded events.",
+      "searchPlaceholder": "Search by person or object",
+      "filterByGroup": "Filter by kind",
+      "allGroups": "All",
+      "columns": {
+        "when": "When",
+        "actor": "Person",
+        "verb": "Did",
+        "object": "To",
+        "ip": "IP",
+        "agent": "Client"
+      },
+      "anonymous": "Anonymous",
+      "deletedActor": "Deleted account",
+      "noObject": "—",
+      "piiWithheld": "IP addresses and client details are withheld — they need the activity:read_pii permission.",
+      "empty": "Nothing has been recorded yet.",
+      "groups": {
+        "auth": "Accounts",
+        "lesson": "Lessons",
+        "comment": "Comments",
+        "exam": "Exams",
+        "admin": "Administration"
+      },
+      "verbs": {
+        "auth.signed_in": "Signed in",
+        "auth.signed_up": "Signed up",
+        "auth.signed_out": "Signed out",
+        "lesson.viewed": "Viewed a lesson",
+        "lesson.completed": "Completed a lesson",
+        "lesson.liked": "Liked a lesson",
+        "lesson.unliked": "Unliked a lesson",
+        "lesson.saved": "Saved a lesson",
+        "lesson.shared": "Shared a lesson",
+        "comment.posted": "Posted a comment",
+        "comment.liked": "Liked a comment",
+        "comment.deleted": "Deleted a comment",
+        "exam.started": "Started an exam",
+        "exam.submitted": "Submitted an exam",
+        "exam.abandoned": "Abandoned an exam",
+        "admin.created": "Created",
+        "admin.updated": "Updated",
+        "admin.deleted": "Deleted",
+        "admin.published": "Published",
+        "admin.page_toggled": "Opened or closed a page",
+        "admin.settings_changed": "Changed settings",
+        "admin.exported": "Exported data"
+      }
     }
   },
   "pages": {

@@ -18,6 +18,7 @@ import {
   type QuizPublishBlocker,
   type QuestionInput,
 } from "@/lib/admin/quiz-schema";
+import { recordActivity } from "@/lib/activity/record";
 import { requirePermission } from "@/lib/authz";
 
 export interface QuizSaveResult {
@@ -144,6 +145,13 @@ export async function createQuiz(formData: FormData): Promise<QuizSaveResult> {
     throw error;
   }
 
+  await recordActivity({
+    verb: "admin.created",
+    objectType: "quiz",
+    objectId: id,
+    metadata: { slug: values.slug, title: values.title },
+  });
+
   revalidateQuiz(values.slug);
   return { ok: true, slug: values.slug };
 }
@@ -212,6 +220,16 @@ export async function updateQuiz(
     throw error;
   }
 
+  await recordActivity({
+    verb: "admin.updated",
+    objectType: "quiz",
+    objectId: id,
+    metadata:
+      before.slug === values.slug
+        ? { slug: values.slug }
+        : { slug: values.slug, previousSlug: before.slug },
+  });
+
   revalidateQuiz(values.slug, before.slug);
   return { ok: true, slug: values.slug };
 }
@@ -272,6 +290,13 @@ export async function saveQuizQuestions(
     });
   });
 
+  await recordActivity({
+    verb: "admin.updated",
+    objectType: "quiz",
+    objectId: quizId,
+    metadata: { slug: quiz.slug, questions: incoming.length },
+  });
+
   revalidateQuiz(quiz.slug);
   return { ok: true };
 }
@@ -325,6 +350,13 @@ export async function setQuizStatus(
     });
   });
 
+  await recordActivity({
+    verb: status === "published" ? "admin.published" : "admin.updated",
+    objectType: "quiz",
+    objectId: id,
+    metadata: { slug: before.slug, from: before.status, to: status },
+  });
+
   revalidateQuiz(before.slug);
   return { ok: true, slug: before.slug };
 }
@@ -363,6 +395,13 @@ export async function deleteQuiz(id: string): Promise<QuizSaveResult> {
     });
   });
 
+  await recordActivity({
+    verb: "admin.deleted",
+    objectType: "quiz",
+    objectId: id,
+    metadata: { slug: before.slug },
+  });
+
   revalidateQuiz(before.slug);
   return { ok: true, slug: before.slug };
 }
@@ -393,6 +432,13 @@ export async function restoreQuiz(id: string): Promise<QuizSaveResult> {
       before: { status: before.status, deletedAt: before.deletedAt },
       after: { status: "draft", deletedAt: null },
     });
+  });
+
+  await recordActivity({
+    verb: "admin.updated",
+    objectType: "quiz",
+    objectId: id,
+    metadata: { slug: before.slug, restored: true },
   });
 
   revalidateQuiz(before.slug);

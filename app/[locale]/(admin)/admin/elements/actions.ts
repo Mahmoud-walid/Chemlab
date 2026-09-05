@@ -10,6 +10,7 @@ import {
   elementEditSchema,
   implausibilities,
 } from "@/lib/admin/element-schema";
+import { recordActivity } from "@/lib/activity/record";
 import { requirePermission } from "@/lib/authz";
 import { elementSlug } from "@/db/queries/elements";
 
@@ -114,6 +115,16 @@ export async function updateElement(
 
   // The element pages are prerendered, so an edit that is not revalidated is
   // an edit nobody sees until the next deploy.
+  // Alongside the audit entry, not instead of it: the audit row is the
+  // security record and lives in the transaction; this is the analytics
+  // stream and is written after the response. See db/schema/activity.ts.
+  await recordActivity({
+    verb: "admin.updated",
+    objectType: "element",
+    objectId: atomicNumber,
+    metadata: { name: parsed.data.name },
+  });
+
   revalidatePath("/admin/elements");
   revalidatePath(`/admin/elements/${atomicNumber}`);
   revalidatePath(`/chemical/${elementSlug(parsed.data.name)}`);

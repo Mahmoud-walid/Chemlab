@@ -18,6 +18,7 @@ import {
   publishBlockers,
   type PublishBlocker,
 } from "@/lib/admin/lesson-schema";
+import { recordActivity } from "@/lib/activity/record";
 import { requirePermission } from "@/lib/authz";
 
 export interface LessonSaveResult {
@@ -150,6 +151,13 @@ export async function createLesson(
     throw error;
   }
 
+  await recordActivity({
+    verb: "admin.created",
+    objectType: "lesson",
+    objectId: id,
+    metadata: { slug: parsed.data.slug, title: parsed.data.title },
+  });
+
   revalidateLesson(parsed.data.slug);
   return { ok: true, slug: parsed.data.slug };
 }
@@ -218,6 +226,18 @@ export async function updateLesson(
     }
     throw error;
   }
+
+  await recordActivity({
+    verb: "admin.updated",
+    objectType: "lesson",
+    objectId: id,
+    // The rename is the part worth being able to find later: it changes a
+    // public URL, and "why did this link stop working" is asked afterwards.
+    metadata:
+      before.slug === parsed.data.slug
+        ? { slug: parsed.data.slug }
+        : { slug: parsed.data.slug, previousSlug: before.slug },
+  });
 
   revalidateLesson(parsed.data.slug, before.slug);
   return { ok: true, slug: parsed.data.slug };
@@ -297,6 +317,13 @@ export async function setLessonStatus(
     });
   });
 
+  await recordActivity({
+    verb: status === "published" ? "admin.published" : "admin.updated",
+    objectType: "lesson",
+    objectId: id,
+    metadata: { slug: before.slug, from: before.status, to: status },
+  });
+
   revalidateLesson(before.slug);
   return { ok: true, slug: before.slug };
 }
@@ -340,6 +367,13 @@ export async function deleteLesson(id: string): Promise<LessonSaveResult> {
     });
   });
 
+  await recordActivity({
+    verb: "admin.deleted",
+    objectType: "lesson",
+    objectId: id,
+    metadata: { slug: before.slug },
+  });
+
   revalidateLesson(before.slug);
   return { ok: true, slug: before.slug };
 }
@@ -370,6 +404,13 @@ export async function restoreLesson(id: string): Promise<LessonSaveResult> {
       before: { status: before.status, deletedAt: before.deletedAt },
       after: { status: "draft", deletedAt: null },
     });
+  });
+
+  await recordActivity({
+    verb: "admin.updated",
+    objectType: "lesson",
+    objectId: id,
+    metadata: { slug: before.slug, restored: true },
   });
 
   revalidateLesson(before.slug);

@@ -18,6 +18,7 @@ import { uuidv7 } from "uuidv7";
 
 import * as schema from "@/db/schema";
 import { DEFAULT_ROLE_KEY } from "@/db/schema/rbac";
+import { recordActivity } from "@/lib/activity/record";
 import { decide, hashIdentifier, WINDOW_MS } from "@/lib/auth-rate-limit";
 
 /** How long a signed session snapshot is trusted without touching the database. */
@@ -221,6 +222,10 @@ export function buildAuthOptions({
        * else is a failure and counts toward the lockout above.
        */
       after: createAuthMiddleware(async (ctx) => {
+        // The activity stream first, because it covers three paths and the
+        // rate-limit bookkeeping below covers only one.
+        await recordAuthActivity(ctx);
+
         if (ctx.path !== "/sign-in/email") return;
 
         const email = (ctx.body as { email?: string } | undefined)?.email;
@@ -240,4 +245,51 @@ export function buildAuthOptions({
       }),
     },
   };
+}
+
+/**
+ * The three account verbs, recorded from Better Auth's own hook.
+ *
+ * Here rather than in the sign-in page, because there are several ways in —
+ * the form, the API, and Google when it lands — and a page can only see its
+ * own. The hook sees them all.
+ *
+ * Sign-out passes its actor explicitly: by the time the hook runs the session
+ * it is describing is already gone, so reading the current session would
+ * record an anonymous sign-out.
+ */
+async function recordAuthActivity(ctx: {
+  path: string;
+  context: {
+    newSession?: { user?: { id?: string } } | null;
+    session?: unknown;
+  };
+}): Promise<void> {
+  const userId = ctx.context.newSession?.user?.id ?? null;
+
+  if (ctx.path === "/sign-in/email" || ctx.path === "/callback/:id") {
+    if (!userId) return; // A failed attempt is not a sign-in.
+    await recordActivity({
+      verb: "auth.signed_in",
+      objectType: "user",
+      objectId: userId,
+      actorId: userId,
+    });
+    return;
+  }
+
+  if (ctx.path === "/sign-up/email") {
+    if (!userId) return;
+    await recordActivity({
+      verb: "auth.signed_up",
+      objectType: "user",
+      objectId: userId,
+      actorId: userId,
+    });
+    return;
+  }
+
+  if (ctx.path === "/sign-out") {
+    await recordActivity({ verb: "auth.signed_out", objectType: "user" });
+  }
 }
