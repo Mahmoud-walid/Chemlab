@@ -327,6 +327,30 @@ happens when the owner loses their account.
 
 ---
 
+### Q30 — adopt Next's Cache Components for the authenticated header?
+
+The account menu has to know who you are, and a server-side session read calls
+`headers()`. In the App Router a dynamic API anywhere in a layout opts every
+route beneath it out of static rendering — which is how adding the header in
+#51 silently cost the public site its prerendering, 238 element and quiz pages
+included.
+
+The header now resolves the session in the browser and shows a neutral
+placeholder until it does, which restores prerendering at the cost of the
+header being right one frame late.
+
+Next 16's [Cache Components](https://nextjs.org/docs/app/getting-started/caching)
+is the sanctioned fix: the static shell prerenders and the authenticated hole
+streams in behind a `<Suspense>` boundary. It is a whole-app rendering change —
+`cacheComponents: true`, then every route that reads the session is re-validated
+— so it belongs in its own piece of work rather than being bolted onto an
+unrelated PR.
+
+**Question:** adopt Cache Components as a dedicated task, or leave the header
+resolving client-side? Nothing is blocked either way.
+
+---
+
 ## Per-issue open questions
 
 Each planning issue carries its own `## Open questions` section for decisions

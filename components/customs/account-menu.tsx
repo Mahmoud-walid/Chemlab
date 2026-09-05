@@ -1,28 +1,45 @@
-import { getTranslations } from "next-intl/server";
+"use client";
+
+import { useTranslations } from "next-intl";
 
 import { Link } from "@/i18n/navigation";
-import { authConfigured, getServerEnv } from "@/lib/env.server";
-import { getCurrentUser } from "@/lib/session";
+import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AccountMenuClient } from "./account-menu.client";
 
 /**
  * The account surface in the header.
  *
- * A server component, so the signed-in state is correct in the first paint:
- * reading the session on the client would flash "Sign in" at someone who is
- * already signed in, on every navigation.
+ * Reads the session in the BROWSER, deliberately, even though a server read
+ * would give a correct first paint. A server read calls `headers()`, and a
+ * dynamic API anywhere in a layout opts every route beneath it out of static
+ * rendering — which silently cost the whole public site its prerendering,
+ * including 238 element and quiz pages, when this component was first added.
  *
- * Renders nothing at all when auth is not configured — the site works without
- * accounts, and an inert Sign in button that 500s is worse than no button.
+ * A content site that works when the database is down is worth more than a
+ * header that is right in the very first frame. While the session resolves the
+ * slot shows a neutral placeholder rather than "Sign in", so nobody is told
+ * they are signed out and then contradicted.
+ *
+ * The proper fix is Next's Cache Components, which prerenders the shell and
+ * streams this hole behind a Suspense boundary. That is a whole-app rendering
+ * change and belongs in its own piece of work — see docs/DEFERRED_QUESTIONS.md.
  */
-export async function AccountMenu() {
-  if (!authConfigured(getServerEnv())) return null;
+export function AccountMenu() {
+  const t = useTranslations("auth");
+  const { data: session, isPending } = authClient.useSession();
 
-  const t = await getTranslations("auth");
-  const user = await getCurrentUser();
+  if (isPending) {
+    return (
+      // Purely visual, and ARIA prohibits aria-label on a plain div. Hidden
+      // from assistive tech rather than announced as an unnamed region: the
+      // real control appears the moment the session resolves.
+      <Skeleton className="size-9 rounded-full" aria-hidden="true" />
+    );
+  }
 
-  if (!user) {
+  if (!session?.user) {
     return (
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="sm" asChild>
@@ -37,9 +54,9 @@ export async function AccountMenu() {
 
   return (
     <AccountMenuClient
-      displayName={user.profile?.displayName ?? user.name}
-      email={user.email}
-      avatarUrl={user.profile?.avatarUrl ?? user.image}
+      displayName={session.user.name}
+      email={session.user.email}
+      avatarUrl={session.user.image ?? null}
       labels={{
         openMenu: t("openAccountMenu"),
         avatarAlt: t("avatarAlt"),

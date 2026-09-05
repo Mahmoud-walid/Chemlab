@@ -12,8 +12,6 @@ import {
 } from "next/font/google";
 import "../globals.css";
 import { Providers } from "@/providers/providers";
-import { FloatingNavBar } from "@/components/customs/floating-nav-bar";
-import { AccountMenu } from "@/components/customs/account-menu";
 import { Toaster } from "@/components/ui/sonner";
 import { absoluteUrl, env } from "@/lib/env";
 import { direction, locales, routing, type Locale } from "@/i18n/routing";
@@ -137,7 +135,6 @@ export default async function LocaleLayout({
   // Opts every route in this segment into static rendering.
   setRequestLocale(locale);
 
-  const t = await getTranslations("common");
   const dir = direction(locale);
   const isArabic = locale === "ar";
   const fontVariables = isArabic
@@ -154,23 +151,12 @@ export default async function LocaleLayout({
         style={{ fontFamily: `var(--active-font, ${defaultFont})` }}
       >
         <NextIntlClientProvider>
+          {/* Only what EVERY route needs: the providers, the theme and the
+              toaster. Public-site chrome lives in (public)/layout.tsx and the
+              admin chrome in (admin)/admin/layout.tsx, so an admin page is not
+              a public page with the nav bar hidden by CSS. */}
           <Providers>
-            {/* The account surface. A header slot rather than a sixth entry in
-                the floating nav bar: the nav bar is for places, this is for
-                who you are, and mixing them makes both harder to scan. */}
-            <div className="flex justify-end px-4 pt-4">
-              <AccountMenu />
-            </div>
-
-            {/* pb-24 keeps content clear of the floating nav bar */}
-            <main className="pb-24">
-              {children}
-              <footer className="py-4 text-center text-sm text-muted-foreground">
-                {t("madeWith")}
-              </footer>
-            </main>
-
-            <FloatingNavBar />
+            {children}
             <Toaster />
           </Providers>
         </NextIntlClientProvider>
