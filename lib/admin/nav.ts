@@ -1,0 +1,228 @@
+import {
+  Atom,
+  BookOpen,
+  ClipboardList,
+  FileText,
+  LayoutDashboard,
+  ScrollText,
+  Settings,
+  ShieldCheck,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
+
+/**
+ * The admin navigation, as data.
+ *
+ * Declared here rather than as JSX so the server can filter it by the viewer's
+ * permissions before it ever reaches the browser, and so the breadcrumb trail
+ * and the command palette read from the same source as the sidebar — three
+ * copies of "what is at /admin/lessons" is three chances to disagree.
+ *
+ * **Filtering is cosmetic.** Hiding a link an editor cannot use is courtesy,
+ * not authorization: it stops nobody from typing the URL. Every admin page
+ * calls `requirePermission()` itself, and so does every server action behind
+ * it. If this file were the only thing standing between an editor and
+ * `/admin/settings`, there would be no security here at all.
+ */
+
+/**
+ * Message keys as literal unions, not `string`.
+ *
+ * next-intl types `t()` keys as a literal union, so typing these loosely would
+ * force a cast at every call site — and a cast is exactly where a mistyped key
+ * slips through. These match `messages/*.json` under the `admin` namespace, and
+ * tests/lib/admin-nav.test.ts asserts every one resolves in both catalogues.
+ */
+export type AdminGroupKey =
+  "groups.overview" | "groups.content" | "groups.people" | "groups.platform";
+
+export type AdminItemKey =
+  | "items.dashboard"
+  | "items.elements"
+  | "items.lessons"
+  | "items.exams"
+  | "items.pages"
+  | "items.users"
+  | "items.roles"
+  | "items.activity"
+  | "items.settings";
+
+export interface AdminNavItem {
+  /** Path under `/admin`, or "" for the dashboard itself. */
+  segment: string;
+  labelKey: AdminItemKey;
+  icon: LucideIcon;
+  /** The permission required to see AND to open it. */
+  permission: string;
+}
+
+export interface AdminNavGroup {
+  labelKey: AdminGroupKey;
+  items: AdminNavItem[];
+}
+
+export const ADMIN_ROOT = "/admin";
+
+export const ADMIN_NAV: AdminNavGroup[] = [
+  {
+    labelKey: "groups.overview",
+    items: [
+      {
+        segment: "",
+        labelKey: "items.dashboard",
+        icon: LayoutDashboard,
+        permission: "admin:access",
+      },
+    ],
+  },
+  {
+    labelKey: "groups.content",
+    items: [
+      {
+        segment: "elements",
+        labelKey: "items.elements",
+        icon: Atom,
+        permission: "element:read",
+      },
+      {
+        segment: "lessons",
+        labelKey: "items.lessons",
+        icon: BookOpen,
+        permission: "lesson:read",
+      },
+      {
+        segment: "exams",
+        labelKey: "items.exams",
+        icon: ClipboardList,
+        permission: "exam:read",
+      },
+      {
+        segment: "pages",
+        labelKey: "items.pages",
+        icon: FileText,
+        permission: "page:read",
+      },
+    ],
+  },
+  {
+    labelKey: "groups.people",
+    items: [
+      {
+        segment: "users",
+        labelKey: "items.users",
+        icon: Users,
+        permission: "user:read",
+      },
+      {
+        segment: "roles",
+        labelKey: "items.roles",
+        icon: ShieldCheck,
+        permission: "role:read",
+      },
+    ],
+  },
+  {
+    labelKey: "groups.platform",
+    items: [
+      {
+        segment: "activity",
+        labelKey: "items.activity",
+        icon: ScrollText,
+        permission: "audit:read",
+      },
+      {
+        segment: "settings",
+        labelKey: "items.settings",
+        icon: Settings,
+        permission: "setting:read",
+      },
+    ],
+  },
+];
+
+/** The href for a nav item. One place, so the sidebar and breadcrumbs agree. */
+export function hrefFor(segment: string): string {
+  return segment ? `${ADMIN_ROOT}/${segment}` : ADMIN_ROOT;
+}
+
+/**
+ * The groups a viewer may see, with the items they may not removed.
+ *
+ * A group whose every item is filtered away renders nothing at all — an empty
+ * heading is worse than an absent one, because it advertises a section the
+ * viewer cannot reach and looks like a bug.
+ */
+export function visibleNav(
+  permissions: ReadonlySet<string>,
+  isSuperAdmin: boolean,
+): AdminNavGroup[] {
+  return ADMIN_NAV.map((group) => ({
+    ...group,
+    items: group.items.filter(
+      (item) => isSuperAdmin || permissions.has(item.permission),
+    ),
+  })).filter((group) => group.items.length > 0);
+}
+
+/** Every item, flattened — for breadcrumbs and the command palette. */
+export function flattenNav(groups: AdminNavGroup[]): AdminNavItem[] {
+  return groups.flatMap((group) => group.items);
+}
+
+export interface Crumb {
+  href: string;
+  /** A message key, when the segment is a known nav item. */
+  labelKey?: AdminItemKey;
+  /** A literal label, when it is not — a record title, say. */
+  label?: string;
+  /** The last crumb is the current page and is not a link. */
+  isCurrent: boolean;
+}
+
+/**
+ * Builds the breadcrumb trail for an admin path.
+ *
+ * Derived from the nav declaration, not from raw URL segments: "roles" should
+ * read as "Roles and permissions", and a dynamic segment is an id nobody wants
+ * to see. `titles` lets the page supply the record's real title for those —
+ * without it, `/admin/lessons/01a06e…` would render a UUID as a breadcrumb.
+ */
+export function breadcrumbsFor(
+  pathname: string,
+  titles: Record<string, string> = {},
+): Crumb[] {
+  // Everything after `/admin`, with any locale prefix already stripped.
+  const withoutRoot = pathname
+    .replace(/^\/(en|ar)(?=\/|$)/, "")
+    .replace(/^\/admin/, "")
+    .split("/")
+    .filter(Boolean);
+
+  const crumbs: Crumb[] = [
+    {
+      href: ADMIN_ROOT,
+      labelKey: "items.dashboard",
+      isCurrent: withoutRoot.length === 0,
+    },
+  ];
+
+  const known = new Map(
+    flattenNav(ADMIN_NAV).map((item) => [item.segment, item.labelKey]),
+  );
+
+  let href = ADMIN_ROOT;
+  withoutRoot.forEach((segment, index) => {
+    href = `${href}/${segment}`;
+    const isCurrent = index === withoutRoot.length - 1;
+    const labelKey = known.get(segment);
+
+    crumbs.push(
+      labelKey
+        ? { href, labelKey, isCurrent }
+        : { href, label: titles[segment] ?? segment, isCurrent },
+    );
+  });
+
+  return crumbs;
+}

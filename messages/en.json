@@ -287,5 +287,45 @@
     "savedComingSoon": "Saving arrives with the rich lesson pages.",
     "browseQuizzes": "Browse quizzes",
     "browseLessons": "Browse lessons"
+  },
+  "admin": {
+    "title": "Chemlab admin",
+    "navLabel": "Admin navigation",
+    "breadcrumbLabel": "Breadcrumb",
+    "toggleSidebar": "Toggle the sidebar",
+    "backToSite": "Back to site",
+    "groups": {
+      "overview": "Overview",
+      "content": "Content",
+      "people": "People",
+      "platform": "Platform"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "elements": "Elements",
+      "lessons": "Lessons",
+      "exams": "Exams",
+      "pages": "Pages",
+      "users": "Users",
+      "roles": "Roles and permissions",
+      "activity": "Activity",
+      "settings": "Settings"
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "subtitle": "Everything you can manage, in one place.",
+      "comingSoon": "Arrives with its own issue.",
+      "noSections": "Your role does not open any admin sections yet."
+    },
+    "error": {
+      "title": "Something went wrong",
+      "body": "The page could not be loaded. Try again, and if it keeps happening, check the server logs.",
+      "retry": "Try again"
+    },
+    "notFound": {
+      "title": "Not found",
+      "body": "There is nothing at that address.",
+      "back": "Back to the dashboard"
+    }
   }
 }

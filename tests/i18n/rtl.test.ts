@@ -27,7 +27,11 @@ function grep(pattern: string, paths: string[]): string[] {
 
 describe("RTL readiness", () => {
   it("uses logical direction utilities, not physical ones", () => {
-    const hits = grep(PHYSICAL, ["app", "components/customs"]);
+    const hits = grep(PHYSICAL, [
+      "app",
+      "components/customs",
+      "components/admin",
+    ]);
     expect(
       hits,
       `use ms-/me-/ps-/pe-/start-/end-/text-start instead:\n${hits.join("\n")}`,
@@ -40,7 +44,7 @@ describe("RTL readiness", () => {
     // counterpart and are allowed.
     const hits = grep(
       String.raw`from "next/link"|import \{[^}]*\b(useRouter|usePathname|redirect)\b[^}]*\} from "next/navigation"`,
-      ["app", "components/customs"],
+      ["app", "components/customs", "components/admin"],
     );
     expect(
       hits,

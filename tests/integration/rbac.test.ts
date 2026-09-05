@@ -370,11 +370,27 @@ describe("the last Super Admin", () => {
     );
   });
 
-  it("becomes removable once a second holder exists, and the second is then immovable", async () => {
+  it("becomes removable once another holder exists", async () => {
+    const countHolders = async () =>
+      (
+        await db
+          .select({ userId: schema.userRoles.userId })
+          .from(schema.userRoles)
+          .where(
+            eq(schema.userRoles.roleId, roleIds.get(SUPER_ADMIN_ROLE_KEY)!),
+          )
+      ).length;
+
+    // Relative to whatever the database already had, never an absolute count:
+    // other suites and the e2e run create Super Admins too, and a test that
+    // assumes it owns the holder set is the bug this file already fixed once.
+    const before = await countHolders();
+
     const second = await makeUser(
       `second-super-${Date.now()}@rbac-test.invalid`,
     );
     await grant(second, SUPER_ADMIN_ROLE_KEY);
+    expect(await countHolders()).toBe(before + 1);
 
     // With two holders, removing one is allowed.
     await db
@@ -386,11 +402,7 @@ describe("the last Super Admin", () => {
         ),
       );
 
-    const holders = await db
-      .select({ userId: schema.userRoles.userId })
-      .from(schema.userRoles)
-      .where(eq(schema.userRoles.roleId, roleIds.get(SUPER_ADMIN_ROLE_KEY)!));
-    expect(holders.length).toBe(1);
+    expect(await countHolders()).toBe(before);
 
     await db.delete(schema.users).where(eq(schema.users.id, second));
   });

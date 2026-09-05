@@ -1,3 +1,7 @@
+// Before anything reads process.env: the browser tests and the server they
+// drive must see the same database as `pnpm db:seed`, and a hosted dev
+// container can carry a DATABASE_URL of its own. See lib/load-env.ts.
+import "./lib/load-env";
 import { defineConfig, devices } from "@playwright/test";
 
 const PORT = Number(process.env.PORT ?? 3000);
