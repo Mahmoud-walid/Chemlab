@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.17.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.16.0...v0.17.0) (2026-09-05)
+
+
+### Features
+
+* **comments:** the data layer and the API — threading, reactions, moderation ([#93](https://github.com/Mahmoud-walid/Chemlab/issues/93)) ([9bc545e](https://github.com/Mahmoud-walid/Chemlab/commit/9bc545e4e3aa43eec0fe80da7d81672710808172))
+* **comments:** the discussion UI — optimistic reactions, buffered arrivals ([#94](https://github.com/Mahmoud-walid/Chemlab/issues/94)) ([aca40da](https://github.com/Mahmoud-walid/Chemlab/commit/aca40da567fd8b68effe92a421fa78995fae6d21))
+
+
+### Bug Fixes
+
+* **comments:** page on the row id, not a timestamp that loses microseconds ([#97](https://github.com/Mahmoud-walid/Chemlab/issues/97)) ([f2835ed](https://github.com/Mahmoud-walid/Chemlab/commit/f2835ed16ca3d333f4d237615d475aa2baa3fe4e))
+
 ## [0.16.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.15.0...v0.16.0) (2026-09-05)
 
 
