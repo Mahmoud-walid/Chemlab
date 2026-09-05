@@ -138,6 +138,10 @@ function secrets(): [string, string][] {
     "GOOGLE_CLIENT_SECRET",
     "DATABASE_URL",
     "DATABASE_URL_UNPOOLED",
+    // The CI alert secrets. The Slack URL is included because the URL IS the
+    // credential: anyone holding it can post to the channel.
+    "CI_NOTIFY_SECRET",
+    "SLACK_WEBHOOK_URL",
   ];
 
   return names

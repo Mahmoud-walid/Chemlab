@@ -136,6 +136,13 @@ jobs:
       NEXT_PUBLIC_VAPID_PUBLIC_KEY: BG8yTZes4g1RimvHLRYVAJwFQ3MfzAZmwDdRuMLcHwobhHQSOVHum2QAZQlLwGL00j4DkMPVtd-iMhMTZdxUVIU
       VAPID_PRIVATE_KEY: x3PPHgvu6UeIR3aXt0vqpbw6txVkNcfWxesGePG1TCo
       VAPID_SUBJECT: mailto:ci@chemlab.invalid
+      # A throwaway HMAC key so the CI-notify tests exercise the SIGNED path.
+      # Not the real secret: this one authenticates nothing beyond this
+      # runner's own requests to its own localhost, and the deployment's key
+      # lives in its environment. Without it those tests skip, and the
+      # signature — the only thing standing between that endpoint and the
+      # internet — would be tested nowhere.
+      CI_NOTIFY_SECRET: ci-only-notify-secret-at-least-32-characters
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -175,3 +182,119 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+
+  # Tells the app what this run did, so a red `main` reaches a phone instead of
+  # waiting to be noticed. One job rather than a step in each of the four: five
+  # reports for one push is four notifications saying nothing new, and this is
+  # the only place that can see the whole run's outcome.
+  notify:
+    name: notify
+    runs-on: ubuntu-latest
+    needs: [verify, build, integration, e2e]
+    # Runs whatever happened above, including a cancellation — and its own
+    # result is never allowed to matter. A monitoring system that can turn a
+    # green build red, or mask a red one, is a liability.
+    if: >-
+      always() &&
+      github.event.pull_request.head.repo.fork != true
+    continue-on-error: true
+    steps:
+      - name: Report the run
+        # No `-v`, and the response body is not echoed: the secret must not
+        # reach a log, and neither must the webhook URL the app holds.
+        env:
+          CI_NOTIFY_URL: ${{ secrets.CI_NOTIFY_URL }}
+          CI_NOTIFY_SECRET: ${{ secrets.CI_NOTIFY_SECRET }}
+          # `needs.*.result` is the only place the outcome of a parallel job is
+          # visible, and it is exact — no API call, no guessing from logs.
+          VERIFY: ${{ needs.verify.result }}
+          BUILD: ${{ needs.build.result }}
+          INTEGRATION: ${{ needs.integration.result }}
+          E2E: ${{ needs.e2e.result }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message || github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          # On a `pull_request` event `github.ref_name` is `90/merge` and
+          # `github.sha` is the ephemeral merge commit — neither is a thing
+          # anybody can check out, and a branch filter matching `90/merge`
+          # matches nothing a developer ever watches. `head_ref` and the PR's
+          # head sha are the real branch and the real commit.
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        # `bash`, not the default `bash -e`. GitHub's default shell aborts the
+        # step on the first non-zero exit, and every line below is best-effort:
+        # a monitoring step that dies because `openssl` was unhappy is a
+        # monitoring step that reports nothing and says nothing about why.
+        shell: bash
+        run: |
+          set +e -u
+
+          if [ -z "${CI_NOTIFY_URL:-}" ] || [ -z "${CI_NOTIFY_SECRET:-}" ]; then
+            echo "CI notifications are not configured for this repository; skipping."
+            exit 0
+          fi
+
+          failed=""
+          for job in verify build integration e2e; do
+            case "$job" in
+              verify) result="$VERIFY" ;;
+              build) result="$BUILD" ;;
+              integration) result="$INTEGRATION" ;;
+              e2e) result="$E2E" ;;
+            esac
+            if [ "$result" = "failure" ]; then
+              failed="$failed \"$job\","
+            fi
+          done
+          failed="[${failed%,}]"
+
+          # A cancellation only counts as one when nothing actually failed:
+          # a cancelled run that already had a red job is a failure the
+          # cancellation happened to interrupt.
+          if [ "$failed" != "[]" ]; then
+            outcome="failure"
+          elif [ "$VERIFY" = "cancelled" ] || [ "$BUILD" = "cancelled" ] || \
+               [ "$INTEGRATION" = "cancelled" ] || [ "$E2E" = "cancelled" ]; then
+            outcome="cancelled"
+          else
+            outcome="success"
+          fi
+
+          # jq builds the JSON so a commit message containing a quote, a
+          # newline or a backslash cannot break the body — or, signed as it
+          # would be, turn into a body the app refuses for the wrong reason.
+          body=$(jq -cn \
+            --arg repository "${{ github.repository }}" \
+            --arg branch "$BRANCH" \
+            --arg commitSha "$COMMIT_SHA" \
+            --arg commitMessage "${COMMIT_MESSAGE:-}" \
+            --arg actor "${{ github.actor }}" \
+            --arg outcome "$outcome" \
+            --argjson failedJobs "$failed" \
+            --arg runUrl "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --arg nonce "$(openssl rand -hex 16)" \
+            --argjson timestamp "$(date +%s)" \
+            --argjson pr "${PR_NUMBER:-null}" \
+            '{repository:$repository, branch:$branch, commitSha:$commitSha,
+              commitMessage:($commitMessage|split("\n")[0]|.[0:200]),
+              actor:$actor, job:"ci", outcome:$outcome, failedJobs:$failedJobs,
+              runUrl:$runUrl, nonce:$nonce, timestamp:$timestamp}
+             + (if $pr == null then {} else {pullRequestNumber:$pr} end)')
+
+          # HMAC over the RAW body, the same construction GitHub uses for its
+          # own webhooks. The secret itself never leaves this runner.
+          signature=$(printf '%s' "$body" \
+            | openssl dgst -sha256 -hmac "$CI_NOTIFY_SECRET" -hex \
+            | awk '{print $NF}')
+
+          status=$(printf '%s' "$body" | curl -sS -o /dev/null -w '%{http_code}' \
+            --max-time 10 --retry 2 --retry-connrefused \
+            -X POST "$CI_NOTIFY_URL" \
+            -H 'content-type: application/json' \
+            -H "x-chemlab-signature: sha256=$signature" \
+            --data-binary @- || echo "000")
+
+          echo "reported $outcome (failed: $failed) — endpoint answered $status"
+          # Deliberately exits 0 whatever the endpoint said. If the app is
+          # down or the secret has rotated, CI still reports the true build
+          # result.
+          exit 0
