@@ -50,6 +50,9 @@ export const ACTIONS = [
   "read_pii",
   // `setting:update_security`, by the same rule.
   "update_security",
+  // `exam:void`. Striking out a sitting is not editing it: the row stays, the
+  // reason is recorded, and the mark stops counting.
+  "void",
 ] as const;
 
 export type Resource = (typeof RESOURCES)[number];
@@ -121,6 +124,14 @@ export const PERMISSIONS: PermissionSpec[] = [
     description: "View exam attempts and scores",
   },
   { resource: "exam", action: "export", description: "Export exam results" },
+  {
+    resource: "exam",
+    action: "void",
+    // Separate from `exam:read` because voiding changes somebody's record.
+    // Reading the scores and striking one out are different levels of trust,
+    // and a void is visible to the candidate.
+    description: "Strike out an exam attempt, with a reason",
+  },
 
   {
     resource: "comment",
@@ -296,6 +307,7 @@ export const ROLES: RoleSpec[] = [
       p("quiz", "publish"),
       p("exam", "read"),
       p("exam", "export"),
+      p("exam", "void"),
       p("comment", "read"),
       p("comment", "moderate"),
       p("comment", "delete"),

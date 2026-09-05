@@ -1,5 +1,6 @@
 import {
   Atom,
+  BarChart3,
   BookOpen,
   ClipboardList,
   FileText,
@@ -42,6 +43,7 @@ export type AdminItemKey =
   | "items.elements"
   | "items.lessons"
   | "items.quizzes"
+  | "items.exams"
   | "items.pages"
   | "items.users"
   | "items.roles"
@@ -101,6 +103,16 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         labelKey: "items.quizzes",
         icon: ClipboardList,
         permission: "quiz:read",
+      },
+      {
+        // Guarded by `exam:read`, which in this vocabulary means exactly
+        // this: view attempts and scores. Deliberately not `quiz:read` — an
+        // Editor who writes the questions has no reason to see who scored
+        // what, and the two are different grants for that reason.
+        segment: "exams",
+        labelKey: "items.exams",
+        icon: BarChart3,
+        permission: "exam:read",
       },
       {
         segment: "pages",
