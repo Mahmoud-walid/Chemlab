@@ -152,7 +152,16 @@
     "backToLessons": "Back to lessons",
     "readingTime": "About {minutes} min read",
     "bodyComingSoon": "This lesson's content is being written.",
-    "readNext": "Read next"
+    "readNext": "Read next",
+    "like": "Like",
+    "liked": "Liked",
+    "save": "Save",
+    "saved": "Saved",
+    "share": "Share",
+    "shareCopied": "Link copied",
+    "shareFailed": "Could not share. Copy the link:",
+    "signInToLike": "Sign in to like and save lessons.",
+    "engagementFailed": "That did not go through. Try again."
   },
   "element": {
     "atomicNumber": "Atomic number",
@@ -314,7 +323,6 @@
     "examsEmpty": "No exams yet. Take a quiz and your score will appear here.",
     "savedTitle": "Saved items",
     "savedEmpty": "Nothing saved yet. Save a lesson and it will appear here.",
-    "savedComingSoon": "Saving arrives with the rich lesson pages.",
     "browseQuizzes": "Browse quizzes",
     "browseLessons": "Browse lessons"
   },

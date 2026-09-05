@@ -143,6 +143,9 @@ jobs:
       # Field-level, not just counts: a build against a half-seeded database
       # produces pages that render but say the wrong thing.
       - run: pnpm run db:verify
+      # Proves the counter triggers survived the migration: a dropped trigger
+      # leaves numbers that look fine and are wrong, and nothing else notices.
+      - run: pnpm run reconcile
       - run: pnpm run build
       - run: pnpm run test:e2e
       - name: Upload the report and traces

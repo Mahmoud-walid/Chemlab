@@ -127,9 +127,20 @@ export const shareEvents = pgTable(
      * no id to deduplicate on, and NULLs in a unique index compare as
      * distinct, so including them would make the index do nothing while
      * looking like it did something.
+     *
+     * The bucket is computed `at time zone 'UTC'` because an index expression
+     * must be IMMUTABLE: `date_trunc` over a `timestamptz` depends on the
+     * session's TimeZone setting, so Postgres refuses it. Fixing the zone also
+     * fixes what the hour MEANS — a dedupe window that moved with the reader's
+     * time zone would be a different window per connection.
      */
     uniqueIndex("share_events_dedupe_idx")
-      .on(t.lessonId, t.userId, t.channel, sql`date_trunc('hour', created_at)`)
+      .on(
+        t.lessonId,
+        t.userId,
+        t.channel,
+        sql`date_trunc('hour', created_at at time zone 'UTC')`,
+      )
       .where(sql`user_id is not null and verified`),
   ],
 );
