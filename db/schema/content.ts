@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   doublePrecision,
+  index,
   integer,
   jsonb,
   pgEnum,
@@ -14,6 +15,21 @@ import { id, timestamps } from "./_shared";
 
 /** Shared by lessons and quizzes; matches `types/quiz.ts`. */
 export const difficulty = pgEnum("difficulty", ["easy", "medium", "hard"]);
+
+/**
+ * The publication lifecycle every editable content row moves through.
+ *
+ * An enum rather than a pair of booleans, and rather than inferring the state
+ * from `published_at`: "archived" is not the absence of publication, and a
+ * nullable timestamp cannot express three states without a second column that
+ * can contradict it. `published_at` stays, but only as the record of WHEN a row
+ * first went live — the status column is what decides whether it is visible.
+ */
+export const contentStatus = pgEnum("content_status", [
+  "draft",
+  "published",
+  "archived",
+]);
 
 /**
  * A rich-text document, stored as ProseMirror/TipTap JSON rather than an HTML
@@ -83,24 +99,48 @@ export const elements = pgTable(
 
 // ── Lessons ─────────────────────────────────────────────────────────────────
 
-export const lessons = pgTable("lessons", {
-  id: id(),
-  slug: text("slug").notNull().unique(),
-  // Default-locale copy. Other locales live in lesson_translations.
-  title: text("title").notNull(),
-  description: text("description").notNull(),
-  difficulty: difficulty("difficulty").notNull(),
-  category: text("category").notNull(),
-  references: text("references")
-    .array()
-    .notNull()
-    .default(sql`'{}'`),
-  publishedAt: timestamp("published_at", { withTimezone: true }),
-  // Lessons are soft-deletable: they carry comments, likes and saves that a
-  // hard delete would take with them.
-  deletedAt: timestamp("deleted_at", { withTimezone: true }),
-  ...timestamps,
-});
+export const lessons = pgTable(
+  "lessons",
+  {
+    id: id(),
+    slug: text("slug").notNull().unique(),
+    // Default-locale copy. Other locales live in lesson_translations.
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    difficulty: difficulty("difficulty").notNull(),
+    category: text("category").notNull(),
+    references: text("references")
+      .array()
+      .notNull()
+      .default(sql`'{}'`),
+    tags: text("tags")
+      .array()
+      .notNull()
+      .default(sql`'{}'`),
+    /**
+     * Cloudinary URL. Modelled here so the editor can carry it; the upload
+     * widget belongs to the media issue and is not built yet, so today this is
+     * a URL an editor pastes.
+     */
+    coverImageUrl: text("cover_image_url"),
+    status: contentStatus("status").notNull().default("draft"),
+    /**
+     * Curriculum order. Lessons build on each other, so the catalogue is a
+     * sequence, not an alphabet — ordering by slug put "acids-bases" before
+     * "atomic-structure", which reads as a syllabus nobody wrote.
+     */
+    position: integer("position").notNull().default(0),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    // Lessons are soft-deletable: they carry comments, likes and saves that a
+    // hard delete would take with them.
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [
+    index("lessons_status_idx").on(t.status),
+    index("lessons_position_idx").on(t.position),
+  ],
+);
 
 export const lessonSections = pgTable(
   "lesson_sections",
@@ -262,6 +302,7 @@ export const quizQuestionTranslations = pgTable(
 
 export type Element = typeof elements.$inferSelect;
 export type NewElement = typeof elements.$inferInsert;
+export type ContentStatus = (typeof contentStatus.enumValues)[number];
 export type Lesson = typeof lessons.$inferSelect;
 export type NewLesson = typeof lessons.$inferInsert;
 export type LessonSection = typeof lessonSections.$inferSelect;

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import {
@@ -39,8 +39,7 @@ export interface LessonDetail extends LessonSummary {
  *
  * A left join, not a second query: a missing translation is an absent row, so
  * the join returns null and `preferred` falls back to the default-locale copy
- * on the base table. Ordered by slug so the numbering on the overview page is
- * stable between requests rather than following Postgres' physical row order.
+ * on the base table.
  */
 export async function listLessons(locale: string): Promise<LessonSummary[]> {
   const rows = await getDb()
@@ -61,9 +60,14 @@ export async function listLessons(locale: string): Promise<LessonSummary[]> {
         eq(lessonTranslations.locale, locale),
       ),
     )
-    // Unpublished and soft-deleted lessons keep their rows but must not be listed.
-    .where(and(isNotNull(lessons.publishedAt), isNull(lessons.deletedAt)))
-    .orderBy(asc(lessons.slug));
+    // Draft, archived and soft-deleted lessons keep their rows but must not be
+    // listed. The status column is the single answer to "is this live" —
+    // `published_at` only records when it first became so.
+    .where(and(eq(lessons.status, "published"), isNull(lessons.deletedAt)))
+    // Curriculum order first, slug as the tiebreak so the numbering on the
+    // overview page is stable between requests rather than following
+    // Postgres' physical row order.
+    .orderBy(asc(lessons.position), asc(lessons.slug));
 
   return rows.map((row) => ({
     slug: row.slug,
@@ -105,7 +109,7 @@ export async function getLessonBySlug(
     .where(
       and(
         eq(lessons.slug, slug),
-        isNotNull(lessons.publishedAt),
+        eq(lessons.status, "published"),
         isNull(lessons.deletedAt),
       ),
     )
@@ -155,7 +159,7 @@ export async function listLessonSlugs(): Promise<string[]> {
   const rows = await getDb()
     .select({ slug: lessons.slug })
     .from(lessons)
-    .where(and(isNotNull(lessons.publishedAt), isNull(lessons.deletedAt)))
-    .orderBy(asc(lessons.slug));
+    .where(and(eq(lessons.status, "published"), isNull(lessons.deletedAt)))
+    .orderBy(asc(lessons.position), asc(lessons.slug));
   return rows.map((row) => row.slug);
 }

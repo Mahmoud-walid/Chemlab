@@ -392,6 +392,101 @@
       "saved": "Saved.",
       "saveFailed": "Nothing was saved.",
       "notFound": "No element has that atomic number."
+    },
+    "lessons": {
+      "title": "Lessons",
+      "subtitle": "{count} lessons, including drafts and archived ones.",
+      "new": "New lesson",
+      "newTitle": "New lesson",
+      "newSubtitle": "New lessons start as drafts. Nothing is public until you publish it.",
+      "editTitle": "{title}",
+      "editSubtitle": "Metadata and publication. The lesson body is edited elsewhere.",
+      "backToList": "Back to lessons",
+      "filterByStatus": "Filter by status",
+      "searchPlaceholder": "Search by title, slug or category",
+      "noContent": "No content yet",
+      "sectionCount": "{count, plural, one {# section} other {# sections}}",
+      "saved": "Saved",
+      "saveFailed": "Nothing was saved",
+      "saving": "Saving…",
+      "save": "Save changes",
+      "create": "Create lesson",
+      "suggestSlug": "Suggest",
+      "slugWarning": "This lesson is published. Changing the slug breaks every existing link to /lessons/{slug}.",
+      "status": {
+        "all": "All",
+        "draft": "Draft",
+        "published": "Published",
+        "archived": "Archived"
+      },
+      "difficulty": {
+        "easy": "Easy",
+        "medium": "Medium",
+        "hard": "Hard"
+      },
+      "columns": {
+        "position": "#",
+        "title": "Title",
+        "category": "Category",
+        "difficulty": "Difficulty",
+        "status": "Status",
+        "content": "Content",
+        "updated": "Updated"
+      },
+      "fields": {
+        "title": "Title",
+        "slug": "Slug",
+        "description": "Description",
+        "difficulty": "Difficulty",
+        "category": "Category",
+        "position": "Position",
+        "coverImageUrl": "Cover image URL",
+        "references": "References",
+        "tags": "Tags"
+      },
+      "hints": {
+        "slug": "Lowercase letters, numbers and single hyphens. This is the public URL.",
+        "position": "Lower numbers come first in the catalogue.",
+        "coverImageUrl": "A full http(s) URL. Uploading images arrives with the media work.",
+        "references": "One per line.",
+        "tags": "Separated by commas."
+      },
+      "body": {
+        "heading": "Lesson content",
+        "empty": "This lesson has no content yet, so it cannot be published.",
+        "count": "{count, plural, one {# section} other {# sections}} written.",
+        "editDisabled": "Edit content",
+        "editDisabledReason": "The rich content editor is not built yet. Until it lands, sections come from the seeded data."
+      },
+      "lifecycle": {
+        "heading": "Publication",
+        "statusIs": "This lesson is {status}.",
+        "publishedOn": "First published {date}.",
+        "neverPublished": "It has never been published.",
+        "publish": "Publish",
+        "unpublish": "Return to draft",
+        "archive": "Archive",
+        "delete": "Withdraw lesson",
+        "restore": "Restore as draft",
+        "cannotPublish": "This lesson cannot be published yet:",
+        "changed": "Publication updated",
+        "failed": "Nothing changed",
+        "confirmDeleteTitle": "Withdraw this lesson?",
+        "confirmDeleteBody": "It disappears from the public site immediately. Nothing is erased — comments, saves and results keep pointing at it — and you can restore it as a draft. Type the slug to confirm.",
+        "confirmDeleteLabel": "Type {slug} to confirm",
+        "confirmDeleteAction": "Withdraw",
+        "confirmPublishTitle": "Publish this lesson?",
+        "confirmPublishBody": "It becomes visible to everyone at /lessons/{slug}.",
+        "confirmPublishAction": "Publish",
+        "cancel": "Cancel"
+      },
+      "blockers": {
+        "missingTitle": "It has no title.",
+        "missingDescription": "It has no description.",
+        "missingCategory": "It has no category.",
+        "missingBody": "It has no content — no sections have been written.",
+        "deleted": "It has been withdrawn. Restore it first."
+      }
     }
   }
 }
