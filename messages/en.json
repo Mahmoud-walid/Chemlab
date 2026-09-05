@@ -607,6 +607,66 @@
         "unanswerableQuestion": "At least one question has no correct answer marked.",
         "deleted": "It has been withdrawn. Restore it first."
       }
+    },
+    "pages": {
+      "title": "Pages",
+      "subtitle": "Open and close public pages without a deploy.",
+      "columns": {
+        "page": "Page",
+        "route": "Route",
+        "state": "State",
+        "nav": "In navigation",
+        "changed": "Changed"
+      },
+      "state": {
+        "open": "Open",
+        "closed": "Closed"
+      },
+      "toggle": {
+        "close": "Close {page}",
+        "open": "Open {page}"
+      },
+      "inNav": {
+        "show": "Show {page} in navigation",
+        "hide": "Hide {page} from navigation"
+      },
+      "opened": "{page} is open",
+      "closed": "{page} is closed",
+      "failed": "Nothing changed",
+      "reverted": "That did not save — put back as it was",
+      "confirmCloseTitle": "Close {page}?",
+      "confirmCloseBody": "Visitors get a maintenance page instead. It disappears from the navigation and the sitemap. You keep seeing it, with a banner.",
+      "confirmCloseAction": "Close the page",
+      "cancel": "Cancel",
+      "message": "Maintenance message",
+      "messageHint": "Shown to visitors instead of the page. Leave empty for the default wording.",
+      "messageEn": "English",
+      "messageAr": "Arabic",
+      "saveMessage": "Save message",
+      "messageSaved": "Message saved",
+      "alwaysOpen": "Sign-in, the admin panel and personal profile pages have no switch on purpose — closing them would close the page that reopens them.",
+      "neverEmpty": "No pages are configured. That means nothing can be closed, not that everything is."
+    }
+  },
+  "pages": {
+    "titles": {
+      "home": "Home",
+      "lessons": "Lessons",
+      "quiz": "Quizzes",
+      "quizResults": "Quiz results",
+      "chemical": "Element pages",
+      "experiments": "Experiments",
+      "games": "Games"
+    },
+    "maintenance": {
+      "heading": "This page is closed for now",
+      "default": "We have taken this page offline for a short while. Everything else still works.",
+      "backHome": "Go to the home page",
+      "metaTitle": "Temporarily closed"
+    },
+    "bypass": {
+      "notice": "This page is closed to visitors. You are seeing it because you hold the bypass permission.",
+      "manage": "Manage pages"
     }
   }
 }

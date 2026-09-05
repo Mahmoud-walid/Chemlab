@@ -249,6 +249,39 @@ export const quizOptions = pgTable(
   (t) => [uniqueIndex("quiz_options_order_idx").on(t.questionId, t.position)],
 );
 
+// ── Pages ───────────────────────────────────────────────────────────────────
+
+/**
+ * The open/close switch for public routes.
+ *
+ * Keyed by the ROUTE PATTERN rather than by an id: the thing being switched is
+ * a URL, the proxy has only a URL to match on, and a surrogate key would mean
+ * a lookup before the decision could be made. It is also what makes the
+ * reconciliation check possible — a route in `app/` either has a row here or it
+ * does not.
+ *
+ * Which routes may appear here is decided in `lib/pages/routes.ts`, not by
+ * whatever happens to be under `app/`. Admin and auth routes are excluded on
+ * purpose: closing them closes the page that reopens them.
+ */
+export const pages = pgTable("pages", {
+  routeKey: text("route_key").primaryKey(),
+  isEnabled: boolean("is_enabled").notNull().default(true),
+  /**
+   * Localised, as `{ en, ar }`. jsonb rather than a side-car table because it
+   * is one short string per locale with no independent publish state — the
+   * trade-off documented for content translations does not apply.
+   */
+  maintenanceMessage: jsonb("maintenance_message").$type<
+    Record<string, string>
+  >(),
+  /** Whether the route appears in the public nav while it is open. */
+  showInNav: boolean("show_in_nav").notNull().default(true),
+  disabledAt: timestamp("disabled_at", { withTimezone: true }),
+  disabledBy: uuid("disabled_by"),
+  ...timestamps,
+});
+
 // ── Translations ────────────────────────────────────────────────────────────
 
 /**
@@ -339,6 +372,8 @@ export const quizQuestionTranslations = pgTable(
 
 export type Element = typeof elements.$inferSelect;
 export type NewElement = typeof elements.$inferInsert;
+export type Page = typeof pages.$inferSelect;
+export type NewPage = typeof pages.$inferInsert;
 export type ContentStatus = (typeof contentStatus.enumValues)[number];
 export type Lesson = typeof lessons.$inferSelect;
 export type NewLesson = typeof lessons.$inferInsert;

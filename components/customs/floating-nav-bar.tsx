@@ -96,8 +96,24 @@ function NavLink({
 // ─────────────────────────────────────────────
 //  FLOATING NAV BAR
 // ─────────────────────────────────────────────
-export function FloatingNavBar() {
+export function FloatingNavBar({
+  /**
+   * The route keys still open and flagged for the nav, resolved by the layout.
+   *
+   * Passed in rather than queried here: this is a client component, and a
+   * closed page that is still linked is a link straight to a maintenance page.
+   * Undefined means "no answer available" — every item renders, which matches
+   * what the proxy does with no row.
+   */
+  openRoutes,
+}: {
+  openRoutes?: string[];
+} = {}) {
   const pathname = usePathname();
+  const open = openRoutes ? new Set(openRoutes) : null;
+  const items = open
+    ? NAV_ITEMS.filter((item) => open.has(item.href))
+    : NAV_ITEMS;
   const t = useTranslations("nav");
 
   return (
@@ -113,7 +129,7 @@ export function FloatingNavBar() {
           "flex items-center px-2 py-1.5 gap-1",
         )}
       >
-        {NAV_ITEMS.map((item) => (
+        {items.map((item) => (
           <NavLink
             key={item.href}
             item={item}

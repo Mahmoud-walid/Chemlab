@@ -17,6 +17,7 @@
     "db:check": "tsx scripts/db-check.ts",
     "db:seed": "tsx scripts/seed.ts",
     "db:verify": "tsx scripts/db-verify.ts",
+    "pages:check": "tsx scripts/pages-check.ts",
     "db:bootstrap-admin": "tsx scripts/bootstrap-admin.ts",
     "db:local:start": "pg_ctlcluster 16 main start || true",
     "db:local:stop": "pg_ctlcluster 16 main stop || true",
@@ -35,7 +36,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report",
-    "check": "pnpm run format:check && pnpm run typecheck && pnpm run lint && pnpm run test",
+    "check": "pnpm run format:check && pnpm run typecheck && pnpm run lint && pnpm run pages:check && pnpm run test",
     "clean": "rm -rf .next out coverage",
     "ui:add": "pnpm dlx shadcn@latest add",
     "ui:diff": "pnpm dlx shadcn@latest diff"

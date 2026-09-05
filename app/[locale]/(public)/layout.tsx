@@ -2,6 +2,9 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { AccountMenu } from "@/components/customs/account-menu";
 import { FloatingNavBar } from "@/components/customs/floating-nav-bar";
+import { PageClosedBanner } from "@/components/customs/page-closed-banner";
+import { visibleNavRoutes } from "@/db/queries/pages";
+import { CLOSABLE_ROUTES } from "@/lib/pages/routes";
 import type { Locale } from "@/i18n/routing";
 
 /**
@@ -23,9 +26,18 @@ export default async function PublicLayout({
   setRequestLocale(locale as Locale);
 
   const t = await getTranslations("common");
+  const tBypass = await getTranslations("pages.bypass");
+
+  // A closed page must not still be advertised. Resolved here rather than in
+  // the nav bar itself so the client component stays a client component and
+  // takes the answer as data.
+  const openRoutes = await visibleNavRoutes(CLOSABLE_ROUTES);
 
   return (
     <>
+      <PageClosedBanner
+        labels={{ notice: tBypass("notice"), manage: tBypass("manage") }}
+      />
       {/* The account surface. A header slot rather than a sixth entry in the
           floating nav bar: the nav bar is for places, this is for who you are,
           and mixing them makes both harder to scan. */}
@@ -41,7 +53,7 @@ export default async function PublicLayout({
         </footer>
       </main>
 
-      <FloatingNavBar />
+      <FloatingNavBar openRoutes={[...openRoutes]} />
     </>
   );
 }

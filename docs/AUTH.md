@@ -21,7 +21,7 @@ configuration gives you.
 | `lib/safe-redirect.ts`   | `next` / `callbackURL` validation                                              |
 | `lib/auth-rate-limit.ts` | The lockout policy, pure so it can be tested without a clock                   |
 | `db/schema/auth.ts`      | The tables, ours and the library's                                             |
-| `middleware.ts`          | A cookie-presence check only. Never the gate that decides                      |
+| `proxy.ts`               | A cookie-presence check only. Never the gate that decides                      |
 
 **Why the options are a separate module.** The integration suite builds its own
 instance against a disposable database. The first version of those tests built
@@ -138,7 +138,7 @@ ever reach a repository.
 
 - Transactional email, and therefore working verification and password-reset
   delivery. The flows and the `verifications` table exist; nothing sends.
-- Roles and permissions (`/admin` is protected by the middleware prefix already,
+- Roles and permissions (`/admin` is protected by the proxy's prefix already,
   but nothing grants access to it yet).
 - Cloudinary avatars. `profiles.avatar_url` is a plain string and
   `avatar_source` records where the current one came from, so replacing a cached
