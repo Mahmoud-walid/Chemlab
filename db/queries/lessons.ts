@@ -37,6 +37,16 @@ export interface LessonSectionView {
 }
 
 export interface LessonDetail extends LessonSummary {
+  /**
+   * The row id, which the page passes to the comment API as its subject.
+   *
+   * Exposed deliberately: comments are polymorphic over
+   * `(subject_type, subject_id)`, so the API takes an id rather than a slug —
+   * teaching it to resolve lesson slugs would tie a generic surface to one
+   * subject type. A lesson id identifies public content and is validated as a
+   * uuid on the way in.
+   */
+  id: string;
   references: string[];
   sections: LessonSectionView[];
   /** Stored, not computed per request — see lib/lessons/reading-time.ts. */
@@ -158,6 +168,7 @@ export async function getLessonBySlug(
     .orderBy(asc(lessonSections.position));
 
   return {
+    id: lesson.id,
     slug: lesson.slug,
     title: preferred(lesson.translatedTitle, lesson.title),
     description: preferred(lesson.translatedDescription, lesson.description),
