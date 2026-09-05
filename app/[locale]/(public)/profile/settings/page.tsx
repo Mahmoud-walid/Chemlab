@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/session";
 import { env } from "@/lib/env";
 import { PushToggle } from "./features/push-toggle";
 import { NotificationPreferences } from "./features/notification-preferences";
+import { PresenceVisibility } from "./features/presence-visibility";
 import {
   NOTIFICATION_SPECS,
   NOTIFICATION_TYPES,
@@ -37,6 +38,7 @@ export default async function ProfileSettingsPage({
   const user = await requireUser();
   const t = await getTranslations("auth");
   const tPreferences = await getTranslations("notifications.preferences");
+  const tPresence = await getTranslations("presence");
 
   const defaults = Object.fromEntries(
     NOTIFICATION_TYPES.map((type) => [
@@ -102,6 +104,17 @@ export default async function ProfileSettingsPage({
               a switch a person has never touched shows what the platform
               would actually do. */}
           <NotificationPreferences defaults={defaults} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            <h2>{tPresence("visibilityTitle")}</h2>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <PresenceVisibility />
         </CardContent>
       </Card>
     </div>

@@ -14,6 +14,7 @@ import {
   indexOfComment,
   shouldVirtualize,
 } from "@/lib/comments/virtualize";
+import { usePresence } from "@/hooks/use-presence";
 import { CommentForm } from "./comment-form";
 import { CommentItem } from "./comment-item";
 
@@ -213,6 +214,19 @@ export function CommentList({
   );
   const myReplies = mine.filter((item) => item.depth === 1);
 
+  /**
+   * One presence request for the whole page, not one per avatar.
+   *
+   * Only the authors currently RENDERED: under windowing the off-screen rows
+   * are not mounted, and asking about people nobody can see is load for
+   * nothing.
+   */
+  const presence = usePresence([
+    ...roots.map((root) => root.authorId),
+    ...roots.flatMap((root) => (root.replies ?? []).map((r) => r.authorId)),
+    ...myReplies.map((reply) => reply.authorId),
+  ]);
+
   // Counted from what is RENDERED — roots plus their visible replies — because
   // that is what costs layout. See lib/comments/virtualize.ts for what
   // windowing costs in return.
@@ -273,6 +287,7 @@ export function CommentList({
           comment={root}
           signedIn={signedIn}
           posInSet={index + 1}
+          presence={root.authorId ? presence.get(root.authorId) : undefined}
           onReply={signedIn ? setReplyTo : undefined}
           onDeleted={
             viewerId && root.authorId === viewerId ? onDeleted : undefined
@@ -296,6 +311,7 @@ export function CommentList({
             comment={reply}
             signedIn={signedIn}
             isReply
+            presence={reply.authorId ? presence.get(reply.authorId) : undefined}
             onReply={signedIn ? () => setReplyTo(root) : undefined}
             onDeleted={
               viewerId && reply.authorId === viewerId ? onDeleted : undefined
@@ -431,6 +447,11 @@ function ShowReplies({
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  // Its own batch: these authors were not on the page when the list asked, so
+  // folding them into that query would mean refetching the whole set every
+  // time somebody expands a thread.
+  const presence = usePresence(extra.map((reply) => reply.authorId));
+
   const load = async () => {
     setBusy(true);
     try {
@@ -464,6 +485,7 @@ function ShowReplies({
             comment={reply}
             signedIn={signedIn}
             isReply
+            presence={reply.authorId ? presence.get(reply.authorId) : undefined}
             onDeleted={
               viewerId && reply.authorId === viewerId ? onDeleted : undefined
             }

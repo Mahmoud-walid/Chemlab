@@ -1188,5 +1188,17 @@
     "sortNew": "الأحدث",
     "sortTop": "الأفضل",
     "feedLabel": "التعليقات على هذا الدرس"
+  },
+  "presence": {
+    "online": "متصل",
+    "away": "بعيد",
+    "offline": "غير متصل",
+    "lastSeen": "آخر ظهور {when}",
+    "visibilityTitle": "من يرى أنك متصل",
+    "visibilityDescription": "إيقاف هذا يعني أن الجميع يرونك غير متصل دائمًا. لا يُخفي ذلك ما كتبته.",
+    "visibilityEveryone": "الجميع",
+    "visibilityNobody": "لا أحد",
+    "visibilitySaved": "تم الحفظ.",
+    "visibilityFailed": "لم يُحفظ. لم يتغير شيء."
   }
 }

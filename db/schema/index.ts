@@ -14,6 +14,7 @@ export * from "./push";
 export * from "./notifications";
 export * from "./ci";
 export * from "./comments";
+export * from "./presence";
 export * from "./auth";
 export * from "./rbac";
 export * from "./activity";

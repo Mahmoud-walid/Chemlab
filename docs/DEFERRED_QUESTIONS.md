@@ -542,6 +542,42 @@ lever.
 
 ---
 
+### Q39 — should presence default to `everyone`, on a site described as for kids?
+
+**Implemented as `everyone`, because that is what you asked for.** This is not
+a blocker and nothing waits on it — but it is the one decision in #28 I would
+push back on, and changing it later is a one-line default plus a migration.
+
+The site's own metadata says _Interactive Chemistry Learning for Kids_. An
+always-public presence signal on a learning platform tells anyone who cares to
+watch when a particular student is at their desk, how long they stay, and when
+they stop. That is a behavioural trace about a child, readable by any other
+account, and it is generated continuously whether or not anybody uses it.
+
+**Recommendation: flip the default to `nobody` and make it opt-in.** The
+feature still works — anybody who wants a green dot beside their name turns it
+on — and the people who never think about the setting are not broadcasting
+their study hours by accident. The cost of being wrong in that direction is a
+missing dot; in the other direction it is a log of a child's daily routine.
+
+A middle option, if you want presence to be useful without being public:
+restrict it to the admin panel, where it answers "is this account active?"
+without showing students each other's schedules.
+
+Three smaller ones from the same issue, all implemented as recommended and all
+cheap to change:
+
+- **Is `away` useful, or should it be binary?** Implemented with three states.
+  "Offline" reads as _gone_, and somebody who was here four minutes ago has
+  probably not gone.
+- **Should the windows be tunable from settings?** No — fixed in code. An
+  admin setting a five-second heartbeat multiplies the write load twelvefold,
+  and there is no question anybody is trying to answer by tuning it.
+- **Presence for everyone, or only within a shared cohort?** Everyone, since
+  no cohort concept exists yet. If Q39 goes the other way this becomes moot.
+
+---
+
 ## Per-issue open questions
 
 Each planning issue carries its own `## Open questions` section for decisions
