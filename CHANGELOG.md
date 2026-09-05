@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.4.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.3.0...v0.4.0) (2026-09-05)
+
+
+### Features
+
+* **auth:** user accounts with Better Auth, sessions and profiles ([#51](https://github.com/Mahmoud-walid/Chemlab/issues/51)) ([63683ee](https://github.com/Mahmoud-walid/Chemlab/commit/63683ee82dfdedf0aa1a55d31b7f176348f2d6c0))
+* **authz:** dynamic RBAC with roles, permissions and an audit trail ([#52](https://github.com/Mahmoud-walid/Chemlab/issues/52)) ([b961724](https://github.com/Mahmoud-walid/Chemlab/commit/b961724c24aaddaf81a755a0d4a99f4f20f01afc))
+* **content:** read elements, lessons and quizzes from Postgres ([#50](https://github.com/Mahmoud-walid/Chemlab/issues/50)) ([e8b4c55](https://github.com/Mahmoud-walid/Chemlab/commit/e8b4c5556fa2946fe8df08ecf1387a77d64541ee)), closes [#10](https://github.com/Mahmoud-walid/Chemlab/issues/10)
+* **db:** run against a local PostgreSQL cluster, and validate env ([#48](https://github.com/Mahmoud-walid/Chemlab/issues/48)) ([9562936](https://github.com/Mahmoud-walid/Chemlab/commit/95629365b98b1912eb85337b0b4ab4fb65eab821))
+
+
+### Bug Fixes
+
+* **app:** restore static rendering, and split public chrome into a route group ([#53](https://github.com/Mahmoud-walid/Chemlab/issues/53)) ([a9c52be](https://github.com/Mahmoud-walid/Chemlab/commit/a9c52beb60f9641bdf56f7f87681bdf603c7460a))
+
 ## [0.3.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.2.0...v0.3.0) (2026-09-04)
 
 
