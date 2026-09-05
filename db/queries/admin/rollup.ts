@@ -1,6 +1,7 @@
 import "server-only";
 import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 
+import { getAnalyticsDb } from "@/db/analytics-client";
 import { getDb } from "@/db/client";
 import { activityDailyRollup, activityEvents } from "@/db/schema/activity";
 import { examAttempts } from "@/db/schema/attempts";
@@ -41,6 +42,14 @@ export interface RollupResult {
  * is wrong, every number after it is wrong with no way to notice.
  */
 export async function rollUpDay(day: string): Promise<RollupResult> {
+  // The one function in this file that stays on the interactive client, and
+  // the reason is the analytics client's timeout. This is a scheduled batch
+  // WRITE, not a dashboard read: nobody is waiting on it, it is invoked from
+  // a cron script rather than a request, and it aggregates a whole day in one
+  // statement. Capping that statement at the dashboards' five seconds would
+  // break the job on exactly the days with the most data — the days it
+  // matters most. It is also no threat to the pool it shares: it runs once a
+  // day from a script process, not once per page view.
   const db = getDb();
 
   const result = await db.execute(sql`
@@ -113,7 +122,7 @@ export async function dailySeries(
   to: Date,
   metric: "events" | "actors" = "events",
 ): Promise<DaySeriesPoint[]> {
-  const db = getDb();
+  const db = getAnalyticsDb();
   const today = isoDay(startOfDay(new Date()));
 
   const column =
@@ -174,7 +183,7 @@ export async function topObjects(
   from: Date,
   limit = 10,
 ): Promise<RankedObject[]> {
-  const db = getDb();
+  const db = getAnalyticsDb();
 
   const rows = await db
     .select({
@@ -209,7 +218,7 @@ export interface QuizFunnelPoint {
 export async function quizAttemptSeries(
   from: Date,
 ): Promise<QuizFunnelPoint[]> {
-  const db = getDb();
+  const db = getAnalyticsDb();
 
   return db
     .select({
@@ -245,7 +254,7 @@ export async function quizAttemptSeries(
  * date range, and run on demand rather than on every page of a dashboard.
  */
 export async function funnelCounts(from: Date, to: Date): Promise<FunnelRow[]> {
-  const db = getDb();
+  const db = getAnalyticsDb();
   const counts: Record<string, number> = {};
 
   for (const stage of FUNNEL_STAGES) {
