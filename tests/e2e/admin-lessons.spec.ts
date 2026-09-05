@@ -26,7 +26,15 @@ let db: SeedDatabase;
 let close: () => Promise<void>;
 
 /** Every lesson this file creates carries the prefix, so cleanup is exact. */
-const PREFIX = "e2e-lesson-";
+/**
+ * Per WORKER, because `afterAll` deletes every row matching this prefix.
+ *
+ * Playwright runs one `afterAll` per worker, not one per file: the worker
+ * that finishes first was deleting rows the other worker was still using,
+ * and the test mid-flight reloaded onto a "Not found" page. Scoping the
+ * prefix means a worker can only ever clean up after itself.
+ */
+const PREFIX = `e2e-lesson-w${process.env.TEST_WORKER_INDEX ?? "0"}-`;
 
 const uniqueSlug = () =>
   `${PREFIX}${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
