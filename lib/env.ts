@@ -45,6 +45,27 @@ export const envSchema = z.object({
       message: "must be a handle starting with @, e.g. @ChemlabApp",
     })
     .optional(),
+
+  /**
+   * The PUBLIC half of the VAPID pair.
+   *
+   * This one genuinely has to reach the browser — `PushManager.subscribe()`
+   * takes it as `applicationServerKey`, so there is no server-side way to
+   * supply it. It is a public key: publishing it lets a browser verify our
+   * pushes, not send them. Its private counterpart lives in
+   * `lib/env.server.schema.ts` and must never gain this prefix.
+   *
+   * Base64url, 65 bytes uncompressed — 87 characters. Checked, because a
+   * truncated key fails inside `subscribe()` with a DOMException that says
+   * nothing about which of the two keys is wrong.
+   */
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9_-]{86,88}$/, {
+      message: "must be a base64url VAPID public key (pnpm vapid:keys)",
+    })
+    .optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -83,6 +104,10 @@ function readEnv(): Env {
       NEXT_PUBLIC_SITE_NAME: process.env.NEXT_PUBLIC_SITE_NAME,
       NEXT_PUBLIC_SITE_DESCRIPTION: process.env.NEXT_PUBLIC_SITE_DESCRIPTION,
       NEXT_PUBLIC_TWITTER_HANDLE: process.env.NEXT_PUBLIC_TWITTER_HANDLE,
+      // Written out literally, like the rest: Next.js only inlines a literal
+      // `process.env.NEXT_PUBLIC_X`, so a dynamic lookup would be undefined in
+      // the browser and the subscribe call would fail with no explanation.
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
     });
   } catch (error) {
     // A throw inside a Next.js build worker is reported as an opaque

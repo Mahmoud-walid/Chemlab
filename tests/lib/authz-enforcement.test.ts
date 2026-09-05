@@ -33,7 +33,15 @@ const ALLOWED_WITHOUT_CHECK = new Set([
  * a session, not a permission. `requireUser()` is the right gate there, and
  * counts as checked.
  */
-const GATES = ["requirePermission(", "requireUser("];
+/**
+ * `requireUserOr401(` is the route-handler form: it returns null rather than
+ * redirecting, because a `fetch` that follows a redirect to the sign-in page
+ * gets 200 and HTML and cannot tell that it failed. It is a gate all the same
+ * — the handler that calls it must answer 401 — and it is listed here so a
+ * handler checking the session by hand still fails this test, which is the
+ * whole point of the check.
+ */
+const GATES = ["requirePermission(", "requireUser(", "requireUserOr401("];
 
 const MUTATION_HINTS = [
   ".insert(",

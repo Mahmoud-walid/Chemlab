@@ -43,7 +43,9 @@
     "check": "pnpm run format:check && pnpm run typecheck && pnpm run lint && pnpm run pages:check && pnpm run test",
     "clean": "rm -rf .next out coverage",
     "ui:add": "pnpm dlx shadcn@latest add",
-    "ui:diff": "pnpm dlx shadcn@latest diff"
+    "ui:diff": "pnpm dlx shadcn@latest diff",
+    "vapid:keys": "tsx scripts/generate-vapid-keys.ts",
+    "push:drain": "tsx scripts/push-drain.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -107,6 +109,7 @@
     "tailwind-merge": "^3.6.0",
     "uuidv7": "^1.2.1",
     "vaul": "^1.1.2",
+    "web-push": "^3.6.7",
     "zod": "^4.5.4"
   },
   "devDependencies": {
@@ -121,6 +124,7 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
+    "@types/web-push": "^3.6.4",
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^6.1.1",
     "@vitest/coverage-v8": "^5.0.0",

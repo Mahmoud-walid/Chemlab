@@ -90,6 +90,30 @@ export const serverEnvSchema = z.object({
    * password ever exists outside Better Auth's own hashing.
    */
   SUPER_ADMIN_EMAIL: z.string().email().optional(),
+
+  /**
+   * Web Push. The PRIVATE half of the VAPID pair, and the only one that must
+   * never carry a `NEXT_PUBLIC_` prefix: it signs every push we send, and a
+   * copy of it lets anyone send notifications that appear to come from us.
+   * `scripts/bundle-check.ts` asserts it never reaches the client bundle.
+   *
+   * Optional as a group, like auth and the database: the app serves every page
+   * without push, and `pushConfigured()` says whether it is available rather
+   * than a route throwing at request time.
+   */
+  VAPID_PRIVATE_KEY: z.string().min(1).optional(),
+  /**
+   * Who the push service should contact about our traffic — a `mailto:` or an
+   * `https:` URL. Required by the VAPID spec, and the address a push provider
+   * uses when our sending looks abusive to them.
+   */
+  VAPID_SUBJECT: z
+    .string()
+    .refine(
+      (value) => value.startsWith("mailto:") || value.startsWith("https://"),
+      { message: "must be a mailto: address or an https: URL" },
+    )
+    .optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
@@ -113,6 +137,21 @@ export function googleConfigured(env: Partial<ServerEnv>): boolean {
   return Boolean(
     authConfigured(env) && env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET,
   );
+}
+
+/**
+ * True when a push can actually be sent.
+ *
+ * Both VAPID halves and the subject are required together: a private key with
+ * no public counterpart signs nothing a browser will accept, and the push
+ * service rejects a request with no subject. Half a configuration is not
+ * "partly working", it is a 400 at send time, so it counts as unconfigured.
+ */
+export function pushConfigured(
+  env: Partial<ServerEnv>,
+  publicKey: string | undefined,
+): boolean {
+  return Boolean(env.VAPID_PRIVATE_KEY && env.VAPID_SUBJECT && publicKey);
 }
 
 export type ServerEnvInput = Partial<
