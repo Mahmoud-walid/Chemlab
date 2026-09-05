@@ -46,7 +46,8 @@
     "ui:diff": "pnpm dlx shadcn@latest diff",
     "vapid:keys": "tsx scripts/generate-vapid-keys.ts",
     "push:drain": "tsx scripts/push-drain.ts",
-    "icons:generate": "tsx scripts/generate-icons.ts"
+    "icons:generate": "tsx scripts/generate-icons.ts",
+    "notifications:fanout": "tsx scripts/notifications-fanout.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

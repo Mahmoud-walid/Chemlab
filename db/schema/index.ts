@@ -11,6 +11,7 @@ export * from "./content";
 export * from "./attempts";
 export * from "./engagement";
 export * from "./push";
+export * from "./notifications";
 export * from "./auth";
 export * from "./rbac";
 export * from "./activity";
