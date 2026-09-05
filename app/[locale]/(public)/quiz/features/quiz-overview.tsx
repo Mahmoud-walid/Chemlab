@@ -119,7 +119,7 @@ export default function QuizOverview({ quizzes }: { quizzes: QuizSummary[] }) {
           </p>
         </div>
         <Button variant="outline" size="sm" asChild>
-          <Link href="/quiz/results">{t("myResults")}</Link>
+          <Link href="/profile/exams">{t("seeAllResults")}</Link>
         </Button>
       </div>
 

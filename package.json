@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
+    "bundle:check": "tsx scripts/bundle-check.ts",
     "start": "next start",
     "env:check": "tsx scripts/env-check.ts",
     "db:generate": "drizzle-kit generate",
