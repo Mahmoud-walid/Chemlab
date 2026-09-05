@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.5.0...v0.6.0) (2026-09-05)
+
+
+### Features
+
+* **admin:** element management with a reusable server-side data table ([#56](https://github.com/Mahmoud-walid/Chemlab/issues/56)) ([afe18fe](https://github.com/Mahmoud-walid/Chemlab/commit/afe18fec8a82894f241a49ac0512cf477d3fce4e))
+
 ## [0.5.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.4.0...v0.5.0) (2026-09-05)
 
 
