@@ -351,6 +351,29 @@ resolving client-side? Nothing is blocked either way.
 
 ---
 
+### Q31 — a section-level permission refusal answers 200, not 404
+
+Refusing `admin:access` in the admin layout produces a real 404. Refusing a
+SECTION permission — `element:read` on `/admin/elements`, say — renders the same
+not-found page but with a **200**: Next has committed the response status by the
+time that check can run, and reordering the awaits does not move it.
+
+The boundary itself holds. The refusal leaks nothing: no element data, no table,
+no section content — asserted in `tests/e2e/admin-elements.spec.ts`. What is
+wrong is only the status line, which matters for monitoring and for crawlers
+rather than for access.
+
+The fix is probably to decide in middleware, which is the only place the status
+is still open — but middleware runs on the edge and cannot reach the database
+cheaply, so it needs a cached permission map rather than a query per request.
+That is the same caching problem the page open/close switch has, so the two are
+worth solving together.
+
+**Question:** worth a dedicated task, or is "correct body, wrong status"
+acceptable while `/admin` itself still 404s?
+
+---
+
 ## Per-issue open questions
 
 Each planning issue carries its own `## Open questions` section for decisions

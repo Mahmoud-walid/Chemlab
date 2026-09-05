@@ -1,6 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { requirePermission } from "@/lib/authz";
+import { requireAdminPermission } from "@/lib/admin/guard";
 import { visibleNav } from "@/lib/admin/nav";
 import {
   Card,
@@ -31,7 +31,7 @@ export default async function AdminDashboardPage({
   const { locale } = await params;
   setRequestLocale(locale as Locale);
 
-  const context = await requirePermission("admin:access");
+  const context = await requireAdminPermission("admin:access");
   const t = await getTranslations("admin");
 
   // The same filtering the sidebar uses, so the dashboard shows the viewer

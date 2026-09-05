@@ -326,6 +326,72 @@
       "title": "Not found",
       "body": "There is nothing at that address.",
       "back": "Back to the dashboard"
+    },
+    "table": {
+      "search": "Search",
+      "empty": "Nothing matches.",
+      "previous": "Previous",
+      "next": "Next",
+      "pageStatus": "Page {page} of {pages}",
+      "sortBy": "Sort by"
+    },
+    "elements": {
+      "title": "Elements",
+      "subtitle": "{count} elements. The periodic table is closed, so rows are edited, never added.",
+      "searchPlaceholder": "Name, symbol or category",
+      "columns": {
+        "number": "Number",
+        "symbol": "Symbol",
+        "name": "Name",
+        "category": "Category",
+        "atomicMass": "Atomic mass",
+        "updated": "Updated"
+      },
+      "editTitle": "Edit {name}",
+      "editSubtitle": "Element {number}. The atomic number cannot change.",
+      "backToList": "Back to elements",
+      "tabs": {
+        "identity": "Identity",
+        "physical": "Physical",
+        "electronic": "Electronic",
+        "editorial": "Editorial"
+      },
+      "fields": {
+        "symbol": "Symbol",
+        "name": "Name",
+        "category": "Category",
+        "period": "Period",
+        "xpos": "Column",
+        "ypos": "Row",
+        "atomicMass": "Atomic mass",
+        "density": "Density",
+        "melt": "Melting point",
+        "boil": "Boiling point",
+        "phase": "Phase",
+        "molarHeat": "Molar heat",
+        "appearance": "Appearance",
+        "color": "Colour",
+        "electronConfiguration": "Electron configuration",
+        "electronConfigurationSemantic": "Semantic configuration",
+        "shells": "Shells",
+        "electronAffinity": "Electron affinity",
+        "electronegativityPauling": "Electronegativity (Pauling)",
+        "ionizationEnergies": "Ionization energies",
+        "summary": "Summary",
+        "discoveredBy": "Discovered by",
+        "namedBy": "Named by",
+        "source": "Source",
+        "spectralImg": "Spectral image URL"
+      },
+      "hints": {
+        "optional": "Leave empty when it is not known — empty means unknown, not zero.",
+        "vector": "Numbers in order, separated by commas or spaces."
+      },
+      "save": "Save changes",
+      "saving": "Saving…",
+      "saved": "Saved.",
+      "saveFailed": "Nothing was saved.",
+      "notFound": "No element has that atomic number."
     }
   }
 }

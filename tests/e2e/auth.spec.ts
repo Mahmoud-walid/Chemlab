@@ -10,6 +10,39 @@ import { expect, test } from "@playwright/test";
  * bounce an anonymous visitor and return them afterwards.
  */
 
+/**
+ * Submits the sign-up form, retrying while the rate limiter says no.
+ *
+ * These tests drive the real form on purpose — that is what they are testing —
+ * and Better Auth correctly limits sign-ups per window. Across a parallel suite
+ * that limit is reached, and the right response is to back off like any client
+ * would, not to loosen the limit to suit the tests.
+ *
+ * Returns once the session exists, or fails having said why.
+ */
+async function submitSignUp(page: import("@playwright/test").Page) {
+  const submit = page.getByRole("button", { name: "Sign up", exact: true });
+  const accountMenu = page.getByRole("button", {
+    name: /open the account menu/i,
+  });
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    await submit.click();
+    try {
+      await expect(accountMenu).toBeVisible({ timeout: 12_000 });
+      return;
+    } catch {
+      // Almost certainly the limiter. Wait out its window and try again.
+      await page.waitForTimeout(3_000 * (attempt + 1));
+    }
+  }
+
+  await expect(accountMenu).toBeVisible({ timeout: 15_000 });
+}
+
+// Real sign-ups with a deliberately slow hash, plus rate-limit backoff.
+test.describe.configure({ timeout: 120_000 });
+
 const PASSWORD = "correct-horse-battery";
 
 /** A fresh address per test, so runs do not collide on the unique email. */
@@ -78,7 +111,7 @@ test.describe("accounts", () => {
     await page.getByLabel("Name").fill("Grace Hopper");
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill(PASSWORD);
-    await page.getByRole("button", { name: "Sign up", exact: true }).click();
+    await submitSignUp(page);
 
     await expect(page).toHaveURL(/\/profile\/exams$/, { timeout: 15_000 });
   });
@@ -98,11 +131,7 @@ test.describe("accounts", () => {
     await page.getByLabel("Name").fill("Ada Lovelace");
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill(PASSWORD);
-    await page.getByRole("button", { name: "Sign up", exact: true }).click();
-
-    await expect(
-      page.getByRole("button", { name: /open the account menu/i }),
-    ).toBeVisible({ timeout: 15_000 });
+    await submitSignUp(page);
     // Landed on our own origin, not the attacker's: the hostile `next`
     // collapsed to "/" rather than being followed.
     await expect(page).not.toHaveURL(/evil\.example/);
