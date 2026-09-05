@@ -1,3 +1,11 @@
+/**
+ * The shape of `data/quiz.json` — the SEED INPUT, not the runtime model.
+ *
+ * The runtime model is the `quizzes` / `quiz_questions` / `quiz_options`
+ * tables and the types in `db/queries/exams/attempts.ts`. What used to live
+ * here as well — `QuizAttempt`, the `sessionStorage` result shape — is gone
+ * with the client-side scoring it existed for.
+ */
 export type Difficulty = "easy" | "medium" | "hard";
 
 export interface QuizQuestion {
@@ -14,20 +22,4 @@ export interface Quiz {
   difficulty: Difficulty;
   category: string;
   questions: QuizQuestion[];
-}
-
-// ── Stored result shape ──
-export interface QuizAttempt {
-  slug: string;
-  title: string;
-  difficulty: Difficulty;
-  score: number; // number of correct answers
-  total: number; // total questions
-  completedAt: string; // ISO string
-  answers: {
-    question: string;
-    chosen: string;
-    correct: string;
-    isCorrect: boolean;
-  }[];
 }

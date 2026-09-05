@@ -55,6 +55,9 @@ jobs:
       # routes render on demand instead of prerendering — see
       # db/queries/availability.ts.
       - run: pnpm run build
+      # The answer key must not be in the JavaScript a candidate downloads.
+      # It needs a build to grep, so it lives here rather than in `pnpm check`.
+      - run: pnpm run bundle:check
 
   integration:
     name: integration

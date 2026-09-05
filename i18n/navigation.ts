@@ -7,5 +7,11 @@ import { routing } from "@/i18n/routing";
  * transitions, sending an Arabic reader back to English mid-session. An ESLint
  * rule enforces this in `app/**` and `components/**`.
  */
-export const { Link, redirect, usePathname, useRouter, getPathname } =
-  createNavigation(routing);
+export const {
+  Link,
+  redirect,
+  permanentRedirect,
+  usePathname,
+  useRouter,
+  getPathname,
+} = createNavigation(routing);

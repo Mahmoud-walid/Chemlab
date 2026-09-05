@@ -9,7 +9,6 @@ import {
   quizTranslations,
   quizzes,
 } from "@/db/schema/content";
-import type { Quiz, QuizQuestion } from "@/types/quiz";
 import { preferred } from "./_locale";
 
 export interface QuizSummary {
@@ -75,117 +74,16 @@ export async function listQuizzes(locale: string): Promise<QuizSummary[]> {
 }
 
 /**
- * One quiz with its questions and options, or null when the slug matches
- * nothing.
+ * `getQuizBySlug` used to live here.
  *
- * Two queries, not one: a single join of quiz × questions × options returns
- * the quiz row repeated once per option, and reassembling that is more code
- * than a second round trip costs. Options come back in stored `position`
- * order — shuffling is a display decision the quiz page makes, which is what
- * lets a resumed attempt show the same order.
- *
- * NOTE: the returned shape still carries `answer`, so a client component
- * rendering it ships the answer key to the browser. That predates this change
- * — see #26, which moves grading to the server.
+ * It returned every question with its answer and its explanation, and it fed
+ * the client-side quiz runner — which is how the whole answer key ended up in
+ * the browser bundle. The exam engine replaced it with two narrower reads:
+ * `getQuizIntro` for the page that offers a Start button, and `getPaper` for
+ * the sitting itself, which names its columns so the key cannot be included
+ * by accident. It is deleted rather than deprecated: a function that returns
+ * the answers is a loaded gun for whoever next needs "the quiz".
  */
-export async function getQuizBySlug(
-  slug: string,
-  locale: string,
-): Promise<Quiz | null> {
-  const db = getDb();
-
-  const [quiz] = await db
-    .select({
-      id: quizzes.id,
-      slug: quizzes.slug,
-      title: quizzes.title,
-      description: quizzes.description,
-      difficulty: quizzes.difficulty,
-      category: quizzes.category,
-      translatedTitle: quizTranslations.title,
-      translatedDescription: quizTranslations.description,
-    })
-    .from(quizzes)
-    .leftJoin(
-      quizTranslations,
-      and(
-        eq(quizTranslations.quizId, quizzes.id),
-        eq(quizTranslations.locale, locale),
-      ),
-    )
-    .where(
-      and(
-        eq(quizzes.slug, slug),
-        eq(quizzes.status, "published"),
-        isNull(quizzes.deletedAt),
-      ),
-    )
-    .limit(1);
-
-  if (!quiz) return null;
-
-  const rows = await db
-    .select({
-      questionId: quizQuestions.id,
-      questionPosition: quizQuestions.position,
-      prompt: quizQuestions.prompt,
-      explanation: quizQuestions.explanation,
-      correctOptionId: quizQuestions.correctOptionId,
-      translatedPrompt: quizQuestionTranslations.prompt,
-      translatedExplanation: quizQuestionTranslations.explanation,
-      optionId: quizOptions.id,
-      label: quizOptions.label,
-    })
-    .from(quizQuestions)
-    .innerJoin(quizOptions, eq(quizOptions.questionId, quizQuestions.id))
-    .leftJoin(
-      quizQuestionTranslations,
-      and(
-        eq(quizQuestionTranslations.questionId, quizQuestions.id),
-        eq(quizQuestionTranslations.locale, locale),
-      ),
-    )
-    .where(eq(quizQuestions.quizId, quiz.id))
-    .orderBy(asc(quizQuestions.position), asc(quizOptions.position));
-
-  const byQuestion = new Map<string, QuizQuestion>();
-  for (const row of rows) {
-    let question = byQuestion.get(row.questionId);
-    if (!question) {
-      question = {
-        question: preferred(row.translatedPrompt, row.prompt),
-        options: [],
-        answer: "",
-        explanation: preferred(row.translatedExplanation, row.explanation),
-      };
-      byQuestion.set(row.questionId, question);
-    }
-    question.options.push(row.label);
-    // The answer is a reference, so it is resolved rather than trusted: the
-    // string is whichever option the FK actually points at.
-    if (row.optionId === row.correctOptionId) question.answer = row.label;
-  }
-
-  const questions = [...byQuestion.values()];
-  // A question whose correct_option_id resolved to nothing would silently
-  // become unanswerable. The seed asserts this too; failing loudly here means
-  // a hand-edited row cannot ship a broken quiz.
-  const unanswerable = questions.filter((q) => q.answer === "");
-  if (unanswerable.length > 0) {
-    throw new Error(
-      `Quiz "${slug}" has ${unanswerable.length} question(s) whose correct option is missing.`,
-    );
-  }
-
-  return {
-    slug: quiz.slug,
-    title: preferred(quiz.translatedTitle, quiz.title),
-    description: preferred(quiz.translatedDescription, quiz.description),
-    difficulty: quiz.difficulty,
-    category: quiz.category,
-    questions,
-  };
-}
 
 /** Slugs only — for `generateStaticParams` and the sitemap. */
 export async function listQuizSlugs(): Promise<string[]> {

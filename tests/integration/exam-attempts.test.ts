@@ -175,6 +175,7 @@ describe("the paper handed to a candidate", () => {
     const paper = await getPaper(
       (started as { attemptId: string }).attemptId,
       USER,
+      "en",
     );
 
     const payload = JSON.stringify(paper);
@@ -192,6 +193,7 @@ describe("the paper handed to a candidate", () => {
     const paper = await getPaper(
       (started as { attemptId: string }).attemptId,
       USER,
+      "en",
     );
     expect(paper!.questions).toHaveLength(3);
     for (const question of paper!.questions) {
@@ -204,8 +206,8 @@ describe("the paper handed to a candidate", () => {
     // process — which is what makes resume honest.
     const started = await startAttempt(SLUG, USER);
     const id = (started as { attemptId: string }).attemptId;
-    const first = await getPaper(id, USER);
-    const second = await getPaper(id, USER);
+    const first = await getPaper(id, USER, "en");
+    const second = await getPaper(id, USER, "en");
     expect(second!.questions.map((q) => q.id)).toEqual(
       first!.questions.map((q) => q.id),
     );
@@ -218,7 +220,7 @@ describe("the paper handed to a candidate", () => {
     // An attempt id is a UUID, but "unguessable" is not an authorization model.
     const started = await startAttempt(SLUG, USER);
     const id = (started as { attemptId: string }).attemptId;
-    expect(await getPaper(id, "someone-else")).toBeNull();
+    expect(await getPaper(id, "someone-else", "en")).toBeNull();
   });
 
   it("reports the server's clock alongside the deadline", async () => {
@@ -226,6 +228,7 @@ describe("the paper handed to a candidate", () => {
     const paper = await getPaper(
       (started as { attemptId: string }).attemptId,
       USER,
+      "en",
     );
     expect(paper!.expiresAt).toBeInstanceOf(Date);
     expect(paper!.serverNow).toBeInstanceOf(Date);
@@ -376,7 +379,7 @@ describe("saving answers", () => {
       ok: true,
     });
 
-    const paper = await getPaper(attemptId, USER);
+    const paper = await getPaper(attemptId, USER, "en");
     const saved = paper!.questions.find((q) => q.id === question);
     expect(saved!.selectedOptionIds).toEqual([option]);
   });
@@ -392,7 +395,7 @@ describe("saving answers", () => {
     await saveAnswer(attemptId, USER, question, [options[1]!.id]);
     await saveAnswer(attemptId, USER, question, [options[2]!.id]);
 
-    const paper = await getPaper(attemptId, USER);
+    const paper = await getPaper(attemptId, USER, "en");
     expect(
       paper!.questions.find((q) => q.id === question)!.selectedOptionIds,
     ).toEqual([options[2]!.id]);
@@ -738,6 +741,7 @@ describe("cooldown and multiple choice", () => {
     const paper = await getPaper(
       (started as { attemptId: string }).attemptId,
       USER,
+      "en",
     );
     expect(paper!.expiresAt).toBeNull();
   });

@@ -5,9 +5,20 @@ import { uuidv7 } from "uuidv7";
 
 import { getDb } from "@/db/client";
 import { attemptAnswers, examAttempts } from "@/db/schema/attempts";
-import { quizOptions, quizQuestions, quizzes } from "@/db/schema/content";
+import {
+  quizOptions,
+  quizQuestionTranslations,
+  quizQuestions,
+  quizTranslations,
+  quizzes,
+} from "@/db/schema/content";
+import { preferred } from "../_locale";
 import { newSeed, optionSeed, shuffleWithSeed } from "@/lib/exams/shuffle";
-import { scoreAttempt, type ScorableQuestion } from "@/lib/exams/score";
+import {
+  percentage,
+  scoreAttempt,
+  type ScorableQuestion,
+} from "@/lib/exams/score";
 
 /**
  * The exam engine's server half.
@@ -74,6 +85,7 @@ export interface Paper {
 export async function getPaper(
   attemptId: string,
   userId: string,
+  locale: string,
 ): Promise<Paper | null> {
   const db = getDb();
 
@@ -89,11 +101,19 @@ export async function getPaper(
       expiresAt: examAttempts.expiresAt,
       quizSlug: quizzes.slug,
       quizTitle: quizzes.title,
+      translatedTitle: quizTranslations.title,
       shuffleQuestions: quizzes.shuffleQuestions,
       shuffleOptions: quizzes.shuffleOptions,
     })
     .from(examAttempts)
     .innerJoin(quizzes, eq(quizzes.id, examAttempts.quizId))
+    .leftJoin(
+      quizTranslations,
+      and(
+        eq(quizTranslations.quizId, quizzes.id),
+        eq(quizTranslations.locale, locale),
+      ),
+    )
     .where(eq(examAttempts.id, attemptId));
 
   // Ownership is checked here rather than by the caller: an attempt id is a
@@ -106,10 +126,21 @@ export async function getPaper(
       position: quizQuestions.position,
       type: quizQuestions.type,
       prompt: quizQuestions.prompt,
+      translatedPrompt: quizQuestionTranslations.prompt,
       points: quizQuestions.points,
-      // NOT `explanation`. NOT `correctOptionId`.
+      // NOT `explanation`. NOT `correctOptionId`. The translation join takes
+      // only `prompt` for the same reason — `quizQuestionTranslations` also
+      // carries the explanation, and joining the table is not permission to
+      // select every column on it.
     })
     .from(quizQuestions)
+    .leftJoin(
+      quizQuestionTranslations,
+      and(
+        eq(quizQuestionTranslations.questionId, quizQuestions.id),
+        eq(quizQuestionTranslations.locale, locale),
+      ),
+    )
     .where(eq(quizQuestions.quizId, attempt.quizId))
     .orderBy(asc(quizQuestions.position));
 
@@ -155,7 +186,7 @@ export async function getPaper(
       id: question.id,
       position: index,
       type: question.type,
-      prompt: question.prompt,
+      prompt: preferred(question.translatedPrompt, question.prompt),
       points: question.points,
       options: (attempt.shuffleOptions
         ? // Seeded from the question's position in THIS paper, so two
@@ -171,7 +202,7 @@ export async function getPaper(
   return {
     attemptId: attempt.id,
     quizSlug: attempt.quizSlug,
-    quizTitle: attempt.quizTitle,
+    quizTitle: preferred(attempt.translatedTitle, attempt.quizTitle),
     attemptNumber: attempt.attemptNumber,
     status: attempt.status,
     startedAt: attempt.startedAt,
@@ -665,4 +696,346 @@ export async function listAttempts(quizSlug: string, userId: string) {
     .innerJoin(quizzes, eq(quizzes.id, examAttempts.quizId))
     .where(and(eq(quizzes.slug, quizSlug), eq(examAttempts.userId, userId)))
     .orderBy(desc(examAttempts.attemptNumber));
+}
+
+// ── After the paper is marked ───────────────────────────────────────────────
+
+export interface ReviewOption {
+  id: string;
+  label: string;
+  isCorrect: boolean;
+  chosen: boolean;
+}
+
+export interface ReviewQuestion {
+  id: string;
+  position: number;
+  prompt: string;
+  explanation: string;
+  points: number;
+  pointsAwarded: number;
+  isCorrect: boolean;
+  answered: boolean;
+  options: ReviewOption[];
+}
+
+export interface Review {
+  attemptId: string;
+  quizSlug: string;
+  quizTitle: string;
+  attemptNumber: number;
+  status: string;
+  score: number;
+  maxScore: number;
+  percent: number;
+  passed: boolean;
+  submittedAt: Date | null;
+  questions: ReviewQuestion[];
+}
+
+export type ReviewResult =
+  | { ok: true; review: Review }
+  | { ok: false; reason: "not_found" | "not_finished" | "policy" };
+
+/**
+ * The answers, after the fact.
+ *
+ * This is the ONLY query that reads `is_correct` and `explanation` for a
+ * candidate, and it refuses three ways before it does: the attempt must be
+ * theirs, it must be finished, and the quiz's `review_policy` must allow it.
+ * Checked here rather than in the page, because a second entry point that
+ * forgot one of the three is exactly how an answer key leaks.
+ */
+export async function getReview(
+  attemptId: string,
+  userId: string,
+  locale: string,
+): Promise<ReviewResult> {
+  const db = getDb();
+
+  const [attempt] = await db
+    .select({
+      id: examAttempts.id,
+      userId: examAttempts.userId,
+      quizId: examAttempts.quizId,
+      attemptNumber: examAttempts.attemptNumber,
+      seed: examAttempts.seed,
+      status: examAttempts.status,
+      score: examAttempts.score,
+      maxScore: examAttempts.maxScore,
+      passed: examAttempts.passed,
+      submittedAt: examAttempts.submittedAt,
+      quizSlug: quizzes.slug,
+      quizTitle: quizzes.title,
+      translatedTitle: quizTranslations.title,
+      shuffleQuestions: quizzes.shuffleQuestions,
+      shuffleOptions: quizzes.shuffleOptions,
+      reviewPolicy: quizzes.reviewPolicy,
+      maxAttempts: quizzes.maxAttempts,
+    })
+    .from(examAttempts)
+    .innerJoin(quizzes, eq(quizzes.id, examAttempts.quizId))
+    .leftJoin(
+      quizTranslations,
+      and(
+        eq(quizTranslations.quizId, quizzes.id),
+        eq(quizTranslations.locale, locale),
+      ),
+    )
+    .where(eq(examAttempts.id, attemptId));
+
+  if (!attempt || attempt.userId !== userId)
+    return { ok: false, reason: "not_found" };
+
+  // An in-progress attempt has no review, and asking for one is how a
+  // candidate would read the answers mid-sitting.
+  if (attempt.status !== "submitted" && attempt.status !== "expired") {
+    return { ok: false, reason: "not_finished" };
+  }
+
+  if (attempt.reviewPolicy === "never") return { ok: false, reason: "policy" };
+
+  if (attempt.reviewPolicy === "after_attempts_exhausted") {
+    // On an unlimited quiz "exhausted" never arrives, so review would never
+    // open — treated as never rather than as a quiet yes.
+    if (attempt.maxAttempts === null) return { ok: false, reason: "policy" };
+    const [{ used }] = await db
+      .select({ used: sql<number>`count(*)::int` })
+      .from(examAttempts)
+      .where(
+        and(
+          eq(examAttempts.quizId, attempt.quizId),
+          eq(examAttempts.userId, userId),
+        ),
+      );
+    if (used < attempt.maxAttempts) return { ok: false, reason: "policy" };
+  }
+
+  const questionRows = await db
+    .select({
+      id: quizQuestions.id,
+      position: quizQuestions.position,
+      prompt: quizQuestions.prompt,
+      translatedPrompt: quizQuestionTranslations.prompt,
+      explanation: quizQuestions.explanation,
+      translatedExplanation: quizQuestionTranslations.explanation,
+      points: quizQuestions.points,
+    })
+    .from(quizQuestions)
+    .leftJoin(
+      quizQuestionTranslations,
+      and(
+        eq(quizQuestionTranslations.questionId, quizQuestions.id),
+        eq(quizQuestionTranslations.locale, locale),
+      ),
+    )
+    .where(eq(quizQuestions.quizId, attempt.quizId))
+    .orderBy(asc(quizQuestions.position));
+
+  const optionRows = questionRows.length
+    ? await db
+        .select({
+          id: quizOptions.id,
+          questionId: quizOptions.questionId,
+          position: quizOptions.position,
+          label: quizOptions.label,
+          isCorrect: quizOptions.isCorrect,
+        })
+        .from(quizOptions)
+        .where(
+          inArray(
+            quizOptions.questionId,
+            questionRows.map((q) => q.id),
+          ),
+        )
+        .orderBy(asc(quizOptions.position))
+    : [];
+
+  const answers = await db
+    .select({
+      questionId: attemptAnswers.questionId,
+      selectedOptionIds: attemptAnswers.selectedOptionIds,
+      isCorrect: attemptAnswers.isCorrect,
+      pointsAwarded: attemptAnswers.pointsAwarded,
+    })
+    .from(attemptAnswers)
+    .where(eq(attemptAnswers.attemptId, attempt.id));
+  const byQuestion = new Map(answers.map((row) => [row.questionId, row]));
+
+  // Same seed, same order as the sitting. Reviewing a paper in a different
+  // order than it was sat makes "question 3" mean two things.
+  const ordered = attempt.shuffleQuestions
+    ? shuffleWithSeed(questionRows, attempt.seed)
+    : questionRows;
+
+  const questions: ReviewQuestion[] = ordered.map((question, index) => {
+    const answer = byQuestion.get(question.id);
+    const chosen = new Set(answer?.selectedOptionIds ?? []);
+    const options = optionRows.filter(
+      (option) => option.questionId === question.id,
+    );
+
+    return {
+      id: question.id,
+      position: index,
+      prompt: preferred(question.translatedPrompt, question.prompt),
+      explanation: preferred(
+        question.translatedExplanation,
+        question.explanation,
+      ),
+      points: question.points,
+      pointsAwarded: answer?.pointsAwarded ?? 0,
+      isCorrect: answer?.isCorrect ?? false,
+      // Distinct from "answered wrong": a blank is worth showing as a blank,
+      // and it is what the per-question analytics need to tell apart.
+      answered: Boolean(answer && answer.selectedOptionIds.length > 0),
+      options: (attempt.shuffleOptions
+        ? shuffleWithSeed(options, optionSeed(attempt.seed, index))
+        : options
+      ).map((option) => ({
+        id: option.id,
+        label: option.label,
+        isCorrect: option.isCorrect,
+        chosen: chosen.has(option.id),
+      })),
+    };
+  });
+
+  const maxScore = attempt.maxScore ?? 0;
+  return {
+    ok: true,
+    review: {
+      attemptId: attempt.id,
+      quizSlug: attempt.quizSlug,
+      quizTitle: preferred(attempt.translatedTitle, attempt.quizTitle),
+      attemptNumber: attempt.attemptNumber,
+      status: attempt.status,
+      score: attempt.score ?? 0,
+      maxScore,
+      percent: percentage(attempt.score ?? 0, maxScore),
+      passed: attempt.passed ?? false,
+      submittedAt: attempt.submittedAt,
+      questions,
+    },
+  };
+}
+
+// ── The sitting rules, for the page that offers a Start button ──────────────
+
+export interface QuizIntro {
+  slug: string;
+  title: string;
+  description: string;
+  difficulty: "easy" | "medium" | "hard";
+  category: string;
+  questionCount: number;
+  timeLimitSeconds: number | null;
+  passMarkPercent: number;
+  maxAttempts: number | null;
+  cooldownMinutes: number;
+  reviewPolicy: "immediate" | "after_attempts_exhausted" | "never";
+}
+
+/**
+ * Everything the intro page shows, and nothing a candidate could sit on.
+ *
+ * Deliberately NOT `getQuizBySlug`, which returns every question with its
+ * answer and explanation — that function fed the client runner this engine
+ * replaces, and calling it from a page is how the answer key gets back into
+ * a bundle.
+ */
+export async function getQuizIntro(
+  slug: string,
+  locale: string,
+): Promise<QuizIntro | null> {
+  const db = getDb();
+
+  const [quiz] = await db
+    .select({
+      id: quizzes.id,
+      slug: quizzes.slug,
+      title: quizzes.title,
+      description: quizzes.description,
+      translatedTitle: quizTranslations.title,
+      translatedDescription: quizTranslations.description,
+      difficulty: quizzes.difficulty,
+      category: quizzes.category,
+      timeLimitSeconds: quizzes.timeLimitSeconds,
+      passMarkPercent: quizzes.passMarkPercent,
+      maxAttempts: quizzes.maxAttempts,
+      cooldownMinutes: quizzes.cooldownMinutes,
+      reviewPolicy: quizzes.reviewPolicy,
+      questionCount: sql<number>`(
+        select count(*)::int from ${quizQuestions}
+        where ${quizQuestions}.quiz_id = ${quizzes}.id
+      )`,
+    })
+    .from(quizzes)
+    .leftJoin(
+      quizTranslations,
+      and(
+        eq(quizTranslations.quizId, quizzes.id),
+        eq(quizTranslations.locale, locale),
+      ),
+    )
+    .where(
+      and(
+        eq(quizzes.slug, slug),
+        eq(quizzes.status, "published"),
+        isNull(quizzes.deletedAt),
+      ),
+    );
+
+  if (!quiz) return null;
+
+  return {
+    slug: quiz.slug,
+    title: preferred(quiz.translatedTitle, quiz.title),
+    description: preferred(quiz.translatedDescription, quiz.description),
+    difficulty: quiz.difficulty,
+    category: quiz.category,
+    questionCount: quiz.questionCount,
+    timeLimitSeconds: quiz.timeLimitSeconds,
+    passMarkPercent: quiz.passMarkPercent,
+    maxAttempts: quiz.maxAttempts,
+    cooldownMinutes: quiz.cooldownMinutes,
+    reviewPolicy: quiz.reviewPolicy,
+  };
+}
+
+/** Every attempt a person has made, across quizzes — the profile history. */
+export async function listAllAttempts(userId: string, locale: string) {
+  const db = getDb();
+  const rows = await db
+    .select({
+      id: examAttempts.id,
+      attemptNumber: examAttempts.attemptNumber,
+      status: examAttempts.status,
+      score: examAttempts.score,
+      maxScore: examAttempts.maxScore,
+      passed: examAttempts.passed,
+      submittedAt: examAttempts.submittedAt,
+      startedAt: examAttempts.startedAt,
+      quizSlug: quizzes.slug,
+      quizTitle: quizzes.title,
+      translatedTitle: quizTranslations.title,
+      reviewPolicy: quizzes.reviewPolicy,
+    })
+    .from(examAttempts)
+    .innerJoin(quizzes, eq(quizzes.id, examAttempts.quizId))
+    .leftJoin(
+      quizTranslations,
+      and(
+        eq(quizTranslations.quizId, quizzes.id),
+        eq(quizTranslations.locale, locale),
+      ),
+    )
+    .where(eq(examAttempts.userId, userId))
+    .orderBy(desc(examAttempts.startedAt));
+
+  return rows.map((row) => ({
+    ...row,
+    quizTitle: preferred(row.translatedTitle, row.quizTitle),
+    percent: percentage(row.score ?? 0, row.maxScore ?? 0),
+  }));
 }

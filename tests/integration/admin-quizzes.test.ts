@@ -13,11 +13,8 @@ import {
   QUIZ_LIST_SPEC,
 } from "@/db/queries/admin/quizzes";
 import { replaceQuizQuestions } from "@/db/queries/admin/save-questions";
-import {
-  getQuizBySlug,
-  listQuizSlugs,
-  listQuizzes,
-} from "@/db/queries/quizzes";
+import { listQuizSlugs, listQuizzes } from "@/db/queries/quizzes";
+import { getQuizIntro } from "@/db/queries/exams/attempts";
 import { parseListParams } from "@/db/queries/admin/list-params";
 import { quizPublishBlockers } from "@/lib/admin/quiz-schema";
 import type { QuestionInput } from "@/lib/admin/quiz-schema";
@@ -355,7 +352,9 @@ describe("a draft quiz", () => {
     expect((await listQuizzes("en")).map((q) => q.slug)).not.toContain(
       OWNED.slug,
     );
-    expect(await getQuizBySlug(OWNED.slug, "en")).toBeNull();
+    // `getQuizIntro` is what the public quiz page reads now; `getQuizBySlug`
+    // is gone with the client-side runner that needed the answer key.
+    expect(await getQuizIntro(OWNED.slug, "en")).toBeNull();
     expect(await listQuizSlugs()).not.toContain(OWNED.slug);
   });
 

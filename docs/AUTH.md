@@ -143,6 +143,9 @@ ever reach a repository.
 - Cloudinary avatars. `profiles.avatar_url` is a plain string and
   `avatar_source` records where the current one came from, so replacing a cached
   Google URL later needs no migration.
-- Adopting anonymous quiz attempts at sign-in. They are discarded today: the
-  scores live in `sessionStorage`, and trusting a client-supplied score is how a
-  leaderboard gets fabricated.
+- Adopting anonymous quiz attempts at sign-in. There are none to adopt: since
+  the exam engine landed, sitting a quiz needs an account and every attempt is
+  a database row. Anything still in a visitor's `sessionStorage` from the old
+  client-side runner is deliberately discarded rather than imported — those
+  scores were computed in a browser that also held the answer key, and
+  trusting a client-supplied score is how a leaderboard gets fabricated.
