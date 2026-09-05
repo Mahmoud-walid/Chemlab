@@ -517,3 +517,95 @@ export async function commentById(
 
   return row ?? null;
 }
+
+/**
+ * The moderation queue: reported comments that nobody has dealt with.
+ *
+ * Oldest first, because a report that has been waiting three days is more
+ * urgent than one from this morning — a newest-first queue is one where the
+ * oldest complaint is never reached.
+ */
+export interface QueuedReport {
+  commentId: string;
+  body: string;
+  status: "visible" | "hidden" | "flagged" | "removed";
+  authorId: string | null;
+  authorName: string | null;
+  createdAt: Date;
+  reportCount: number;
+  firstReportedAt: Date;
+  reasons: string[];
+}
+
+export async function listReportQueue(
+  db: AnyDatabase,
+  limit = 50,
+): Promise<QueuedReport[]> {
+  const rows = await db
+    .select({
+      commentId: comments.id,
+      // NOT masked by `deletedAt`, unlike every public read: a moderator
+      // deciding whether somebody keeps their account needs to see what was
+      // written. That is what `comment:read` buys, and it is why the page is
+      // guarded rather than merely unlinked.
+      body: comments.body,
+      status: comments.status,
+      authorId: comments.authorId,
+      authorName: users.name,
+      createdAt: comments.createdAt,
+      reportCount: sql<number>`count(${commentReports.id})::int`,
+      firstReportedAt: sql<Date>`min(${commentReports.createdAt})`,
+      reasons: sql<string[]>`array_agg(distinct ${commentReports.reason})`,
+    })
+    .from(commentReports)
+    .innerJoin(comments, eq(comments.id, commentReports.commentId))
+    .leftJoin(users, eq(users.id, comments.authorId))
+    .where(isNull(commentReports.resolvedAt))
+    .groupBy(
+      comments.id,
+      comments.body,
+      comments.status,
+      comments.authorId,
+      users.name,
+      comments.createdAt,
+    )
+    .orderBy(sql`min(${commentReports.createdAt}) asc`)
+    .limit(limit);
+
+  return rows as QueuedReport[];
+}
+
+/** How many reports are waiting — for a badge on the admin nav. */
+export async function openReportCount(db: AnyDatabase): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(commentReports)
+    .where(isNull(commentReports.resolvedAt));
+  return row?.count ?? 0;
+}
+
+/**
+ * Closes every open report on a comment.
+ *
+ * Resolving is separate from acting: a moderator who decides a comment is fine
+ * still needs the report to leave the queue, or the same argument arrives every
+ * morning.
+ */
+export async function resolveReports(
+  db: AnyDatabase,
+  commentId: string,
+  resolvedBy: string,
+): Promise<number> {
+  const changed = await db
+    .update(commentReports)
+    .set({ resolvedAt: new Date(), resolvedBy })
+    .where(
+      and(
+        eq(commentReports.commentId, commentId),
+        isNull(commentReports.resolvedAt),
+      ),
+    )
+    .returning();
+
+  return changed.length;
+}
