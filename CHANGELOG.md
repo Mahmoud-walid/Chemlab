@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.19.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.18.0...v0.19.0) (2026-09-05)
+
+
+### Features
+
+* **i18n:** decide what a stale or unreviewed translation shows a reader ([#103](https://github.com/Mahmoud-walid/Chemlab/issues/103)) ([290f6ff](https://github.com/Mahmoud-walid/Chemlab/commit/290f6ff959647559c3e274344d7ea96c811e419d))
+* **i18n:** translation status, ownership and staleness by generated hash ([#102](https://github.com/Mahmoud-walid/Chemlab/issues/102)) ([c60dcf4](https://github.com/Mahmoud-walid/Chemlab/commit/c60dcf40f157bc9aa083a7b87b25be035ae22ea1))
+
 ## [0.18.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.17.0...v0.18.0) (2026-09-05)
 
 
