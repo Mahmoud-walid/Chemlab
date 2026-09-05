@@ -64,6 +64,13 @@
       "when": 1788583322186,
       "tag": "0008_activity_events",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788585163536,
+      "tag": "0009_settings",
+      "breakpoints": true
     }
   ]
 }

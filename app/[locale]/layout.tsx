@@ -19,6 +19,7 @@ import { Providers } from "@/providers/providers";
 import { Toaster } from "@/components/ui/sonner";
 import { absoluteUrl, env } from "@/lib/env";
 import { direction, locales, routing, type Locale } from "@/i18n/routing";
+import { getSettings } from "@/lib/settings/get";
 
 // Latin faces. The previous twelve-family stack cost twelve font requests for
 // one runtime variable; these three cover sans, mono and body text.
@@ -54,9 +55,17 @@ export async function generateMetadata({
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "common" });
 
-  const siteName = env.NEXT_PUBLIC_SITE_NAME;
+  // The database first, the environment as the boot-time fallback. Renaming
+  // the site is a settings change, not a redeploy — and an unconfigured or
+  // database-less deployment still renders a name rather than an empty title.
+  const configured = await getSettings();
+  const siteName =
+    (configured["general.siteName"]?.value as string | undefined) ??
+    env.NEXT_PUBLIC_SITE_NAME;
   const title = `${siteName} – ${t("tagline")}`;
-  const description = env.NEXT_PUBLIC_SITE_DESCRIPTION;
+  const description =
+    (configured["general.siteDescription"]?.value as string | undefined) ??
+    env.NEXT_PUBLIC_SITE_DESCRIPTION;
   const ogImage = absoluteUrl("/og-image.png");
   const path = locale === routing.defaultLocale ? "/" : `/${locale}`;
 

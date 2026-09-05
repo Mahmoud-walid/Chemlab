@@ -11,7 +11,7 @@ import {
 } from "@/db/queries/admin/activity";
 import { parseListParams } from "@/db/queries/admin/list-params";
 import { requireAdminPermission } from "@/lib/admin/guard";
-import { verbGroups, type ActivityVerb } from "@/lib/activity/verbs";
+import { verbGroups } from "@/lib/activity/verbs";
 import { hasPermission } from "@/lib/authz";
 import { StatusFilter } from "@/components/admin/status-filter";
 import type { Locale } from "@/i18n/routing";

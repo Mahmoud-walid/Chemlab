@@ -65,7 +65,13 @@ describe("message catalogues", () => {
    * rather than hard-coding them means a translator can still override them.
    */
   const intentionallyLatin = (key: string) =>
+    // A language's own name, wherever it appears. `locale.*` is the public
+    // switcher; `admin.settings.locales.*` is the same list in the settings
+    // form. A picker that translated its own options would offer an Arabic
+    // reader "الإنجليزية" and "العربية", which is worse at the one job it has:
+    // letting somebody find the language they read.
     key.startsWith("locale.") ||
+    /(^|\.)locales\.[a-z]{2}$/.test(key) ||
     key.startsWith("element.units.") ||
     key === "settings.fontSample" ||
     // "{count}e" — e is the electron symbol, not a word.

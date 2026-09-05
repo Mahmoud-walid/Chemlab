@@ -258,6 +258,15 @@ exists and content changes have a known cadence.
   without a deferrable constraint. A dangling answer is therefore possible and
   is _detected_ rather than prevented: publishing refuses a quiz with one, and
   `getQuizBySlug` throws rather than serving an unanswerable question.
+- **`settings` is one row per key, not one jsonb blob.** A blob makes partial
+  validation impossible, turns every concurrent edit into a lost update, and
+  offers no place to hang a per-key permission. `value` is nullable, because a
+  cleared optional setting is a null VALUE — distinct from having no row at
+  all, which is what the registry default covers.
+- **No secret ever lives in `settings`.** Secrets are environment variables;
+  this table is product configuration. A test asserts no key name even looks
+  like a credential, and that is what makes recording old and new values in the
+  activity stream safe by construction.
 - **`activity_events` and `audit_log` are two tables on purpose.** They look
   alike and answer different questions. `audit_log` is a security record:
   append-only by trigger, never pruned, deliberately narrow. `activity_events`

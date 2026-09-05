@@ -124,6 +124,18 @@ export default defineConfig({
         // matters (the log cannot be edited) is a database trigger, proven in
         // tests/integration/rbac.test.ts.
         "lib/audit.ts",
+        // next/server's after(), next/headers and one insert. Everything that
+        // decides anything was pulled out into modules that ARE measured here:
+        // activity/verbs.ts and activity/ip.ts, both at 100%. That the write
+        // actually happens, is deferred, and cannot fail the request is proven
+        // in tests/e2e/admin-activity.spec.ts against the running app.
+        "lib/activity/record.ts",
+        // React cache over one SELECT, plus the fallback-to-default path. The
+        // rules it applies live in settings/registry.ts, which is measured;
+        // the behaviour — defaults with no rows, an out-of-schema value
+        // ignored, a forgotten key left alone — is proven against real
+        // Postgres in tests/integration/settings.test.ts.
+        "lib/settings/get.ts",
       ],
       // Deliberately per-area rather than one global gate. A single 80% number
       // drives people to write assertion-free tests over presentational code

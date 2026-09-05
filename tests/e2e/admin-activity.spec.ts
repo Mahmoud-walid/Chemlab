@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { desc, eq, like } from "drizzle-orm";
+import { eq, like } from "drizzle-orm";
 
 import { connect, seedUrl, type SeedDatabase } from "@/db/seed/connect";
 import * as schema from "@/db/schema";
