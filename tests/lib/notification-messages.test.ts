@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createTranslator } from "next-intl";
 
 import en from "@/messages/en.json";
 import ar from "@/messages/ar.json";
@@ -29,6 +30,22 @@ function resolve(catalogue: Messages, path: string): unknown {
           : undefined,
       catalogue,
     );
+}
+
+/**
+ * A translator that takes its key as a plain string.
+ *
+ * The app's catalogue is typed, so `t` normally accepts only the literal keys
+ * next-intl found in it — which is exactly the guarantee this file exists to
+ * check independently. Addressing the keys as data keeps the test honest: it
+ * resolves what is in the JSON, not what the type says should be.
+ */
+function translatorFor(locale: "en" | "ar", catalogue: Messages) {
+  return createTranslator({
+    locale,
+    messages: catalogue as never,
+    namespace: "notifications.messages" as never,
+  }) as unknown as (key: string, values: Record<string, unknown>) => string;
 }
 
 const CATALOGUES: [string, Messages][] = [
@@ -86,6 +103,44 @@ describe("notification copy", () => {
     for (const category of ["one", "two", "few", "many", "other"]) {
       expect(message, category).toContain(`${category} {`);
     }
+  });
+
+  it("counts the OTHER people, not everybody twice", () => {
+    // "Sara and 4 others" from four distinct likers claims five people. ICU's
+    // `offset:1` is what makes the actor named in the sentence not also one of
+    // the others — and it picks the plural category from the remainder, which
+    // is the number actually printed.
+    const t = translatorFor("en", en as Messages);
+
+    expect(t("lesson.liked", { actor: "Sara", count: 1 })).toBe(
+      "Sara liked your lesson",
+    );
+    expect(t("lesson.liked", { actor: "Sara", count: 2 })).toBe(
+      "Sara and 1 other liked your lesson",
+    );
+    expect(t("lesson.liked", { actor: "Sara", count: 4 })).toBe(
+      "Sara and 3 others liked your lesson",
+    );
+  });
+
+  it("picks the Arabic form from the remainder, not the total", () => {
+    // Three likers is Sara plus TWO others, and two is its own category in
+    // Arabic. Choosing on the total would render the dual form for three
+    // people and the plural for two — wrong in both directions.
+    const t = translatorFor("ar", ar as Messages);
+
+    expect(t("comment.liked", { actor: "سارة", count: 1 })).toBe(
+      "أعجب سارة بتعليقك",
+    );
+    expect(t("comment.liked", { actor: "سارة", count: 2 })).toContain(
+      "وشخص آخر",
+    );
+    expect(t("comment.liked", { actor: "سارة", count: 3 })).toContain(
+      "وشخصان آخران",
+    );
+    expect(t("comment.liked", { actor: "سارة", count: 5 })).toContain(
+      "و4 آخرين",
+    );
   });
 
   it("stores no key with a dot in it, which would be unreachable", () => {

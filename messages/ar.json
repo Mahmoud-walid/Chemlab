@@ -1094,11 +1094,11 @@
     "loadMore": "تحميل الأقدم",
     "messages": {
       "lesson": {
-        "liked": "{count, plural, one {أعجب {actor} بدرسك} two {أعجب {actor} وشخص آخر بدرسك} few {أعجب {actor} و# آخرين بدرسك} many {أعجب {actor} و# آخرًا بدرسك} other {أعجب {actor} و# آخر بدرسك}}",
+        "liked": "{count, plural, offset:1 =1 {أعجب {actor} بدرسك} zero {أعجب {actor} بدرسك} one {أعجب {actor} وشخص آخر بدرسك} two {أعجب {actor} وشخصان آخران بدرسك} few {أعجب {actor} و# آخرين بدرسك} many {أعجب {actor} و# آخرًا بدرسك} other {أعجب {actor} و# آخر بدرسك}}",
         "published": "نُشر درس جديد"
       },
       "comment": {
-        "liked": "{count, plural, one {أعجب {actor} بتعليقك} two {أعجب {actor} وشخص آخر بتعليقك} few {أعجب {actor} و# آخرين بتعليقك} many {أعجب {actor} و# آخرًا بتعليقك} other {أعجب {actor} و# آخر بتعليقك}}",
+        "liked": "{count, plural, offset:1 =1 {أعجب {actor} بتعليقك} zero {أعجب {actor} بتعليقك} one {أعجب {actor} وشخص آخر بتعليقك} two {أعجب {actor} وشخصان آخران بتعليقك} few {أعجب {actor} و# آخرين بتعليقك} many {أعجب {actor} و# آخرًا بتعليقك} other {أعجب {actor} و# آخر بتعليقك}}",
         "replied": "ردّ {actor} على تعليقك"
       },
       "exam": {

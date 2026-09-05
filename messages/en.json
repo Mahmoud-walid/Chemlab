@@ -1094,11 +1094,11 @@
     "loadMore": "Load older",
     "messages": {
       "lesson": {
-        "liked": "{count, plural, one {{actor} liked your lesson} other {{actor} and # others liked your lesson}}",
+        "liked": "{count, plural, offset:1 =1 {{actor} liked your lesson} one {{actor} and # other liked your lesson} other {{actor} and # others liked your lesson}}",
         "published": "A new lesson has been published"
       },
       "comment": {
-        "liked": "{count, plural, one {{actor} liked your comment} other {{actor} and # others liked your comment}}",
+        "liked": "{count, plural, offset:1 =1 {{actor} liked your comment} one {{actor} and # other liked your comment} other {{actor} and # others liked your comment}}",
         "replied": "{actor} replied to your comment"
       },
       "exam": {
