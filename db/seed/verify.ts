@@ -161,6 +161,15 @@ export async function verifyContent(db: SeedDatabase): Promise<string[]> {
       continue;
     }
 
+    // A quiz nobody can see is indistinguishable from one that failed to seed.
+    // Both halves are checked: `status` is what the public queries filter on,
+    // `published_at` records when it went live, and one without the other is a
+    // row whose two answers to "is this live" disagree.
+    if (quiz.status !== "published")
+      problems.push(`quizzes: ${json.slug} is ${quiz.status}, not published`);
+    if (quiz.publishedAt === null)
+      problems.push(`quizzes: ${json.slug} has no publication date`);
+
     const rows = await db
       .select({
         position: schema.quizQuestions.position,

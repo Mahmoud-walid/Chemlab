@@ -8,6 +8,7 @@ import {
   permissionForPath,
   visibleNav,
 } from "@/lib/admin/nav";
+import { ROLES } from "@/db/seed/rbac";
 import { isKnownPermission } from "@/lib/authz-core";
 import en from "@/messages/en.json";
 import ar from "@/messages/ar.json";
@@ -18,6 +19,34 @@ describe("the nav declaration", () => {
     // feature rather than a broken permission name.
     for (const item of flattenNav(ADMIN_NAV)) {
       expect(isKnownPermission(item.permission), item.permission).toBe(true);
+    }
+  });
+
+  it("shows the Editor role every section it can author in", () => {
+    // The permission a section is guarded by must be one the people who do
+    // that work actually hold. `exam:read` exists, so the "does this
+    // permission exist" test above passed while the quizzes section was
+    // guarded by it — but it means "view attempts and scores", which an
+    // Editor does not hold, so an Editor holding every `quiz:*` permission
+    // could not see the section at all.
+    const editor = ROLES.find((role) => role.key === "editor");
+    expect(editor, "no editor role").toBeTruthy();
+    const held = new Set(editor!.permissions);
+
+    for (const [segment, authoring] of [
+      ["elements", "element:update"],
+      ["lessons", "lesson:update"],
+      ["quizzes", "quiz:update"],
+    ] as const) {
+      const item = flattenNav(ADMIN_NAV).find((i) => i.segment === segment);
+      expect(item, segment).toBeTruthy();
+      expect(held.has(authoring), `${segment}: editor should author here`).toBe(
+        true,
+      );
+      expect(
+        held.has(item!.permission),
+        `${segment} is guarded by ${item!.permission}, which an Editor does not hold`,
+      ).toBe(true);
     }
   });
 

@@ -43,6 +43,13 @@
       "when": 1788571621436,
       "tag": "0005_lesson_lifecycle",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788573638503,
+      "tag": "0006_quiz_lifecycle",
+      "breakpoints": true
     }
   ]
 }

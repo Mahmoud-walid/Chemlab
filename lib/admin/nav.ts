@@ -41,7 +41,7 @@ export type AdminItemKey =
   | "items.dashboard"
   | "items.elements"
   | "items.lessons"
-  | "items.exams"
+  | "items.quizzes"
   | "items.pages"
   | "items.users"
   | "items.roles"
@@ -92,10 +92,15 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         permission: "lesson:read",
       },
       {
-        segment: "exams",
-        labelKey: "items.exams",
+        // "quizzes", not "exams". #16 calls the section exams, but the table,
+        // the public /quiz route and the `quiz:*` permissions all say quiz —
+        // and `exam:read` in the permission catalogue means something else
+        // entirely: viewing attempts and scores. Pointing this section at it
+        // hid the whole section from an Editor holding every quiz permission.
+        segment: "quizzes",
+        labelKey: "items.quizzes",
         icon: ClipboardList,
-        permission: "exam:read",
+        permission: "quiz:read",
       },
       {
         segment: "pages",

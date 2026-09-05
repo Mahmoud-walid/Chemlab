@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import {
@@ -55,7 +55,13 @@ export async function listQuizzes(locale: string): Promise<QuizSummary[]> {
         eq(quizTranslations.locale, locale),
       ),
     )
-    .orderBy(asc(quizzes.slug));
+    // Draft, archived and soft-deleted quizzes keep their rows but must not
+    // be listed. The status column is the single answer to "is this live" —
+    // `published_at` only records when it first became so.
+    .where(and(eq(quizzes.status, "published"), isNull(quizzes.deletedAt)))
+    // Catalogue order first, slug as the tiebreak so the list is stable
+    // between requests rather than following Postgres' physical row order.
+    .orderBy(asc(quizzes.position), asc(quizzes.slug));
 
   return rows.map((row) => ({
     slug: row.slug,
@@ -107,7 +113,13 @@ export async function getQuizBySlug(
         eq(quizTranslations.locale, locale),
       ),
     )
-    .where(eq(quizzes.slug, slug))
+    .where(
+      and(
+        eq(quizzes.slug, slug),
+        eq(quizzes.status, "published"),
+        isNull(quizzes.deletedAt),
+      ),
+    )
     .limit(1);
 
   if (!quiz) return null;
@@ -180,6 +192,7 @@ export async function listQuizSlugs(): Promise<string[]> {
   const rows = await getDb()
     .select({ slug: quizzes.slug })
     .from(quizzes)
-    .orderBy(asc(quizzes.slug));
+    .where(and(eq(quizzes.status, "published"), isNull(quizzes.deletedAt)))
+    .orderBy(asc(quizzes.position), asc(quizzes.slug));
   return rows.map((row) => row.slug);
 }

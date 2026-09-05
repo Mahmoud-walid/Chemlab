@@ -55,7 +55,11 @@ async function signUp(page: import("@playwright/test").Page, email: string) {
   await page.getByLabel("Name").fill("Ada Lovelace");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign up", exact: true }).click();
+  // Through the backoff helper, not a bare click: this helper exists for the
+  // limiter, and clicking past it meant these two tests were the only
+  // sign-ups in the suite with no retry — which is what failed once the admin
+  // specs added more accounts to the same window.
+  await submitSignUp(page);
 }
 
 test.describe("accounts", () => {

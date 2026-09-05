@@ -5,19 +5,19 @@ import {
 } from "next-intl/server";
 
 import {
-  LESSON_LIST_SPEC,
-  listLessonsForAdmin,
-  type LessonSort,
-} from "@/db/queries/admin/lessons";
+  QUIZ_LIST_SPEC,
+  listQuizzesForAdmin,
+  type QuizSort,
+} from "@/db/queries/admin/quizzes";
 import { parseListParams } from "@/db/queries/admin/list-params";
 import type { ContentStatus } from "@/db/schema/content";
 import { requireAdminPermission } from "@/lib/admin/guard";
 import { hasPermission } from "@/lib/authz";
+import { StatusFilter } from "@/components/admin/status-filter";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
-import { LessonsTable } from "./features/lessons-table";
-import { StatusFilter } from "@/components/admin/status-filter";
+import { QuizzesTable } from "./features/quizzes-table";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +31,7 @@ function statusFilter(raw: string | string[] | undefined) {
     : undefined;
 }
 
-export default async function AdminLessonsPage({
+export default async function AdminQuizzesPage({
   params,
   searchParams,
 }: {
@@ -42,17 +42,17 @@ export default async function AdminLessonsPage({
   setRequestLocale(locale as Locale);
 
   // Its own gate. The layout checked `admin:access`; reading unpublished
-  // lessons needs `lesson:read`, and a page that leans on its parent is one
+  // quizzes needs `quiz:read`, and a page that leans on its parent is one
   // refactor away from being unprotected.
-  const actor = await requireAdminPermission("lesson:read");
-  const canCreate = hasPermission(actor, "lesson:create");
+  const actor = await requireAdminPermission("quiz:read");
+  const canCreate = hasPermission(actor, "quiz:create");
 
   const raw = await searchParams;
-  const list = parseListParams<LessonSort>(raw, LESSON_LIST_SPEC);
+  const list = parseListParams<QuizSort>(raw, QUIZ_LIST_SPEC);
   const status = statusFilter(raw.status);
-  const { rows, total, pages } = await listLessonsForAdmin(list, status);
+  const { rows, total, pages } = await listQuizzesForAdmin(list, status);
 
-  const t = await getTranslations("admin.lessons");
+  const t = await getTranslations("admin.quizzes");
   const tTable = await getTranslations("admin.table");
   const format = await getFormatter();
 
@@ -79,7 +79,7 @@ export default async function AdminLessonsPage({
         </div>
         {canCreate && (
           <Button asChild>
-            <Link href="/admin/lessons/new">{t("new")}</Link>
+            <Link href="/admin/quizzes/new">{t("new")}</Link>
           </Button>
         )}
       </div>
@@ -93,18 +93,17 @@ export default async function AdminLessonsPage({
         ]}
       />
 
-      <LessonsTable
+      <QuizzesTable
         rows={rows.map((row) => ({
           ...row,
           difficulty: difficultyNames[row.difficulty],
           // Pluralised here rather than in the table: next-intl's plural rules
           // belong to the request's locale, and a formatting FUNCTION cannot
-          // cross into a client component — passing one renders the error
-          // boundary instead of the list.
-          contentLabel:
-            row.sectionCount === 0
-              ? t("noContent")
-              : t("sectionCount", { count: row.sectionCount }),
+          // cross into a client component.
+          questionsLabel:
+            row.questionCount === 0
+              ? t("noQuestions")
+              : t("questionCount", { count: row.questionCount }),
           updatedLabel: format.dateTime(row.updatedAt, { dateStyle: "medium" }),
         }))}
         page={list.page}
@@ -115,7 +114,7 @@ export default async function AdminLessonsPage({
           category: t("columns.category"),
           difficulty: t("columns.difficulty"),
           status: t("columns.status"),
-          content: t("columns.content"),
+          questions: t("columns.questions"),
           updated: t("columns.updated"),
           statusNames,
           table: {
