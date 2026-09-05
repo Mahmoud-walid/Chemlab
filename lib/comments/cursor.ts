@@ -16,11 +16,23 @@
  * change.
  */
 
-/** Newest-first feeds order by `(created_at, id)`. `id` is the tiebreaker
- * because two comments can share a millisecond. */
-export interface TimeCursor {
-  kind: "time";
-  createdAt: string;
+/**
+ * Newest-first feeds page on the row id alone.
+ *
+ * The ids are UUID v7, so ordering by id IS ordering by time — and unlike a
+ * timestamp it is unique and it round-trips exactly.
+ *
+ * It used to carry `created_at` as well, and that was wrong in a way that only
+ * appears under load: `Date.toISOString()` has millisecond precision and
+ * Postgres `timestamptz` stores microseconds, so the cursor's timestamp was a
+ * TRUNCATION of the row's. The `created_at = $1` half of the keyset predicate
+ * then matched nothing and the `<` half excluded every row inside that
+ * millisecond — so the page after a burst of comments came back EMPTY, and the
+ * reader saw a thread that stopped early. Two comments sharing a millisecond
+ * is precisely the case keyset pagination exists to get right.
+ */
+export interface IdCursor {
+  kind: "id";
   id: string;
 }
 
@@ -36,7 +48,7 @@ export interface ScoreCursor {
   id: string;
 }
 
-export type Cursor = TimeCursor | ScoreCursor;
+export type Cursor = IdCursor | ScoreCursor;
 
 export function encodeCursor(cursor: Cursor): string {
   return Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url");
@@ -61,20 +73,9 @@ export function decodeCursor(value: string | null | undefined): Cursor | null {
     if (!parsed || typeof parsed !== "object") return null;
     const candidate = parsed as Record<string, unknown>;
 
-    if (candidate.kind === "time") {
-      if (
-        typeof candidate.createdAt !== "string" ||
-        typeof candidate.id !== "string" ||
-        // A date the database cannot compare is a 500 waiting to happen.
-        Number.isNaN(Date.parse(candidate.createdAt))
-      ) {
-        return null;
-      }
-      return {
-        kind: "time",
-        createdAt: candidate.createdAt,
-        id: candidate.id,
-      };
+    if (candidate.kind === "id") {
+      if (typeof candidate.id !== "string") return null;
+      return { kind: "id", id: candidate.id };
     }
 
     if (candidate.kind === "score") {

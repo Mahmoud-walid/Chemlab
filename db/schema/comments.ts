@@ -111,11 +111,21 @@ export const comments = pgTable(
      * is what keeps it small, since hidden and removed rows are never read by
      * the public query and top-level rows are a fraction of the table.
      */
+    /**
+     * Matches the feed's ORDER BY exactly — by id, not by timestamp.
+     *
+     * The ids are UUID v7, so ordering by id is ordering by time. The cursor
+     * carries an id for the same reason: a timestamp round-tripped through
+     * `toISOString()` loses the microseconds Postgres stores, and a keyset
+     * predicate built on a truncated value returns an empty page for every
+     * comment inside that millisecond.
+     */
     index("comments_feed_idx")
-      .on(t.subjectType, t.subjectId, t.createdAt.desc(), t.id.desc())
+      .on(t.subjectType, t.subjectId, t.id.desc())
       .where(sql`depth = 0 and status in ('visible', 'flagged')`),
-    // Replies, oldest first: a thread reads in the order it happened.
-    index("comments_replies_idx").on(t.parentId, t.createdAt, t.id),
+    // Replies, oldest first: a thread reads in the order it happened, and by
+    // id for the same reason as the feed above.
+    index("comments_replies_idx").on(t.parentId, t.id),
     // `top`, by score. An expression index, because the score is not a column:
     // storing it would be a third counter to keep in step with two others.
     index("comments_top_idx").on(

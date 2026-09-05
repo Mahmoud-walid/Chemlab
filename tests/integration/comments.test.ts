@@ -524,3 +524,91 @@ describe("loading a page of threads", () => {
     }
   });
 });
+
+describe("comments that share a millisecond", () => {
+  it("still pages, which a timestamp cursor did not", async () => {
+    /**
+     * The bug this exists for.
+     *
+     * A cursor carrying `created_at` as an ISO string is millisecond
+     * precision; Postgres `timestamptz` stores microseconds. So the cursor was
+     * a TRUNCATION of the row it named: the `created_at = $1` half of the
+     * keyset predicate matched nothing, and the `<` half excluded every row
+     * inside that millisecond. The page after a burst came back EMPTY and the
+     * thread appeared to stop early.
+     *
+     * A single INSERT gives every row the same `now()`, which is the sharpest
+     * version of the same thing — and exactly what a busy thread produces.
+     */
+    const rows = Array.from({ length: 25 }, (_, i) => {
+      const id = uuidv7();
+      return {
+        id,
+        subjectType: "lesson" as const,
+        subjectId: lessonId,
+        authorId: AUTHOR,
+        body: `same millisecond ${i}`,
+        depth: 0,
+        path: id,
+      };
+    });
+    await db.insert(schema.comments).values(rows);
+
+    // They really do share a timestamp: without that this test proves nothing.
+    const distinct = await db
+      .select({ count: sql<number>`count(distinct created_at)::int` })
+      .from(schema.comments)
+      .where(eq(schema.comments.subjectId, lessonId));
+    expect(distinct[0]!.count).toBe(1);
+
+    const seen: string[] = [];
+    let cursor: string | null = null;
+
+    do {
+      const page: Awaited<ReturnType<typeof listComments>> = await listComments(
+        db,
+        { subjectType: "lesson", subjectId: lessonId, limit: 10, cursor },
+      );
+      seen.push(...page.items.map((row) => row.id));
+      cursor = page.nextCursor;
+    } while (cursor);
+
+    expect(seen).toHaveLength(25);
+    expect(new Set(seen).size).toBe(25);
+  });
+
+  it("pages a thread's replies the same way", async () => {
+    const root = await post("root");
+    const replies = Array.from({ length: 12 }, (_, i) => {
+      const id = uuidv7();
+      return {
+        id,
+        subjectType: "lesson" as const,
+        subjectId: lessonId,
+        authorId: READER,
+        body: `burst reply ${i}`,
+        depth: 1,
+        parentId: root.id,
+        rootId: root.id,
+        path: `${root.id}/${id}`,
+      };
+    });
+    await db.insert(schema.comments).values(replies);
+
+    const seen: string[] = [];
+    let cursor: string | null = null;
+
+    do {
+      const page: Awaited<ReturnType<typeof listReplies>> = await listReplies(
+        db,
+        root.id,
+        { limit: 5, cursor },
+      );
+      seen.push(...page.items.map((row) => row.id));
+      cursor = page.nextCursor;
+    } while (cursor);
+
+    expect(seen).toHaveLength(12);
+    expect(new Set(seen).size).toBe(12);
+  });
+});

@@ -144,14 +144,8 @@ export async function listComments(
   const after =
     cursor === null
       ? undefined
-      : cursor.kind === "time"
-        ? or(
-            lt(comments.createdAt, new Date(cursor.createdAt)),
-            and(
-              eq(comments.createdAt, new Date(cursor.createdAt)),
-              lt(comments.id, cursor.id),
-            ),
-          )
+      : cursor.kind === "id"
+        ? lt(comments.id, cursor.id)
         : or(
             sql`${score} < ${cursor.score}`,
             and(sql`${score} = ${cursor.score}`, lt(comments.id, cursor.id)),
@@ -162,10 +156,13 @@ export async function listComments(
     .from(comments)
     .leftJoin(users, eq(users.id, comments.authorId))
     .where(after ? and(base, after) : base)
+    // By id for the newest-first feed: the ids are UUID v7, so this IS
+    // newest-first, and it matches the cursor exactly — which a timestamp
+    // truncated to milliseconds did not.
     .orderBy(
       ...(sort === "top"
         ? [desc(score), desc(comments.id)]
-        : [desc(comments.createdAt), desc(comments.id)]),
+        : [desc(comments.id)]),
     )
     // One more than asked for: the extra row is how we know there IS a next
     // page, without a second COUNT query over the whole thread.
@@ -185,11 +182,7 @@ export async function listComments(
                   score: last.likeCount - last.dislikeCount,
                   id: last.id,
                 }
-              : {
-                  kind: "time",
-                  createdAt: last.createdAt.toISOString(),
-                  id: last.id,
-                },
+              : { kind: "id", id: last.id },
           )
         : null,
   };
@@ -246,22 +239,18 @@ export async function listReplies(
 
   const base = and(eq(comments.parentId, parentId), READABLE);
   const after =
-    cursor === null || cursor.kind !== "time"
+    cursor === null || cursor.kind !== "id"
       ? undefined
-      : or(
-          sql`${comments.createdAt} > ${new Date(cursor.createdAt)}`,
-          and(
-            eq(comments.createdAt, new Date(cursor.createdAt)),
-            sql`${comments.id} > ${cursor.id}`,
-          ),
-        );
+      : sql`${comments.id} > ${cursor.id}`;
 
   const rows = await db
     .select(selection(viewerId))
     .from(comments)
     .leftJoin(users, eq(users.id, comments.authorId))
     .where(after ? and(base, after) : base)
-    .orderBy(asc(comments.createdAt), asc(comments.id))
+    // Oldest first — the order a thread happened in — and by id for the same
+    // reason the feed is: it is the cursor, exactly.
+    .orderBy(asc(comments.id))
     .limit(limit + 1);
 
   const items = rows.slice(0, limit) as CommentRow[];
@@ -271,11 +260,7 @@ export async function listReplies(
     items,
     nextCursor:
       rows.length > limit && last
-        ? encodeCursor({
-            kind: "time",
-            createdAt: last.createdAt.toISOString(),
-            id: last.id,
-          })
+        ? encodeCursor({ kind: "id", id: last.id })
         : null,
   };
 }
