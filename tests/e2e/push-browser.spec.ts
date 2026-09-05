@@ -147,6 +147,23 @@ test.describe("permission", () => {
 
   test("is offered on the settings page, behind a button", async ({ page }) => {
     test.skip(!configured, "needs NEXT_PUBLIC_VAPID_PUBLIC_KEY");
+
+    // "Never asked yet" has to be STATED, not assumed. A headless Chromium
+    // reports `Notification.permission === "denied"` out of the box — it has
+    // no UI to show a dialog in, so it answers as though the request had
+    // already been refused — and granting the permission through Playwright
+    // moves it to "granted", never to "default". Neither is the state this
+    // test is about, and without the override the toggle correctly renders
+    // the denied copy and this assertion fails for a reason that says nothing
+    // about the product. Same technique as the denied test below, in the
+    // opposite direction.
+    await page.addInitScript(() => {
+      Object.defineProperty(Notification, "permission", {
+        configurable: true,
+        get: () => "default",
+      });
+    });
+
     await signInAs(page, db, "member");
     await page.goto("/profile/settings");
 
