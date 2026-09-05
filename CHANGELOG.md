@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.15.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.14.0...v0.15.0) (2026-09-05)
+
+
+### Features
+
+* **notifications:** the event catalogue, the fan-out and the inbox ([#87](https://github.com/Mahmoud-walid/Chemlab/issues/87)) ([b57a592](https://github.com/Mahmoud-walid/Chemlab/commit/b57a592799b44b0dcad25ac49ce522e6f7e52474))
+* **push:** the service worker, the manifest and an honest permission prompt ([#86](https://github.com/Mahmoud-walid/Chemlab/issues/86)) ([d37f0da](https://github.com/Mahmoud-walid/Chemlab/commit/d37f0daf01842f4be9ac0396a8820b50da8f0f7f))
+
 ## [0.14.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.13.0...v0.14.0) (2026-09-05)
 
 
