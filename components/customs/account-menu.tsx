@@ -7,6 +7,7 @@ import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AccountMenuClient } from "./account-menu.client";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 /**
  * The account surface in the header.
@@ -53,20 +54,25 @@ export function AccountMenu() {
   }
 
   return (
-    <AccountMenuClient
-      displayName={session.user.name}
-      email={session.user.email}
-      avatarUrl={session.user.image ?? null}
-      labels={{
-        openMenu: t("openAccountMenu"),
-        avatarAlt: t("avatarAlt"),
-        profile: t("profile"),
-        myExams: t("myExams"),
-        savedItems: t("savedItems"),
-        settings: t("settings"),
-        signOut: t("signOut"),
-        signedOut: t("signedOut"),
-      }}
-    />
+    <div className="flex items-center gap-1">
+      {/* Only for somebody signed in: there is nothing to notify an anonymous
+          reader about, and a bell that always shows zero is furniture. */}
+      <NotificationBell />
+      <AccountMenuClient
+        displayName={session.user.name}
+        email={session.user.email}
+        avatarUrl={session.user.image ?? null}
+        labels={{
+          openMenu: t("openAccountMenu"),
+          avatarAlt: t("avatarAlt"),
+          profile: t("profile"),
+          myExams: t("myExams"),
+          savedItems: t("savedItems"),
+          settings: t("settings"),
+          signOut: t("signOut"),
+          signedOut: t("signedOut"),
+        }}
+      />
+    </div>
   );
 }

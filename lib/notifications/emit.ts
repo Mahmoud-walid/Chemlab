@@ -32,10 +32,19 @@ export interface NotificationEvent {
   data?: NotificationData;
 }
 
-/** Anything with an `insert`, so this works with a transaction or a handle. */
+/**
+ * Anything that can insert an outbox row — a transaction or a plain handle.
+ *
+ * Typed against the table's own insert shape rather than a loose record, so a
+ * missing column is a type error here rather than a runtime one in a job that
+ * runs on a schedule. `PromiseLike` because Drizzle's builder is a thenable
+ * rather than a Promise.
+ */
 export interface Inserter {
   insert: (table: typeof notificationOutbox) => {
-    values: (row: Record<string, unknown>) => Promise<unknown>;
+    values: (
+      row: typeof notificationOutbox.$inferInsert,
+    ) => PromiseLike<unknown>;
   };
 }
 

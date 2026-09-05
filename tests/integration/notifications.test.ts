@@ -175,7 +175,7 @@ describe("the outbox", () => {
     // no phantom notification about a like that no longer exists.
     await expect(
       db.transaction(async (tx) => {
-        await emitNotificationEvent(tx as never, {
+        await emitNotificationEvent(tx, {
           type: "comment.liked",
           actorId: LIKER_A,
           subjectType: "comment",
@@ -191,7 +191,7 @@ describe("the outbox", () => {
 
   it("keeps the event when its transaction commits", async () => {
     await db.transaction(async (tx) => {
-      await emitNotificationEvent(tx as never, {
+      await emitNotificationEvent(tx, {
         type: "comment.liked",
         actorId: LIKER_A,
         subjectType: "comment",
@@ -208,7 +208,7 @@ describe("the outbox", () => {
 describe("fan-out", () => {
   it("turns an event into a notification for the named recipient", async () => {
     await db.transaction(async (tx) => {
-      await emitNotificationEvent(tx as never, {
+      await emitNotificationEvent(tx, {
         type: "comment.liked",
         actorId: LIKER_A,
         subjectType: "comment",
@@ -233,7 +233,7 @@ describe("fan-out", () => {
     });
 
     await db.transaction(async (tx) => {
-      await emitNotificationEvent(tx as never, {
+      await emitNotificationEvent(tx, {
         type: "comment.liked",
         actorId: LIKER_A,
         subjectType: "comment",
@@ -248,7 +248,7 @@ describe("fan-out", () => {
 
   it("records nothing for a self-action that reached the outbox", async () => {
     await db.transaction(async (tx) => {
-      await emitNotificationEvent(tx as never, {
+      await emitNotificationEvent(tx, {
         type: "comment.liked",
         actorId: AUTHOR,
         subjectType: "comment",
@@ -264,7 +264,7 @@ describe("fan-out", () => {
 
   it("processes each event once", async () => {
     await db.transaction(async (tx) => {
-      await emitNotificationEvent(tx as never, {
+      await emitNotificationEvent(tx, {
         type: "comment.liked",
         actorId: LIKER_A,
         subjectType: "comment",

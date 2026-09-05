@@ -1,4 +1,4 @@
-import type { SeedDatabase } from "@/db/seed/connect";
+import type { AnyDatabase } from "@/db/any-database";
 import {
   broadcastRecipients,
   claimEvents,
@@ -71,7 +71,7 @@ function urlFor(event: PendingEvent): string {
 }
 
 export async function fanOut(
-  db: SeedDatabase,
+  db: AnyDatabase,
   options: { now?: Date; limit?: number } = {},
 ): Promise<FanoutResult> {
   const now = options.now ?? new Date();
@@ -145,7 +145,7 @@ export async function fanOut(
 
 /** Who this event is for. */
 async function recipientsFor(
-  db: SeedDatabase,
+  db: AnyDatabase,
   event: PendingEvent,
 ): Promise<string[]> {
   if (specFor(event.type).targeting === "personal") {

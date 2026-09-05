@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 
-import type { SeedDatabase } from "@/db/seed/connect";
+import type { AnyDatabase } from "@/db/any-database";
 import {
   MAX_BATCHES_PER_RUN,
   RETENTION_BATCH_SIZE,
@@ -54,7 +54,7 @@ export interface RetentionOptions {
 }
 
 export async function runRetention(
-  db: SeedDatabase,
+  db: AnyDatabase,
   options: RetentionOptions = {},
 ): Promise<RetentionRun> {
   const eventDays = options.eventDays ?? EVENT_RETENTION_DAYS;
@@ -136,7 +136,7 @@ export async function runRetention(
 }
 
 async function countRows(
-  db: SeedDatabase,
+  db: AnyDatabase,
   where: ReturnType<typeof sql>,
 ): Promise<number> {
   const result = await db.execute<{ n: number }>(

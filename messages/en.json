@@ -1078,5 +1078,51 @@
       "notice": "This page is closed to visitors. You are seeing it because you hold the bypass permission.",
       "manage": "Manage pages"
     }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "Nothing yet. When somebody likes or replies to your work, it will appear here.",
+    "markAllRead": "Mark all read",
+    "unread": "{count, plural, =0 {No unread notifications} one {# unread notification} other {# unread notifications}}",
+    "open": "Open notifications",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "earlier": "Earlier",
+    "someone": "Someone",
+    "deleted": "The thing this was about has been removed.",
+    "viewAll": "See all notifications",
+    "loadMore": "Load older",
+    "messages": {
+      "lesson": {
+        "liked": "{count, plural, one {{actor} liked your lesson} other {{actor} and # others liked your lesson}}",
+        "published": "A new lesson has been published"
+      },
+      "comment": {
+        "liked": "{count, plural, one {{actor} liked your comment} other {{actor} and # others liked your comment}}",
+        "replied": "{actor} replied to your comment"
+      },
+      "exam": {
+        "published": "A new exam has been added"
+      }
+    },
+    "preferences": {
+      "title": "What you are notified about",
+      "description": "Turning something off stops the notification reaching your devices. It still appears here in your notifications.",
+      "saved": "Saved.",
+      "failed": "That did not save. Nothing was changed.",
+      "types": {
+        "lesson": {
+          "liked": "Somebody likes a lesson you wrote",
+          "published": "A new lesson is published"
+        },
+        "comment": {
+          "liked": "Somebody likes your comment",
+          "replied": "Somebody replies to your comment"
+        },
+        "exam": {
+          "published": "A new exam is added"
+        }
+      }
+    }
   }
 }

@@ -1,0 +1,105 @@
+import { describe, expect, it } from "vitest";
+
+import en from "@/messages/en.json";
+import ar from "@/messages/ar.json";
+import { NOTIFICATION_TYPES } from "@/lib/notifications/types";
+
+/**
+ * Every notification type has copy, in both languages, resolvable the way
+ * next-intl actually resolves it.
+ *
+ * This test exists because of a bug that shipped once already: message keys
+ * containing dots are read as NESTING, so a flat `"lesson.liked": "…"` is
+ * unreachable from any scope — `t("messages.lesson.liked")` walks
+ * messages → lesson → liked and finds nothing. Every screen rendered the raw
+ * key, and nothing caught it because nothing resolved a label the way
+ * next-intl does. So this resolves them that way.
+ */
+
+type Messages = Record<string, unknown>;
+
+/** Splits on dots and walks, exactly as next-intl does. */
+function resolve(catalogue: Messages, path: string): unknown {
+  return path
+    .split(".")
+    .reduce<unknown>(
+      (node, segment) =>
+        node && typeof node === "object"
+          ? (node as Messages)[segment]
+          : undefined,
+      catalogue,
+    );
+}
+
+const CATALOGUES: [string, Messages][] = [
+  ["en", en as Messages],
+  ["ar", ar as Messages],
+];
+
+describe("notification copy", () => {
+  it.each(CATALOGUES)(
+    "%s has a message for every type",
+    (_locale, catalogue) => {
+      for (const type of NOTIFICATION_TYPES) {
+        const message = resolve(catalogue, `notifications.messages.${type}`);
+        expect(typeof message, type).toBe("string");
+        expect((message as string).length).toBeGreaterThan(0);
+      }
+    },
+  );
+
+  it.each(CATALOGUES)(
+    "%s has a preference label for every type",
+    (_locale, catalogue) => {
+      for (const type of NOTIFICATION_TYPES) {
+        const label = resolve(
+          catalogue,
+          `notifications.preferences.types.${type}`,
+        );
+        expect(typeof label, type).toBe("string");
+      }
+    },
+  );
+
+  it("uses ICU plurals where several people can be involved", () => {
+    // A sentence assembled in code with an `if` gets Arabic wrong in four of
+    // its six plural categories. This is why nothing user-facing is stored.
+    for (const type of ["lesson.liked", "comment.liked"] as const) {
+      for (const [locale, catalogue] of CATALOGUES) {
+        const message = resolve(
+          catalogue,
+          `notifications.messages.${type}`,
+        ) as string;
+        expect(message, `${locale} ${type}`).toContain("plural");
+      }
+    }
+  });
+
+  it("gives Arabic the plural categories it actually has", () => {
+    // English has two; Arabic has six. A catalogue that only supplied one and
+    // other would read as broken grammar to half the audience.
+    const message = resolve(
+      ar as Messages,
+      "notifications.messages.comment.liked",
+    ) as string;
+
+    for (const category of ["one", "two", "few", "many", "other"]) {
+      expect(message, category).toContain(`${category} {`);
+    }
+  });
+
+  it("stores no key with a dot in it, which would be unreachable", () => {
+    // The bug this whole file exists for.
+    const walk = (node: unknown, path: string[]): void => {
+      if (!node || typeof node !== "object") return;
+      for (const [key, value] of Object.entries(node as Messages)) {
+        expect(key, [...path, key].join(".")).not.toContain(".");
+        walk(value, [...path, key]);
+      }
+    };
+
+    for (const [locale, catalogue] of CATALOGUES) {
+      walk((catalogue as Messages).notifications, [locale, "notifications"]);
+    }
+  });
+});

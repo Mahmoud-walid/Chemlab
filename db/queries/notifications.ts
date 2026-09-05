@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
 
-import type { SeedDatabase } from "@/db/seed/connect";
+import type { AnyDatabase } from "@/db/any-database";
 import {
   notificationOutbox,
   notificationPreferences,
@@ -48,7 +48,7 @@ export interface PendingEvent {
  * event into two notifications.
  */
 export async function claimEvents(
-  db: SeedDatabase,
+  db: AnyDatabase,
   limit: number = FANOUT_BATCH_SIZE,
 ): Promise<PendingEvent[]> {
   const result = await db.execute<PendingEvent & Record<string, unknown>>(sql`
@@ -71,7 +71,7 @@ export async function claimEvents(
 }
 
 export async function markProcessed(
-  db: SeedDatabase,
+  db: AnyDatabase,
   eventId: string,
 ): Promise<void> {
   await db
@@ -81,7 +81,7 @@ export async function markProcessed(
 }
 
 export async function markEventFailed(
-  db: SeedDatabase,
+  db: AnyDatabase,
   eventId: string,
   reason: string,
 ): Promise<void> {
@@ -93,7 +93,7 @@ export async function markEventFailed(
 
 /** A user's preferences, or the platform defaults when they have no row. */
 export async function preferencesFor(
-  db: SeedDatabase,
+  db: AnyDatabase,
   userId: string,
 ): Promise<Preferences> {
   const [row] = await db
@@ -133,7 +133,7 @@ export interface RecordResult {
  * would reject the second, turning a race into an error instead of a count.
  */
 export async function recordNotification(
-  db: SeedDatabase,
+  db: AnyDatabase,
   input: {
     recipientId: string;
     type: NotificationType;
@@ -217,7 +217,7 @@ export async function recordNotification(
 
 /** Everyone who could receive a broadcast: every user except the actor. */
 export async function broadcastRecipients(
-  db: SeedDatabase,
+  db: AnyDatabase,
   exceptUserId: string | null,
 ): Promise<string[]> {
   const rows = await db.select({ id: users.id }).from(users);
@@ -227,7 +227,7 @@ export async function broadcastRecipients(
 /** Whether a push may go out, and when. Re-exported so the worker reads as
  * one story rather than reaching into two modules. */
 export async function pushDecisionFor(
-  db: SeedDatabase,
+  db: AnyDatabase,
   recipientId: string,
   type: NotificationType,
   now: Date,
@@ -261,7 +261,7 @@ export interface InboxPage {
  * anybody does anything.
  */
 export async function listNotifications(
-  db: SeedDatabase,
+  db: AnyDatabase,
   recipientId: string,
   options: { limit?: number; before?: string } = {},
 ): Promise<InboxPage> {
@@ -304,7 +304,7 @@ export async function listNotifications(
 }
 
 export async function unreadCount(
-  db: SeedDatabase,
+  db: AnyDatabase,
   recipientId: string,
 ): Promise<number> {
   const [row] = await db
@@ -322,7 +322,7 @@ export async function unreadCount(
 /** Marks one notification, or all of them, read. Scoped to the caller's own
  * rows — there is no user id parameter to get wrong. */
 export async function markRead(
-  db: SeedDatabase,
+  db: AnyDatabase,
   recipientId: string,
   notificationIds: string[] | "all",
 ): Promise<number> {
@@ -344,7 +344,7 @@ export async function markRead(
 
 /** Old, read notifications. The table is unbounded otherwise. */
 export async function pruneRead(
-  db: SeedDatabase,
+  db: AnyDatabase,
   before: Date,
 ): Promise<number> {
   const result = await db
