@@ -18,7 +18,17 @@ unique key, so the admin UI can group by resource without parsing strings.
 `user`, `role`, `permission`, `setting`, `media`, `notification`, `audit`.
 
 **Actions:** `read`, `create`, `update`, `delete`, `publish`, `moderate`,
-`assign`, `impersonate`, `export`, `toggle`, `access`.
+`assign`, `impersonate`, `export`, `toggle`, `bypass`, `access`, `read_pii`,
+`update_security`.
+
+Two actions narrow another one rather than naming a new verb:
+`activity:read_pii` sits inside `activity:read` (the stream without IP
+addresses and user agents is still the stream), and `setting:update_security`
+sits inside `setting:update` (session lifetime, the rate limits and the sign-in
+provider list decide who gets in; renaming the site does not). Both are
+separate permissions because the narrower half is a different decision to
+trust somebody with — and both are two-part names, so the vocabulary stays
+`resource:action` instead of growing a third segment.
 
 Not every pairing is meaningful, so `db/seed/rbac.ts` lists the permissions
 explicitly rather than seeding a cross product — a cross product would create

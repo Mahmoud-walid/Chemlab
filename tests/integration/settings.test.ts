@@ -96,6 +96,61 @@ describe("with a stored row", () => {
   });
 });
 
+describe("the slice-2 value shapes", () => {
+  it("round-trips a list as a list", async () => {
+    await db
+      .insert(schema.settings)
+      .values({ key: "localization.offeredLocales", value: ["en"] });
+
+    expect(await getSetting<string[]>("localization.offeredLocales")).toEqual([
+      "en",
+    ]);
+  });
+
+  it("round-trips a number as a number", async () => {
+    await db
+      .insert(schema.settings)
+      .values({ key: "content.lessonsPerPage", value: 24 });
+
+    expect(await getSetting<number>("content.lessonsPerPage")).toBe(24);
+  });
+
+  it("repairs a number that was stored as a string", async () => {
+    // How one gets there: a row written before the schema learned to coerce.
+    // Serving "24" where a number is expected makes `perPage - 1` produce
+    // "231", so the read path converts rather than falling back.
+    await db
+      .insert(schema.settings)
+      .values({ key: "content.lessonsPerPage", value: "24" });
+
+    expect(await getSetting<number>("content.lessonsPerPage")).toBe(24);
+  });
+
+  it("falls back rather than serving a list with an unknown member", async () => {
+    await db
+      .insert(schema.settings)
+      .values({ key: "security.allowedOAuthProviders", value: ["github"] });
+
+    expect(
+      await getSetting<string[]>("security.allowedOAuthProviders"),
+    ).toEqual(["google"]);
+  });
+
+  it("keeps every security and notification key off the client payload", async () => {
+    // Not secrets — rate limits and notification defaults simply have no
+    // reader in the browser, and everything shipped there is shipped on every
+    // page.
+    await db.insert(schema.settings).values({
+      key: "security.authAttemptsPerWindow",
+      value: 3,
+    });
+
+    const client = await clientSettings();
+    expect(Object.hasOwn(client, "security.authAttemptsPerWindow")).toBe(false);
+    expect(Object.hasOwn(client, "notifications.weeklyDigest")).toBe(false);
+  });
+});
+
 describe("a value the schema no longer accepts", () => {
   it("falls back to the default rather than serving it", async () => {
     // How this happens: a schema is tightened after a row was written. Serving
@@ -178,7 +233,7 @@ describe("the registry's permissions", () => {
       );
     }
     // And a key nobody declared has none, so it can only be refused.
-    expect(settingDefinition("security.sessionLifetimeDays")).toBeUndefined();
+    expect(settingDefinition("security.masterPassword")).toBeUndefined();
   });
 });
 

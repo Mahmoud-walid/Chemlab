@@ -79,7 +79,12 @@ describe("message catalogues", () => {
     // A sample email address. Email local parts and example.com are the same
     // in every locale, and an Arabic-script placeholder would be misleading
     // about what the field accepts.
-    key === "auth.emailPlaceholder";
+    key === "auth.emailPlaceholder" ||
+    // Sign-in provider names. "Google" is the brand as it appears on the
+    // button the visitor is about to press, and Google's own Arabic sign-in
+    // flow spells it in Latin script too — transliterating it here would make
+    // the two disagree.
+    key.startsWith("admin.settings.options.security.allowedOAuthProviders.");
 
   it("actually translates — Arabic values are not copies of the English", () => {
     const allowedIdentical = new Set(["locale.en", "locale.ar"]);

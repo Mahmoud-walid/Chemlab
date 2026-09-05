@@ -48,6 +48,8 @@ export const ACTIONS = [
   // #19's `activity:read:pii` becomes an action of its own rather than a
   // third segment the whole model would have to grow to carry.
   "read_pii",
+  // `setting:update_security`, by the same rule.
+  "update_security",
 ] as const;
 
 export type Resource = (typeof RESOURCES)[number];
@@ -197,6 +199,16 @@ export const PERMISSIONS: PermissionSpec[] = [
     action: "update",
     description: "Change platform settings",
   },
+  {
+    resource: "setting",
+    action: "update_security",
+    // Separate from `update` for the same reason `activity:read_pii` is
+    // separate from `activity:read`. Session lifetime, the rate limits and the
+    // OAuth provider list decide who gets in and how hard it is to try;
+    // trusting somebody to rename the site is not the same decision.
+    description:
+      "Change security settings: sessions, rate limits and sign-in providers",
+  },
 
   { resource: "media", action: "read", description: "Browse uploaded media" },
   { resource: "media", action: "create", description: "Upload media" },
@@ -297,6 +309,7 @@ export const ROLES: RoleSpec[] = [
       p("permission", "read"),
       p("setting", "read"),
       p("setting", "update"),
+      p("setting", "update_security"),
       p("media", "read"),
       p("media", "create"),
       p("media", "delete"),

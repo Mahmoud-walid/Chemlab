@@ -8,6 +8,9 @@ import { settings } from "@/db/schema/settings";
 import { auditLog } from "@/db/schema/rbac";
 import { recordActivity } from "@/lib/activity/record";
 import { requirePermission } from "@/lib/authz";
+import { configuredOAuthProviders } from "@/lib/settings/config-status";
+import { crossKeyProblems, projectSettings } from "@/lib/settings/constraints";
+import { getSettings } from "@/lib/settings/get";
 import { settingDefinition } from "@/lib/settings/registry";
 
 export interface SettingsSaveResult {
@@ -42,6 +45,14 @@ export interface SettingSubmission {
  * 2. **One transaction over every changed key.** A partial write leaves the
  *    platform in a configuration nobody chose — half a section applied, the
  *    rest refused — and there is no obvious way back from it.
+ *
+ * 3. **Validation in three layers, each seeing something the last cannot.**
+ *    The zod schema sees one value. The cross-key rules see the configuration
+ *    as it would be AFTER the write, including keys this submission does not
+ *    touch — that is what catches "the Localisation tab just removed the
+ *    language the General tab defaults to". The environment gate sees
+ *    `process.env`, which neither of the others may: a browser has no idea
+ *    whether Google's credentials exist.
  */
 export async function saveSettings(
   submissions: SettingSubmission[],
@@ -78,6 +89,55 @@ export async function saveSettings(
   }
 
   if (Object.keys(errors).length > 0) return { ok: false, errors };
+
+  // An OAuth provider whose credentials are absent must not be enableable:
+  // the button would appear and every sign-in through it would fail at the
+  // callback. Checked here rather than in the schema because the schema is
+  // imported by the browser, where `process.env` holds nothing.
+  const providerEntry = parsed.find(
+    (entry) => entry.key === "security.allowedOAuthProviders",
+  );
+  if (providerEntry) {
+    const available = new Set(configuredOAuthProviders());
+    const missing = (providerEntry.value as string[]).filter(
+      (provider) => !available.has(provider),
+    );
+    if (missing.length > 0) {
+      return {
+        ok: false,
+        errors: {
+          "security.allowedOAuthProviders": `Not configured on the server: ${missing.join(", ")}. Set its credentials in the environment first.`,
+        },
+      };
+    }
+  }
+
+  // Cross-key rules, against the configuration this write would produce —
+  // current values merged with the submission, so a rule can be broken by a
+  // key that is not in this form at all.
+  const current = await getSettings();
+  const projected = projectSettings(
+    Object.fromEntries(
+      Object.entries(current).map(([key, resolved]) => [key, resolved.value]),
+    ),
+    parsed,
+  );
+  const conflicts = crossKeyProblems(projected);
+  if (conflicts.length > 0) {
+    const crossErrors: Record<string, string> = {};
+    for (const problem of conflicts) crossErrors[problem.key] = problem.message;
+    // A rule can be broken by a key this form does not render — a submission
+    // that cannot show its own error still must not be written, so the message
+    // is repeated as a form-level problem.
+    const orphan = conflicts.find(
+      (problem) => !parsed.some((entry) => entry.key === problem.key),
+    );
+    return {
+      ok: false,
+      errors: crossErrors,
+      problem: orphan?.message,
+    };
+  }
 
   const actor = await requirePermission("setting:read");
   const db = getDb();

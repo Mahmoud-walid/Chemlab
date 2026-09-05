@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  OAUTH_PROVIDERS,
   SECRET_LOOKING,
   SETTINGS,
+  SETTING_KINDS,
   SETTING_SECTIONS,
   defaultSettings,
   settingDefinition,
@@ -39,6 +41,62 @@ describe("the settings registry", () => {
     // bug, and one that looks like a broken form.
     for (const setting of SETTINGS) {
       expect(isKnownPermission(setting.permission), setting.key).toBe(true);
+    }
+  });
+
+  it("declares a kind every renderer knows", () => {
+    for (const setting of SETTINGS) {
+      expect(SETTING_KINDS, setting.key).toContain(setting.kind);
+    }
+  });
+
+  it("gives every choosing kind its options, and no others", () => {
+    // A select with no options renders an empty dropdown; options on a text
+    // field are silently ignored. Both are the kind of mistake that only
+    // shows up when somebody opens the tab.
+    for (const setting of SETTINGS) {
+      const choosing =
+        setting.kind === "select" || setting.kind === "multiSelect";
+      expect(Boolean(setting.options), setting.key).toBe(choosing);
+      if (choosing)
+        expect(setting.options!.length, setting.key).toBeGreaterThan(0);
+    }
+  });
+
+  it("only offers options its own schema accepts", () => {
+    for (const setting of SETTINGS) {
+      for (const option of setting.options ?? []) {
+        const candidate = setting.kind === "multiSelect" ? [option] : option;
+        const result = setting.schema.safeParse(candidate);
+        expect(result.success, `${setting.key} rejects ${option}`).toBe(true);
+      }
+    }
+  });
+
+  it("guards every security setting with the security permission", () => {
+    // The whole point of the split. A security key that slipped back to
+    // `setting:update` would be editable by anyone who can rename the site,
+    // and nothing on the screen would look different.
+    for (const setting of settingsInSection("security")) {
+      expect(setting.permission, setting.key).toBe("setting:update_security");
+    }
+    for (const setting of SETTINGS) {
+      if (setting.section === "security") continue;
+      expect(setting.permission, setting.key).toBe("setting:update");
+    }
+  });
+
+  it("keeps every server-side setting out of the browser payload", () => {
+    // `clientSafe` is not about secrecy — nothing here is secret. It is about
+    // what is worth shipping in every page's payload, and the rate limits and
+    // notification defaults are read by the server alone.
+    for (const setting of SETTINGS) {
+      if (
+        setting.section === "security" ||
+        setting.section === "notifications"
+      ) {
+        expect(setting.clientSafe, setting.key).toBe(false);
+      }
     }
   });
 
@@ -136,5 +194,80 @@ describe("the schemas", () => {
     expect(schemaFor("features.commentsEnabled").safeParse(false).success).toBe(
       true,
     );
+  });
+});
+
+describe("the slice-2 schemas", () => {
+  const schemaFor = (key: string) => settingDefinition(key)!.schema;
+
+  it("accepts a number field posted as the string an input holds", () => {
+    // A number input posts "12", not 12. Rejecting it would make every
+    // numeric field unsaveable, which is exactly the sort of thing that ships.
+    expect(schemaFor("content.lessonsPerPage").parse("12")).toBe(12);
+    expect(schemaFor("content.lessonsPerPage").parse(12)).toBe(12);
+  });
+
+  it("rejects an empty or non-numeric page size rather than reading it as 0", () => {
+    expect(schemaFor("content.lessonsPerPage").safeParse("").success).toBe(
+      false,
+    );
+    expect(schemaFor("content.lessonsPerPage").safeParse("abc").success).toBe(
+      false,
+    );
+    expect(schemaFor("content.lessonsPerPage").safeParse("4.5").success).toBe(
+      false,
+    );
+  });
+
+  it("keeps page sizes inside a range a page can actually render", () => {
+    expect(schemaFor("content.lessonsPerPage").safeParse(3).success).toBe(
+      false,
+    );
+    expect(schemaFor("content.lessonsPerPage").safeParse(61).success).toBe(
+      false,
+    );
+  });
+
+  it("treats 0 as no time limit, but refuses a one-second exam", () => {
+    const schema = schemaFor("content.defaultExamTimeLimitSeconds");
+    expect(schema.safeParse(0).success).toBe(true);
+    expect(schema.safeParse(59).success).toBe(false);
+    expect(schema.safeParse(60).success).toBe(true);
+  });
+
+  it("treats 0 attempts as unlimited rather than as none", () => {
+    expect(schemaFor("content.defaultMaxAttempts").safeParse(0).success).toBe(
+      true,
+    );
+  });
+
+  it("rejects an OAuth provider the app has no client for", () => {
+    const schema = schemaFor("security.allowedOAuthProviders");
+    expect(schema.safeParse(["google"]).success).toBe(true);
+    expect(schema.safeParse(["github"]).success).toBe(false);
+    // An empty list is valid: it means email and password only.
+    expect(schema.safeParse([]).success).toBe(true);
+  });
+
+  it("offers exactly the providers the app knows how to speak to", () => {
+    expect(
+      settingDefinition("security.allowedOAuthProviders")!.options,
+    ).toEqual(OAUTH_PROVIDERS);
+  });
+
+  it("refuses to offer no language at all", () => {
+    const schema = schemaFor("localization.offeredLocales");
+    expect(schema.safeParse([]).success).toBe(false);
+    expect(schema.safeParse(["en"]).success).toBe(true);
+    expect(schema.safeParse(["en", "en"]).success).toBe(false);
+    expect(schema.safeParse(["en", "fr"]).success).toBe(false);
+  });
+
+  it("keeps a rate limit from being set to zero requests", () => {
+    // A window allowing 0 attempts locks everyone out, including the person
+    // who set it — through the settings screen they can no longer sign in to.
+    expect(
+      schemaFor("security.authAttemptsPerWindow").safeParse(0).success,
+    ).toBe(false);
   });
 });
