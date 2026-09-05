@@ -2,11 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import type { CommentPageResponse, CommentView } from "@/lib/comments/types";
+import {
+  ESTIMATED_ROW_HEIGHT,
+  commentIdFromHash,
+  indexOfComment,
+  shouldVirtualize,
+} from "@/lib/comments/virtualize";
 import { CommentForm } from "./comment-form";
 import { CommentItem } from "./comment-item";
 
@@ -27,6 +34,10 @@ import { CommentItem } from "./comment-item";
  *    is unreachable by keyboard, and `IntersectionObserver` is throttled in
  *    background tabs — both end the list silently, which is indistinguishable
  *    from having reached the end.
+ * 4. **Windowing is conditional.** Below the threshold the list is plain DOM,
+ *    which keeps find-in-page, anchor links and printing working — all of
+ *    which windowing costs. Almost every lesson stays under it. See
+ *    lib/comments/virtualize.ts.
  */
 
 const PAGE_SIZE = 20;
@@ -195,10 +206,116 @@ export function CommentList({
     setRemoved((current) => new Set(current).add(id));
   }, []);
 
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
   const roots = [...mine.filter((item) => item.depth === 0), ...loaded].filter(
     (item) => !removed.has(item.id),
   );
   const myReplies = mine.filter((item) => item.depth === 1);
+
+  // Counted from what is RENDERED — roots plus their visible replies — because
+  // that is what costs layout. See lib/comments/virtualize.ts for what
+  // windowing costs in return.
+  const windowed = shouldVirtualize(
+    roots.map((root) => ({
+      replies: [
+        ...(root.replies ?? []),
+        ...myReplies.filter((reply) => reply.parentId === root.id),
+      ],
+    })),
+  );
+
+  /**
+   * `#comment-<id>` in the URL.
+   *
+   * A plain anchor works in the unwindowed list because the node is in the
+   * document. Windowed it is not, so the browser scrolls nowhere and the link
+   * reads as broken — this scrolls to it deliberately, and asks for more pages
+   * while the target is still beyond what is loaded.
+   */
+  useEffect(() => {
+    const target = commentIdFromHash(window.location.hash);
+    if (!target || query.isPending) return;
+
+    if (indexOfComment(roots, target) === null) {
+      // Not loaded yet. Fetch onwards rather than give up: a link somebody was
+      // sent should reach its comment whatever page it is on.
+      if (query.hasNextPage && !query.isFetchingNextPage) {
+        void query.fetchNextPage();
+      }
+      return;
+    }
+
+    document
+      .getElementById(`comment-${target}`)
+      ?.scrollIntoView({ block: "center" });
+  }, [roots, query]);
+
+  /**
+   * One root and its replies.
+   *
+   * Hoisted so the plain and windowed branches render the SAME markup — a
+   * virtualised list with its own copy of the row is how the two quietly
+   * diverge, and the copy nobody looks at is the windowed one.
+   */
+  const renderRoot = (root: CommentView, index: number) => {
+    const replies = [
+      ...(root.replies ?? []),
+      ...myReplies.filter((reply) => reply.parentId === root.id),
+    ].filter((reply) => !removed.has(reply.id));
+
+    return (
+      // A plain wrapper: the position goes on the element that IS the
+      // article, below. `role="article"` here would nest two articles,
+      // and a screen reader would announce the comment twice.
+      <div key={root.id}>
+        <CommentItem
+          comment={root}
+          signedIn={signedIn}
+          posInSet={index + 1}
+          onReply={signedIn ? setReplyTo : undefined}
+          onDeleted={
+            viewerId && root.authorId === viewerId ? onDeleted : undefined
+          }
+        />
+
+        {replyTo?.id === root.id && (
+          <div className="ms-11 pb-4">
+            <CommentForm
+              subjectId={subjectId}
+              replyTo={replyTo}
+              onPosted={onPosted}
+              onCancel={() => setReplyTo(null)}
+            />
+          </div>
+        )}
+
+        {replies.map((reply) => (
+          <CommentItem
+            key={reply.id}
+            comment={reply}
+            signedIn={signedIn}
+            isReply
+            onReply={signedIn ? () => setReplyTo(root) : undefined}
+            onDeleted={
+              viewerId && reply.authorId === viewerId ? onDeleted : undefined
+            }
+          />
+        ))}
+
+        {root.replyCount > replies.length && (
+          <ShowReplies
+            rootId={root.id}
+            known={replies.length}
+            total={root.replyCount}
+            signedIn={signedIn}
+            viewerId={viewerId}
+            onDeleted={onDeleted}
+          />
+        )}
+      </div>
+    );
+  };
 
   return (
     <section className="mx-auto max-w-2xl space-y-4">
@@ -262,68 +379,15 @@ export function CommentList({
           aria-busy={query.isFetchingNextPage}
           className="divide-y"
         >
-          {roots.map((root, index) => {
-            const replies = [
-              ...(root.replies ?? []),
-              ...myReplies.filter((reply) => reply.parentId === root.id),
-            ].filter((reply) => !removed.has(reply.id));
-
-            return (
-              // A plain wrapper: the position goes on the element that IS the
-              // article, below. `role="article"` here would nest two articles,
-              // and a screen reader would announce the comment twice.
-              <div key={root.id}>
-                <CommentItem
-                  comment={root}
-                  signedIn={signedIn}
-                  posInSet={index + 1}
-                  onReply={signedIn ? setReplyTo : undefined}
-                  onDeleted={
-                    viewerId && root.authorId === viewerId
-                      ? onDeleted
-                      : undefined
-                  }
-                />
-
-                {replyTo?.id === root.id && (
-                  <div className="ms-11 pb-4">
-                    <CommentForm
-                      subjectId={subjectId}
-                      replyTo={replyTo}
-                      onPosted={onPosted}
-                      onCancel={() => setReplyTo(null)}
-                    />
-                  </div>
-                )}
-
-                {replies.map((reply) => (
-                  <CommentItem
-                    key={reply.id}
-                    comment={reply}
-                    signedIn={signedIn}
-                    isReply
-                    onReply={signedIn ? () => setReplyTo(root) : undefined}
-                    onDeleted={
-                      viewerId && reply.authorId === viewerId
-                        ? onDeleted
-                        : undefined
-                    }
-                  />
-                ))}
-
-                {root.replyCount > replies.length && (
-                  <ShowReplies
-                    rootId={root.id}
-                    known={replies.length}
-                    total={root.replyCount}
-                    signedIn={signedIn}
-                    viewerId={viewerId}
-                    onDeleted={onDeleted}
-                  />
-                )}
-              </div>
-            );
-          })}
+          {windowed ? (
+            <VirtualRoots
+              roots={roots}
+              renderRoot={renderRoot}
+              scrollRef={scrollRef}
+            />
+          ) : (
+            roots.map(renderRoot)
+          )}
         </div>
       )}
 
@@ -419,6 +483,70 @@ function ShowReplies({
           })}
         </Button>
       )}
+    </div>
+  );
+}
+
+/**
+ * The windowed branch.
+ *
+ * `@tanstack/react-virtual` rather than `react-window` because **variable
+ * heights are the whole problem here**: a comment's height is unknown until it
+ * renders — the body length varies, an avatar loads, a long URL wraps, and
+ * expanding "show 4 more replies" changes a row's height *after* it was
+ * measured. This handles that with a `ResizeObserver` per rendered row and
+ * corrects the offsets; `react-window`'s variable-size list wants
+ * `resetAfterIndex` called by hand on every change, which is a thing to get
+ * wrong. It is also headless, so the markup below is ours rather than a
+ * container's, and `@tanstack/*` is already in the tree.
+ */
+function VirtualRoots({
+  roots,
+  renderRoot,
+  scrollRef,
+}: {
+  roots: CommentView[];
+  renderRoot: (root: CommentView, index: number) => React.ReactNode;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const virtualizer = useVirtualizer({
+    count: roots.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ESTIMATED_ROW_HEIGHT,
+    // Rows above and below the viewport, so scrolling does not reveal a gap
+    // while the next one measures.
+    overscan: 6,
+  });
+
+  return (
+    <div
+      ref={scrollRef}
+      // The scroll container the virtualizer measures against. A fixed height
+      // is what makes windowing possible at all — without one every row is in
+      // the viewport and nothing is saved.
+      className="max-h-[70vh] overflow-y-auto"
+    >
+      <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
+        {virtualizer.getVirtualItems().map((item) => (
+          <div
+            key={item.key}
+            // `measureElement` is what turns the estimate into the real
+            // height, and what makes an expanding thread not shift everything
+            // below it.
+            ref={virtualizer.measureElement}
+            data-index={item.index}
+            style={{
+              position: "absolute",
+              top: 0,
+              insetInlineStart: 0,
+              width: "100%",
+              transform: `translateY(${item.start}px)`,
+            }}
+          >
+            {renderRoot(roots[item.index]!, item.index)}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

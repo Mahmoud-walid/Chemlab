@@ -4,6 +4,7 @@ import {
   BookOpen,
   ClipboardList,
   FileText,
+  MessageSquare,
   LayoutDashboard,
   ScrollText,
   Settings,
@@ -45,6 +46,7 @@ export type AdminItemKey =
   | "items.quizzes"
   | "items.exams"
   | "items.pages"
+  | "items.comments"
   | "items.users"
   | "items.roles"
   | "items.activity"
@@ -119,6 +121,15 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         labelKey: "items.pages",
         icon: FileText,
         permission: "page:read",
+      },
+      {
+        // The report queue. Guarded by `comment:read`, which in this
+        // vocabulary means exactly "see comments awaiting moderation" — a
+        // moderator needs it and an Editor who writes lessons does not.
+        segment: "comments",
+        labelKey: "items.comments",
+        icon: MessageSquare,
+        permission: "comment:read",
       },
     ],
   },

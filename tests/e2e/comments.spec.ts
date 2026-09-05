@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
 
 import * as schema from "@/db/schema";
@@ -62,6 +62,23 @@ test.beforeEach(async () => {
     .delete(schema.comments)
     .where(eq(schema.comments.subjectId, lessonId));
 });
+
+/** Writes many comments in one statement. 120 sequential inserts is most of a
+ * long-thread test's runtime, and none of that time tests anything. */
+async function seedMany(count: number, label: string) {
+  const rows = Array.from({ length: count }, (_, i) => {
+    const id = uuidv7();
+    return {
+      id,
+      subjectType: "lesson" as const,
+      subjectId: lessonId,
+      body: `${label} ${i}`,
+      depth: 0,
+      path: id,
+    };
+  });
+  await db.insert(schema.comments).values(rows);
+}
 
 /** Writes a comment straight to the table: these tests are about the LIST,
  * and going through the form would spend the rate limit on setup. */
@@ -251,4 +268,81 @@ test("shows a deleted comment as a tombstone rather than dropping the thread", a
 test("says so when there is nothing yet", async ({ page }) => {
   await page.goto(`/lessons/${lessonSlug}`);
   await expect(page.getByText(/ask the first question/i)).toBeVisible();
+});
+
+test("switches to a windowed list once enough is loaded, showing the same comments", async ({
+  page,
+}) => {
+  // The threshold counts what is RENDERED, and one page is twenty rows — so a
+  // long thread stays on the plain branch until somebody actually loads their
+  // way into it. That is the intended behaviour: windowing costs find-in-page
+  // and anchors, and nothing should pay it for twenty comments.
+  await seedMany(120, "Bulk comment number");
+
+  await page.goto(`/lessons/${lessonSlug}`);
+  const feed = page.getByRole("feed");
+  await expect(page.getByText("Bulk comment number 119")).toBeVisible();
+
+  // Plain DOM at first: no scroll container.
+  await expect(feed.locator("div.overflow-y-auto")).toHaveCount(0);
+
+  const loadMore = page.getByRole("button", { name: /load older/i });
+
+  // The first few pages are still plain DOM, so each newly loaded page's
+  // newest row is genuinely in the document and can be asserted directly.
+  for (let i = 0; i < 3; i++) {
+    await loadMore.click();
+    await expect(
+      page.getByText(`Bulk comment number ${99 - i * 20}`),
+    ).toBeVisible({ timeout: 15_000 });
+  }
+
+  // Two more pages take it past the threshold. Beyond this point, asserting a
+  // specific row's visibility would be asserting the PLAIN branch's invariant
+  // on the windowed one — off-screen rows are deliberately not in the DOM,
+  // which is the entire point of windowing.
+  for (let i = 0; i < 2; i++) {
+    // Guarded: the button unmounts when the last page arrives, and clicking a
+    // control that is on its way out waits for the full test budget.
+    if ((await loadMore.count()) === 0) break;
+    await loadMore.click();
+    await page.waitForTimeout(500);
+  }
+
+  // Past the threshold, the windowed branch takes over — and still renders
+  // the same comments, which is the point: a virtualised list with its own
+  // copy of the row is how the two quietly diverge.
+  const container = feed.locator("div.overflow-y-auto").first();
+  await expect(container).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("Bulk comment number 119")).toBeVisible();
+
+  await container.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await expect(page.getByText("Bulk comment number 20")).toBeVisible({
+    timeout: 15_000,
+  });
+});
+
+test("scrolls to a comment named in the URL", async ({ page }) => {
+  // On the plain branch the browser would do this itself; the assertion is
+  // that the scroll still happens once the list takes it over, which is what
+  // the windowed branch needs and what a plain anchor cannot do there.
+  await seedMany(40, "Deep link target");
+
+  // One from the middle of the first page, so it is loaded but off screen.
+  const newest = await db
+    .select({ id: schema.comments.id })
+    .from(schema.comments)
+    .where(eq(schema.comments.subjectId, lessonId))
+    .orderBy(desc(schema.comments.id))
+    .limit(15);
+  // The 15th newest: inside the first page of twenty, so it is loaded, but far
+  // enough down that nothing scrolled to it by accident.
+  const target = newest[newest.length - 1]!.id;
+  await page.goto(`/lessons/${lessonSlug}#comment-${target}`);
+
+  await expect(page.locator(`#comment-${target}`)).toBeInViewport({
+    timeout: 15_000,
+  });
 });

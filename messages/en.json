@@ -365,7 +365,8 @@
       "roles": "Roles and permissions",
       "activity": "Activity",
       "settings": "Settings",
-      "exams": "Exam results"
+      "exams": "Exam results",
+      "comments": "Comments"
     },
     "dashboard": {
       "title": "Dashboard",
@@ -789,7 +790,11 @@
         "comment": {
           "posted": "Posted a comment",
           "liked": "Liked a comment",
-          "deleted": "Deleted a comment"
+          "deleted": "Deleted a comment",
+          "hidden": "Hid a comment",
+          "removed": "Removed a comment",
+          "restored": "Restored a comment",
+          "dismissed": "Dismissed reports on a comment"
         },
         "exam": {
           "started": "Started an exam",
@@ -1056,6 +1061,29 @@
         "end": "That is the whole history held for this account.",
         "empty": "Nothing recorded for this account yet."
       }
+    },
+    "comments": {
+      "title": "Reported comments",
+      "subtitle": "What readers have flagged, oldest first — a report that has waited three days is more urgent than one from this morning.",
+      "empty": "Nothing reported. The queue being empty is the normal state.",
+      "reportedBy": "{count, plural, one {# report} other {# reports}}",
+      "reasons": "Reasons",
+      "posted": "Posted",
+      "firstReported": "First reported",
+      "author": "Author",
+      "status": "Status",
+      "actions": "Actions",
+      "hide": "Hide",
+      "restore": "Restore",
+      "remove": "Remove",
+      "dismiss": "Looks fine",
+      "hidden": "Hidden",
+      "visible": "Visible",
+      "flagged": "Flagged",
+      "removedStatus": "Removed",
+      "done": "Done.",
+      "failed": "That did not go through. Nothing was changed.",
+      "deletedBody": "This comment was already deleted. Its body is gone; the report is not."
     }
   },
   "pages": {
