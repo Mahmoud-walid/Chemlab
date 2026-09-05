@@ -1,5 +1,5 @@
 {
-  "id": "068ec03d-a121-4f17-a973-c4c6045e6123",
+  "id": "f9fc987c-7689-479f-98d9-3cdb63ddbf4e",
   "prevId": "3628bd06-3951-440b-ac75-89da49f1a4a2",
   "version": "7",
   "dialect": "postgresql",
@@ -3266,64 +3266,6 @@
       },
       "isRLSEnabled": false
     },
-    "public.user_presence": {
-      "name": "user_presence",
-      "schema": "",
-      "columns": {
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "last_seen_at": {
-          "name": "last_seen_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "last_path": {
-          "name": "last_path",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "user_presence_last_seen_idx": {
-          "name": "user_presence_last_seen_idx",
-          "columns": [
-            {
-              "expression": "last_seen_at",
-              "isExpression": false,
-              "asc": false,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "user_presence_user_id_users_id_fk": {
-          "name": "user_presence_user_id_users_id_fk",
-          "tableFrom": "user_presence",
-          "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.accounts": {
       "name": "accounts",
       "schema": "",
@@ -3753,14 +3695,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
-        },
-        "presence_visibility": {
-          "name": "presence_visibility",
-          "type": "presence_visibility",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'everyone'"
         },
         "created_at": {
           "name": "created_at",
@@ -4672,11 +4606,6 @@
       "schema": "public",
       "values": ["en", "ar"]
     },
-    "public.presence_visibility": {
-      "name": "presence_visibility",
-      "schema": "public",
-      "values": ["everyone", "nobody"]
-    },
     "public.activity_object_type": {
       "name": "activity_object_type",
       "schema": "public",
@@ -4709,6 +4638,10 @@
         "comment.posted",
         "comment.liked",
         "comment.deleted",
+        "comment.hidden",
+        "comment.removed",
+        "comment.restored",
+        "comment.dismissed",
         "exam.started",
         "exam.submitted",
         "exam.abandoned",

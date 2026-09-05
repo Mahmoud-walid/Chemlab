@@ -28,6 +28,14 @@ export const ACTIVITY_VERBS = [
   "comment.posted",
   "comment.liked",
   "comment.deleted",
+  // Moderation, filed under `comment` rather than `admin` for the same reason
+  // `exam.voided` is not an admin verb: the story a reader's timeline needs is
+  // "your comment was hidden", and splitting that across two groups makes it
+  // unreadable from either.
+  "comment.hidden",
+  "comment.removed",
+  "comment.restored",
+  "comment.dismissed",
 
   // Assessment
   "exam.started",
