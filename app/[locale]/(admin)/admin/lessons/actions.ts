@@ -13,6 +13,7 @@ import {
 import type { ContentStatus } from "@/db/schema/content";
 import { auditLog } from "@/db/schema/rbac";
 import { isSlugTaken } from "@/db/queries/admin/lessons";
+import { currentSourceHash } from "@/db/queries/translations";
 import {
   lessonEditSchema,
   publishBlockers,
@@ -129,6 +130,12 @@ export async function createLesson(
         locale: "en",
         title: parsed.data.title,
         description: parsed.data.description,
+        // Published, not the column's `draft` default: this row IS the
+        // English copy, not a translation waiting for review.
+        status: "published",
+        // Read back from the lesson written a line above, never recomputed
+        // here — see db/queries/translations.ts.
+        sourceHash: currentSourceHash(lessons, id),
       });
 
       // In the same transaction as the change it describes: a creation with no
@@ -207,7 +214,13 @@ export async function updateLesson(
       // looks exactly like the save having failed.
       await tx
         .update(lessonTranslations)
-        .set({ title: parsed.data.title, description: parsed.data.description })
+        .set({
+          title: parsed.data.title,
+          description: parsed.data.description,
+          // The mirror row moves with the source, so English is never stale
+          // against itself.
+          sourceHash: currentSourceHash(lessons, id),
+        })
         .where(
           sql`${lessonTranslations.lessonId} = ${id} and ${lessonTranslations.locale} = 'en'`,
         );

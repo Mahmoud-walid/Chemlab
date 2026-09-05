@@ -13,6 +13,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { id, timestamps } from "./_shared";
+import { users } from "./auth";
 import type { LessonBlock } from "@/lib/lessons/blocks";
 
 /** Shared by lessons and quizzes; matches `types/quiz.ts`. */
@@ -32,6 +33,96 @@ export const contentStatus = pgEnum("content_status", [
   "published",
   "archived",
 ]);
+
+/**
+ * Where a translation is in its life, independent of whether the source has
+ * moved on since.
+ *
+ * "missing" is deliberately NOT a value here: a translation that does not
+ * exist is an absent row, not a row claiming absence. Storing it would mean
+ * every locale of every entity needs a row before anybody has translated
+ * anything, and the first thing to drift would be the rows nobody created.
+ *
+ * "stale" is not a value either, for a stronger reason — see `sourceHash`
+ * below. Staleness is a comparison, not a state, and a state that has to be
+ * kept in step with a comparison is a state that will eventually disagree
+ * with it.
+ */
+export const translationStatus = pgEnum("translation_status", [
+  "draft",
+  "in_review",
+  "published",
+]);
+
+/**
+ * A fingerprint of the default-locale fields a translation was made from.
+ *
+ * `GENERATED ALWAYS ... STORED` on the SOURCE tables, so it cannot be
+ * forgotten: Postgres recomputes it inside the same statement that changes
+ * the source, which is what makes "editing an English lesson marks its
+ * Arabic translation stale, atomically" true by construction rather than by
+ * every future write path remembering to do it.
+ *
+ * The translation tables carry a plain copy of the value that was current
+ * when the translation was written, so:
+ *
+ *     stale  ⇔  translation.source_hash IS DISTINCT FROM source.source_hash
+ *
+ * One SQL comparison, filterable and indexable, with no boolean to maintain.
+ *
+ * **md5, not sha256, and that is deliberate.** This is a change detector, not
+ * a security primitive: its only job is to differ when the text differs, and
+ * nobody gains anything by forging a collision with their own lesson. md5 is
+ * also the only hash Postgres exposes as an IMMUTABLE function over `text` —
+ * `sha256` takes `bytea`, and `convert_to` is merely STABLE (it depends on
+ * the server encoding), so a sha256 expression cannot be used in a generated
+ * column without wrapping it in a function that lies about its volatility.
+ * A truthful md5 beats a sha256 with a false promise attached.
+ *
+ * The separator is the ASCII unit separator, so ("ab", "c") and ("a", "bc")
+ * do not hash alike.
+ */
+const sourceHash = (expression: ReturnType<typeof sql>) =>
+  text("source_hash").notNull().generatedAlwaysAs(expression);
+
+/**
+ * The workflow columns every `*_translations` table carries.
+ *
+ * Repeated across four tables rather than collapsed into one polymorphic
+ * table with a `jsonb` payload — #15's original design. The repetition is of
+ * COLUMNS, not of logic, and it buys real types: a wrong field name fails
+ * `tsc` instead of returning `undefined` at runtime, and each table keeps its
+ * own foreign key to the thing it translates.
+ *
+ * `on delete set null` on both people: an account being deleted must not take
+ * the translation with it, and "translated by somebody who is gone" is a true
+ * statement worth keeping.
+ */
+const translationWorkflow = {
+  status: translationStatus("status").notNull().default("draft"),
+  translatedBy: text("translated_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  reviewedBy: text("reviewed_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  /** The source fingerprint this translation was made from. See above. */
+  sourceHash: text("source_hash").notNull(),
+};
+
+/**
+ * Side-car tables rather than per-locale columns (`title_en`, `title_ar`).
+ * Adding a third language becomes data instead of DDL, and a missing
+ * translation is an absent row — easy to fall back on — rather than a nullable
+ * column every query must remember to check.
+ *
+ * Trade-off: every content read joins on locale, so the join-with-fallback
+ * belongs in one helper rather than at each call site.
+ *
+ * Only `en` is seeded. Arabic content is the owner's to commission — machine
+ * translation of chemistry is how a wrong answer gets marked correct.
+ */
 
 /**
  * A section body: an ordered array of typed blocks, defined and validated in
@@ -130,6 +221,8 @@ export const lessons = pgTable(
      * a URL an editor pastes.
      */
     coverImageUrl: text("cover_image_url"),
+    /** The fields a lesson_translations row is a translation OF. */
+    sourceHash: sourceHash(sql`md5(title || E'\\x1f' || description)`),
     status: contentStatus("status").notNull().default("draft"),
     /**
      * Computed from the blocks when the lesson is saved — never per request,
@@ -201,6 +294,13 @@ export const lessonSections = pgTable(
     position: integer("position").notNull(),
     heading: text("heading").notNull(),
     body: jsonb("body").$type<LessonBody>().notNull(),
+    /**
+     * `body::text` is safe inside the hash: jsonb normalises on input — keys
+     * sorted, whitespace dropped — so two equal jsonb values always render
+     * the same text, and a reformatted-but-identical body does not read as a
+     * change the translator has to redo.
+     */
+    sourceHash: sourceHash(sql`md5(heading || E'\\x1f' || body::text)`),
     ...timestamps,
   },
   (t) => [uniqueIndex("lesson_sections_order_idx").on(t.lessonId, t.position)],
@@ -246,6 +346,8 @@ export const quizzes = pgTable(
     slug: text("slug").notNull().unique(),
     title: text("title").notNull(),
     description: text("description").notNull(),
+    /** The fields a quiz_translations row is a translation OF. */
+    sourceHash: sourceHash(sql`md5(title || E'\\x1f' || description)`),
     difficulty: difficulty("difficulty").notNull(),
     category: text("category").notNull(),
 
@@ -310,6 +412,15 @@ export const quizQuestions = pgTable(
     position: integer("position").notNull(),
     type: questionType("type").notNull().default("single_choice"),
     prompt: text("prompt").notNull(),
+    /**
+     * The fields a quiz_question_translations row is a translation OF.
+     *
+     * The options are not in it. They live in `quiz_options` and have no
+     * translation table yet, so including them would mark every translation
+     * stale for a change no translator can act on. When options become
+     * translatable this hash grows to cover them.
+     */
+    sourceHash: sourceHash(sql`md5(prompt || E'\\x1f' || explanation)`),
     /**
      * Never sent to a browser before the attempt is submitted. The in-progress
      * query names its columns explicitly so this one cannot be included by
@@ -400,18 +511,6 @@ export const pages = pgTable("pages", {
 
 // ── Translations ────────────────────────────────────────────────────────────
 
-/**
- * Side-car tables rather than per-locale columns (`title_en`, `title_ar`).
- * Adding a third language becomes data instead of DDL, and a missing
- * translation is an absent row — easy to fall back on — rather than a nullable
- * column every query must remember to check.
- *
- * Trade-off: every content read joins on locale, so the join-with-fallback
- * belongs in one helper rather than at each call site.
- *
- * Only `en` is seeded. Arabic content is the owner's to commission — machine
- * translation of chemistry is how a wrong answer gets marked correct.
- */
 export const lessonTranslations = pgTable(
   "lesson_translations",
   {
@@ -422,6 +521,7 @@ export const lessonTranslations = pgTable(
     locale: text("locale").notNull(),
     title: text("title").notNull(),
     description: text("description").notNull(),
+    ...translationWorkflow,
     ...timestamps,
   },
   (t) => [
@@ -439,6 +539,7 @@ export const lessonSectionTranslations = pgTable(
     locale: text("locale").notNull(),
     heading: text("heading").notNull(),
     body: jsonb("body").$type<LessonBody>().notNull(),
+    ...translationWorkflow,
     ...timestamps,
   },
   (t) => [
@@ -459,6 +560,7 @@ export const quizTranslations = pgTable(
     locale: text("locale").notNull(),
     title: text("title").notNull(),
     description: text("description").notNull(),
+    ...translationWorkflow,
     ...timestamps,
   },
   (t) => [uniqueIndex("quiz_translations_locale_idx").on(t.quizId, t.locale)],
@@ -474,6 +576,7 @@ export const quizQuestionTranslations = pgTable(
     locale: text("locale").notNull(),
     prompt: text("prompt").notNull(),
     explanation: text("explanation").notNull(),
+    ...translationWorkflow,
     ...timestamps,
   },
   (t) => [

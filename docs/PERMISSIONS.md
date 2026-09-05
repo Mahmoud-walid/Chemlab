@@ -15,11 +15,23 @@ Names are `resource:action`, lowercase, singular resource, colon separator.
 unique key, so the admin UI can group by resource without parsing strings.
 
 **Resources:** `admin`, `lesson`, `element`, `quiz`, `exam`, `comment`, `page`,
-`user`, `role`, `permission`, `setting`, `media`, `notification`, `audit`.
+`user`, `role`, `permission`, `setting`, `media`, `notification`, `audit`,
+`activity`, `translation`.
 
 **Actions:** `read`, `create`, `update`, `delete`, `publish`, `moderate`,
 `assign`, `impersonate`, `export`, `toggle`, `bypass`, `access`, `read_pii`,
-`update_security`, `void`.
+`update_security`, `void`, `write`, `review`.
+
+`translation` is a resource of its own rather than actions on `lesson` and
+`quiz`, because a translator works across every content type and must not
+thereby gain the right to edit the English originals — which `lesson:update`
+would give them. Its `write` is deliberately one grant rather than `create`
+plus `update`: starting a translation and finishing it are the same job.
+`review` is separate from both, because checking a chemistry translation is a
+language competence rather than a publishing right, and a mistranslated
+definition is a factual error. The `editor` role holds `translation:write` but
+not `translation:review` — self-approval is how an unchecked translation
+reaches a reader looking exactly like a checked one.
 
 Two actions narrow another one rather than naming a new verb:
 `activity:read_pii` sits inside `activity:read` (the stream without IP

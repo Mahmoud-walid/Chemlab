@@ -83,7 +83,10 @@ async function main() {
               publishedAt: sql`coalesce(${schema.lessons.publishedAt}, now())`,
             },
           })
-          .returning({ id: schema.lessons.id });
+          .returning({
+            id: schema.lessons.id,
+            sourceHash: schema.lessons.sourceHash,
+          });
 
         // Default-locale translation row, so reads can always join on locale.
         await tx
@@ -93,13 +96,24 @@ async function main() {
             locale: "en",
             title: row.title,
             description: row.description,
+            // This row IS the English copy, not a translation of it: live,
+            // and by definition never stale against its own source. The hash
+            // is read back from the generated column rather than recomputed
+            // here — see db/queries/translations.ts.
+            status: "published",
+            sourceHash: lesson.sourceHash,
           })
           .onConflictDoUpdate({
             target: [
               schema.lessonTranslations.lessonId,
               schema.lessonTranslations.locale,
             ],
-            set: { title: row.title, description: row.description },
+            set: {
+              title: row.title,
+              description: row.description,
+              status: "published",
+              sourceHash: lesson.sourceHash,
+            },
           });
 
         // Not every lesson has a body written yet; the rest seed as
@@ -161,7 +175,10 @@ async function main() {
               publishedAt: sql`coalesce(${schema.quizzes.publishedAt}, now())`,
             },
           })
-          .returning({ id: schema.quizzes.id });
+          .returning({
+            id: schema.quizzes.id,
+            sourceHash: schema.quizzes.sourceHash,
+          });
 
         await tx
           .insert(schema.quizTranslations)
@@ -170,13 +187,20 @@ async function main() {
             locale: "en",
             title: row.title,
             description: row.description,
+            status: "published",
+            sourceHash: quiz.sourceHash,
           })
           .onConflictDoUpdate({
             target: [
               schema.quizTranslations.quizId,
               schema.quizTranslations.locale,
             ],
-            set: { title: row.title, description: row.description },
+            set: {
+              title: row.title,
+              description: row.description,
+              status: "published",
+              sourceHash: quiz.sourceHash,
+            },
           });
 
         for (const question of toQuestionRows(json)) {

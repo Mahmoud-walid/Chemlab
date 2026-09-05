@@ -9,6 +9,7 @@ import { quizQuestions, quizTranslations, quizzes } from "@/db/schema/content";
 import type { ContentStatus } from "@/db/schema/content";
 import { auditLog } from "@/db/schema/rbac";
 import { quizPublishCounts, isQuizSlugTaken } from "@/db/queries/admin/quizzes";
+import { currentSourceHash } from "@/db/queries/translations";
 import { replaceQuizQuestions } from "@/db/queries/admin/save-questions";
 import {
   quizEditSchema,
@@ -127,6 +128,12 @@ export async function createQuiz(formData: FormData): Promise<QuizSaveResult> {
         locale: "en",
         title: values.title,
         description: values.description,
+        // Published, not the column's `draft` default: this row IS the
+        // English copy, not a translation waiting for review.
+        status: "published",
+        // Read back from the quiz written a line above, never recomputed
+        // here — see db/queries/translations.ts.
+        sourceHash: currentSourceHash(quizzes, id),
       });
 
       await tx.insert(auditLog).values({
@@ -196,7 +203,13 @@ export async function updateQuiz(
       // looks exactly like the save having failed.
       await tx
         .update(quizTranslations)
-        .set({ title: values.title, description: values.description })
+        .set({
+          title: values.title,
+          description: values.description,
+          // The mirror row moves with the source, so English is never stale
+          // against itself.
+          sourceHash: currentSourceHash(quizzes, id),
+        })
         .where(
           and(
             eq(quizTranslations.quizId, id),
