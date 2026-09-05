@@ -87,17 +87,11 @@ export default async function AdminLessonPage({
             ? t("body.empty")
             : t("body.count", { count: lesson.sectionCount })}
         </p>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled
-          aria-describedby="body-why"
-        >
-          {t("body.editDisabled")}
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/admin/lessons/${lesson.slug}/edit`}>
+            {t("body.edit")}
+          </Link>
         </Button>
-        <p id="body-why" className="text-xs text-muted-foreground">
-          {t("body.editDisabledReason")}
-        </p>
       </section>
 
       <LessonForm

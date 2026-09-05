@@ -101,16 +101,21 @@ test.describe("engagement", () => {
     await like.click();
     await expect(like).toHaveAttribute("aria-pressed", "true");
 
-    const rows = await db
-      .select({ userId: schema.lessonLikes.userId })
-      .from(schema.lessonLikes)
-      .where(
-        and(
-          eq(schema.lessonLikes.lessonId, lesson),
-          eq(schema.lessonLikes.userId, id),
-        ),
-      );
-    expect(rows).toHaveLength(1);
+    // Polled, not read once: `aria-pressed` flips OPTIMISTICALLY, before the
+    // request finishes, so it is evidence of the click being handled and not
+    // of the row existing. Reading the table immediately races the write.
+    await expect(async () => {
+      const rows = await db
+        .select({ userId: schema.lessonLikes.userId })
+        .from(schema.lessonLikes)
+        .where(
+          and(
+            eq(schema.lessonLikes.lessonId, lesson),
+            eq(schema.lessonLikes.userId, id),
+          ),
+        );
+      expect(rows).toHaveLength(1);
+    }).toPass({ timeout: 10_000 });
 
     await page.getByRole("button", { name: /liked/i }).click();
     await expect(page.getByRole("button", { name: /^like/i })).toHaveAttribute(
