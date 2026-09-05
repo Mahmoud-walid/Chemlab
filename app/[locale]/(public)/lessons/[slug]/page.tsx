@@ -12,6 +12,7 @@ import { EngagementBar } from "@/components/lessons/engagement-bar";
 import { ReadingProgress } from "@/components/lessons/reading-progress";
 import { TableOfContents } from "@/components/lessons/table-of-contents";
 import { ViewBeacon } from "@/components/lessons/view-beacon";
+import { CommentSection } from "@/components/comments/comment-section";
 import { readingTimeMinutes } from "@/lib/lessons/reading-time";
 import { Link } from "@/i18n/navigation";
 import { defaultLocale, type Locale } from "@/i18n/routing";
@@ -221,6 +222,11 @@ export default async function LessonPage({
             </ul>
           </section>
         )}
+        <section className="mt-12">
+          {/* Client-side: this page is prerendered, so who is reading it is
+              not known until the browser says so. */}
+          <CommentSection subjectId={lesson.id} />
+        </section>
       </div>
 
       <ViewBeacon slug={lesson.slug} />

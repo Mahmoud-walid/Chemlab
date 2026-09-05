@@ -98,6 +98,25 @@ async function eventually<T>(read: () => Promise<T[]>, attempts = 24) {
 }
 
 test.describe("exporting", () => {
+  /**
+   * Start every test from an export window this file owns.
+   *
+   * The limiter allows ten per hour and counts the `admin.exported` events
+   * themselves, which is the right design — no second table to drift. But the
+   * e2e accounts are reused across runs on purpose, so against a database that
+   * persists, running this suite a few times within an hour spends the window
+   * and every export test starts answering 429. CI's database is fresh each
+   * run and never saw it; a contributor running the suite twice does, and
+   * "the export tests fail on the second run" is not a lesson worth teaching.
+   *
+   * The limit itself is proven in `tests/lib/export-policy.test.ts`.
+   */
+  test.beforeEach(async () => {
+    await db
+      .delete(schema.activityEvents)
+      .where(eq(schema.activityEvents.verb, "admin.exported"));
+  });
+
   test("downloads the activity stream as a CSV attachment", async ({
     page,
   }) => {

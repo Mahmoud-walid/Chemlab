@@ -1124,5 +1124,41 @@
         }
       }
     }
+  },
+  "comments": {
+    "title": "Discussion",
+    "empty": "No comments yet. Ask the first question.",
+    "placeholder": "Ask a question, or add something useful",
+    "replyPlaceholder": "Reply to {name}",
+    "post": "Post",
+    "posting": "Posting…",
+    "cancel": "Cancel",
+    "reply": "Reply",
+    "replies": "{count, plural, =0 {No replies} one {# reply} other {# replies}}",
+    "showReplies": "{count, plural, one {Show # more reply} other {Show # more replies}}",
+    "loadMore": "Load older comments",
+    "loading": "Loading…",
+    "someone": "Someone who deleted their account",
+    "edited": "edited",
+    "deletedBody": "This comment was deleted.",
+    "delete": "Delete this comment",
+    "deleteFailed": "That could not be deleted. Nothing was changed.",
+    "like": "Helpful",
+    "dislike": "Not helpful",
+    "reactionFailed": "That did not save. Your reaction was put back.",
+    "signInToReact": "Sign in to react to a comment.",
+    "signInToComment": "Sign in to join the discussion.",
+    "report": "Report this comment",
+    "reported": "Reported. A moderator will look at it.",
+    "reportFailed": "That could not be reported.",
+    "newComments": "{count, plural, one {# new comment} other {# new comments}} — show",
+    "postFailed": "That did not post. Nothing was sent.",
+    "tooFast": "You are posting quickly. Give it a moment.",
+    "duplicate": "You have already posted that.",
+    "tooShort": "That is too short to be a question.",
+    "tooLong": "That is too long. Try trimming it.",
+    "sortNew": "Newest",
+    "sortTop": "Top",
+    "feedLabel": "Comments on this lesson"
   }
 }
