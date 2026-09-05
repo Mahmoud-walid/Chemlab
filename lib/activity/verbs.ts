@@ -33,6 +33,10 @@ export const ACTIVITY_VERBS = [
   "exam.started",
   "exam.submitted",
   "exam.abandoned",
+  // Administrative, but filed under `exam` rather than `admin`: the timeline
+  // a candidate's record needs is "your attempt was voided", and burying it
+  // among the admin verbs splits one story across two groups.
+  "exam.voided",
 
   // Administration — the same changes the audit log records, kept here too so
   // a timeline of "what happened" is not split across two tables to read.

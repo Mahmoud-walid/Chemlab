@@ -341,7 +341,8 @@
       "users": "Users",
       "roles": "Roles and permissions",
       "activity": "Activity",
-      "settings": "Settings"
+      "settings": "Settings",
+      "exams": "Exam results"
     },
     "dashboard": {
       "title": "Dashboard",
@@ -869,6 +870,63 @@
             "google": "Google"
           }
         }
+      }
+    },
+    "exams": {
+      "title": "Exam results",
+      "subtitle": "Who sat what, and how the marks fell. Scores are read as recorded — nothing is re-marked here.",
+      "empty": "Nobody has finished a quiz yet.",
+      "backToExams": "Back to exam results",
+      "attemptTotal": "{count, plural, one {# sitting} other {# sittings}} in total",
+      "columns": {
+        "quiz": "Quiz",
+        "finished": "Finished",
+        "inProgress": "In progress",
+        "voided": "Voided",
+        "average": "Average",
+        "passRate": "Pass rate",
+        "lastAttempt": "Last sitting"
+      },
+      "statuses": {
+        "draft": "Draft",
+        "archived": "Archived",
+        "submitted": "Submitted",
+        "expired": "Timed out",
+        "in_progress": "In progress",
+        "abandoned": "Abandoned",
+        "voided": "Voided"
+      },
+      "distribution": {
+        "heading": "Score distribution",
+        "attempts": "Sittings",
+        "band": "{band}%",
+        "empty": "No marked sittings yet.",
+        "summary": "Read the numbers instead"
+      },
+      "questions": {
+        "heading": "Per question",
+        "note": "Percent correct is out of the sittings that ANSWERED the question. A blank is counted as skipped, not as wrong — a question nobody reached is not a hard question.",
+        "prompt": "Question",
+        "answered": "Answered",
+        "correct": "Correct",
+        "skipped": "Skipped",
+        "hard": "Rarely correct"
+      },
+      "attempts": {
+        "heading": "Sittings",
+        "candidate": "Candidate",
+        "attemptNumber": "Attempt",
+        "score": "Score",
+        "status": "Status",
+        "started": "Started",
+        "void": "Void",
+        "voiding": "Voiding…",
+        "reasonLabel": "Why is this being voided?",
+        "reasonPlaceholder": "Recorded against this attempt and visible in the activity stream.",
+        "confirm": "Void this attempt",
+        "cancel": "Cancel",
+        "deletedUser": "an account since deleted",
+        "empty": "No sittings yet."
       }
     }
   },

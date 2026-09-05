@@ -2,13 +2,7 @@ import "server-only";
 import { and, asc, eq, isNull } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
-import {
-  quizOptions,
-  quizQuestionTranslations,
-  quizQuestions,
-  quizTranslations,
-  quizzes,
-} from "@/db/schema/content";
+import { quizQuestions, quizTranslations, quizzes } from "@/db/schema/content";
 import { preferred } from "./_locale";
 
 export interface QuizSummary {
