@@ -33,7 +33,10 @@ export default async function AdminLessonPage({
   if (!lesson) notFound();
 
   const t = await getTranslations("admin.lessons");
+  const tTranslations = await getTranslations("admin.translations");
   const format = await getFormatter();
+
+  const canTranslate = hasPermission(actor, "translation:read");
 
   return (
     <div className="space-y-6">
@@ -87,11 +90,22 @@ export default async function AdminLessonPage({
             ? t("body.empty")
             : t("body.count", { count: lesson.sectionCount })}
         </p>
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/admin/lessons/${lesson.slug}/edit`}>
-            {t("body.edit")}
-          </Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/admin/lessons/${lesson.slug}/edit`}>
+              {t("body.edit")}
+            </Link>
+          </Button>
+          {/* Beside the body editor rather than on the settings form: a
+              translator's job starts from the words, and the words are here. */}
+          {canTranslate && (
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/admin/lessons/${lesson.slug}/translate`}>
+                {tTranslations("open")}
+              </Link>
+            </Button>
+          )}
+        </div>
       </section>
 
       <LessonForm

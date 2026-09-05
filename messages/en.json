@@ -1096,7 +1096,29 @@
       "draft": "Draft translation",
       "in_review": "Awaiting review",
       "stale": "Out of date",
-      "published": "Translated"
+      "published": "Translated",
+      "heading": "Translate",
+      "subtitle": "Every box sits beside the English it answers. The Arabic keeps the lesson's own structure — the same blocks, in the same order — so nothing can drift out of step.",
+      "back": "Back to the lesson",
+      "title": "Title",
+      "description": "Summary",
+      "sectionHeading": "Section heading",
+      "source": "English",
+      "save": "Save translation",
+      "saved": "Saved",
+      "submit": "Submit for review",
+      "publish": "Publish translation",
+      "sendBack": "Send back to draft",
+      "progress": "{done} of {total} written",
+      "optional": "optional",
+      "open": "Translate",
+      "kinds": {
+        "text": "Text",
+        "alt": "Image description",
+        "caption": "Caption",
+        "attribution": "Attribution",
+        "item": "List item"
+      }
     }
   },
   "pages": {
