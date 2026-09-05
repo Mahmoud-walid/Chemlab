@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type BrowserContext, type Page } from "@playwright/test";
 import { eq } from "drizzle-orm";
 
 import * as schema from "@/db/schema";
@@ -149,6 +149,48 @@ async function signInViaApi(page: Page, email: string): Promise<boolean> {
 const accountsByRole = new Map<string, string>();
 
 /**
+ * The cookies of a session already established for a role, in this worker.
+ *
+ * Playwright gives each test a fresh browser context — a fresh cookie jar — so
+ * without this every test signs in again, and a worker running a dozen admin
+ * tests makes a dozen sign-in requests as the same identifier. Better Auth
+ * rate limits that, correctly, and the suite starts failing on 429s that have
+ * nothing to do with what is being tested. Weakening the limiter to suit the
+ * tests would be weakening the product.
+ *
+ * Replaying the cookies is what a returning browser does, and it exercises the
+ * same session rows the sign-in created. `auth.spec.ts` still drives the real
+ * form and the real endpoint, so the sign-in path itself stays covered.
+ *
+ * One hazard to know about: a test that SIGNS OUT as a shared role deletes the
+ * session row these cookies name, and the next test to reuse them would fail
+ * somewhere far from the cause. No test does that today — `auth.spec.ts` signs
+ * out of its own throwaway account — and one that needs to should sign in with
+ * its own address rather than a shared role.
+ */
+const sessionCookies = new Map<string, Cookie[]>();
+
+/** How Playwright describes a cookie to `addCookies`. */
+type Cookie = Awaited<ReturnType<BrowserContext["cookies"]>>[number];
+
+/**
+ * Whether a set of cookies still contains a live session.
+ *
+ * Cookies carry an expiry, and a worker running for several minutes can hold
+ * one that has passed. Replaying an expired cookie lands on the sign-in page
+ * with an error about the page under test, so the age is checked and a fresh
+ * sign-in happens instead.
+ */
+function stillValid(cookies: Cookie[]): boolean {
+  if (cookies.length === 0) return false;
+  const now = Date.now() / 1000;
+  // `-1` is a session cookie, which does not expire on its own.
+  return cookies.every(
+    (cookie) => cookie.expires === -1 || cookie.expires > now + 30,
+  );
+}
+
+/**
  * This worker's address for a role. `.invalid` is reserved, so it can never
  * collide with a real one.
  *
@@ -171,10 +213,22 @@ export async function signInAs(
 
   const email = accountEmailFor(roleKey);
 
+  // A session this worker already established: replay its cookies rather than
+  // spending another sign-in. This is the whole reason the suite stopped
+  // tripping the rate limiter — see `sessionCookies` above.
+  const known = sessionCookies.get(roleKey);
+  if (known && stillValid(known)) {
+    await page.context().addCookies(known);
+    return email;
+  }
+
   // Known to this worker already: the account exists, so sign in directly.
   if (accountsByRole.has(roleKey)) {
-    if (await signInViaApi(page, email)) return email;
-    throw new Error(`sign-in for ${email} failed`);
+    if (!(await signInViaApi(page, email))) {
+      throw new Error(`sign-in for ${email} failed`);
+    }
+    sessionCookies.set(roleKey, await page.context().cookies());
+    return email;
   }
 
   const outcome = await signUpViaApi(page, email);
@@ -188,5 +242,6 @@ export async function signInAs(
   // `onConflictDoNothing` makes a second grant free.
   await grantRole(db, email, roleKey);
   accountsByRole.set(roleKey, email);
+  sessionCookies.set(roleKey, await page.context().cookies());
   return email;
 }
