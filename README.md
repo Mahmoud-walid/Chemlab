@@ -177,6 +177,30 @@ the protected role, or to edit the audit log. The vocabulary, the rules for
 building on `requirePermission()`, and how to add a permission are in
 [docs/PERMISSIONS.md](docs/PERMISSIONS.md).
 
+### CI alerts
+
+A red `main` that nobody notices is worse than one that pages somebody: every
+branch cut afterwards inherits it. The `notify` job in `ci.yml` posts the
+outcome of a whole workflow run to `/api/ci/notify`, which reaches opted-in
+developers by Web Push and, when a webhook is configured, Slack.
+
+```bash
+openssl rand -hex 32   # CI_NOTIFY_SECRET — the same value both sides
+```
+
+| Variable            | Where it lives                        | Notes                                                                                      |
+| ------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `CI_NOTIFY_SECRET`  | GitHub Actions secret **and** the app | The HMAC key. Never transmitted — a copy of it is the only way to forge                    |
+| `CI_NOTIFY_URL`     | GitHub Actions secret only            | Always the **production** deployment: the alert path must not depend on what may be broken |
+| `SLACK_WEBHOOK_URL` | The app, server-only                  | The URL **is** the credential. Optional — push works without it                            |
+
+All three are **server-only**; none may carry a `NEXT_PUBLIC_` prefix, and
+`pnpm bundle:check` fails the build if one reaches the client bundle. CI
+notifications are opt-in per account — an absent preference row means never —
+and the job can never change the build's own result. The full policy, and how
+to answer "why did nobody get paged?", is in
+[docs/CI_ALERTS.md](docs/CI_ALERTS.md).
+
 ### UI components
 
 shadcn/ui components are vendored into `components/ui`. Add and update them
