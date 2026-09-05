@@ -211,12 +211,22 @@ jobs:
           BUILD: ${{ needs.build.result }}
           INTEGRATION: ${{ needs.integration.result }}
           E2E: ${{ needs.e2e.result }}
-          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message || github.event.pull_request.title }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          # On a `pull_request` event `github.ref_name` is `90/merge` and
+          # `github.sha` is the ephemeral merge commit — neither is a thing
+          # anybody can check out, and a branch filter matching `90/merge`
+          # matches nothing a developer ever watches. `head_ref` and the PR's
+          # head sha are the real branch and the real commit.
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        # `bash`, not the default `bash -e`. GitHub's default shell aborts the
+        # step on the first non-zero exit, and every line below is best-effort:
+        # a monitoring step that dies because `openssl` was unhappy is a
+        # monitoring step that reports nothing and says nothing about why.
+        shell: bash
         run: |
-          # Not `set -e`: every line below is best-effort, and a monitoring
-          # step that fails the job it monitors is worse than no monitoring.
-          set -u
+          set +e -u
 
           if [ -z "${CI_NOTIFY_URL:-}" ] || [ -z "${CI_NOTIFY_SECRET:-}" ]; then
             echo "CI notifications are not configured for this repository; skipping."
@@ -254,8 +264,8 @@ jobs:
           # would be, turn into a body the app refuses for the wrong reason.
           body=$(jq -cn \
             --arg repository "${{ github.repository }}" \
-            --arg branch "${{ github.ref_name }}" \
-            --arg commitSha "${{ github.sha }}" \
+            --arg branch "$BRANCH" \
+            --arg commitSha "$COMMIT_SHA" \
             --arg commitMessage "${COMMIT_MESSAGE:-}" \
             --arg actor "${{ github.actor }}" \
             --arg outcome "$outcome" \
