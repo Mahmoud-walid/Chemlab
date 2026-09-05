@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.7.0...v0.8.0) (2026-09-05)
+
+
+### Features
+
+* **admin:** quiz lifecycle, sitting rules and a question editor ([#60](https://github.com/Mahmoud-walid/Chemlab/issues/60)) ([d78aa94](https://github.com/Mahmoud-walid/Chemlab/commit/d78aa94a32a6f9f67d49fd97b5776ee9d5a95629))
+
 ## [0.7.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.6.0...v0.7.0) (2026-09-05)
 
 
