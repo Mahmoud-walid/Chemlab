@@ -149,13 +149,19 @@ describe("lessons", () => {
   });
 
   it("publishes every seeded lesson and soft-deletes none", async () => {
-    // A lesson with no publishedAt is invisible to the site, which is the same
-    // symptom as a lesson that failed to seed.
-    const [{ count }] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(schema.lessons)
-      .where(isNull(schema.lessons.publishedAt));
-    expect(count).toBe(0);
+    // A lesson that is not published is invisible to the site, which is the
+    // same symptom as a lesson that failed to seed. Both halves are checked:
+    // `status` is what the public queries filter on, `published_at` records
+    // when it went live, and one without the other is a row whose two answers
+    // to "is this live" disagree.
+    const [counts] = await db
+      .select({
+        unpublished: sql<number>`count(*) filter (where ${schema.lessons.status} <> 'published')::int`,
+        undated: sql<number>`count(*) filter (where ${schema.lessons.publishedAt} is null)::int`,
+        deleted: sql<number>`count(*) filter (where ${schema.lessons.deletedAt} is not null)::int`,
+      })
+      .from(schema.lessons);
+    expect(counts).toEqual({ unpublished: 0, undated: 0, deleted: 0 });
   });
 
   it("stores sections in order as rich-text documents", async () => {

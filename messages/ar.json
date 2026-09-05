@@ -392,6 +392,101 @@
       "saved": "تم الحفظ.",
       "saveFailed": "لم يُحفظ أي شيء.",
       "notFound": "لا يوجد عنصر بهذا العدد الذري."
+    },
+    "lessons": {
+      "title": "الدروس",
+      "subtitle": "{count} درسًا، بما في ذلك المسودات والمؤرشفة.",
+      "new": "درس جديد",
+      "newTitle": "درس جديد",
+      "newSubtitle": "تبدأ الدروس الجديدة كمسودات. لا شيء يظهر للعامة حتى تنشره.",
+      "editTitle": "{title}",
+      "editSubtitle": "البيانات الوصفية والنشر. يُحرَّر متن الدرس في مكان آخر.",
+      "backToList": "العودة إلى الدروس",
+      "filterByStatus": "التصفية حسب الحالة",
+      "searchPlaceholder": "ابحث بالعنوان أو المُعرِّف أو التصنيف",
+      "noContent": "لا يوجد محتوى بعد",
+      "sectionCount": "{count, plural, zero {# قسم} one {قسم واحد} two {قسمان} few {# أقسام} many {# قسمًا} other {# قسم}}",
+      "saved": "تم الحفظ",
+      "saveFailed": "لم يُحفَظ شيء",
+      "saving": "جارٍ الحفظ…",
+      "save": "حفظ التغييرات",
+      "create": "إنشاء الدرس",
+      "suggestSlug": "اقتراح",
+      "slugWarning": "هذا الدرس منشور. تغيير المُعرِّف يكسر كل رابط قائم إلى ‎/lessons/{slug}‎.",
+      "status": {
+        "all": "الكل",
+        "draft": "مسودة",
+        "published": "منشور",
+        "archived": "مؤرشف"
+      },
+      "difficulty": {
+        "easy": "سهل",
+        "medium": "متوسط",
+        "hard": "صعب"
+      },
+      "columns": {
+        "position": "#",
+        "title": "العنوان",
+        "category": "التصنيف",
+        "difficulty": "المستوى",
+        "status": "الحالة",
+        "content": "المحتوى",
+        "updated": "آخر تحديث"
+      },
+      "fields": {
+        "title": "العنوان",
+        "slug": "المُعرِّف",
+        "description": "الوصف",
+        "difficulty": "المستوى",
+        "category": "التصنيف",
+        "position": "الترتيب",
+        "coverImageUrl": "رابط صورة الغلاف",
+        "references": "المراجع",
+        "tags": "الوسوم"
+      },
+      "hints": {
+        "slug": "حروف إنجليزية صغيرة وأرقام وشرطات مفردة. هذا هو الرابط العام.",
+        "position": "الأرقام الأصغر تظهر أولًا في الفهرس.",
+        "coverImageUrl": "رابط http(s) كامل. رفع الصور يأتي مع أعمال الوسائط.",
+        "references": "مرجع واحد في كل سطر.",
+        "tags": "مفصولة بفواصل."
+      },
+      "body": {
+        "heading": "محتوى الدرس",
+        "empty": "لا يحتوي هذا الدرس على محتوى بعد، لذا لا يمكن نشره.",
+        "count": "{count, plural, zero {# قسم} one {قسم واحد مكتوب} two {قسمان مكتوبان} few {# أقسام مكتوبة} many {# قسمًا مكتوبًا} other {# قسم مكتوب}}",
+        "editDisabled": "تحرير المحتوى",
+        "editDisabledReason": "محرر المحتوى الغني لم يُبنَ بعد. حتى ذلك الحين تأتي الأقسام من البيانات المزروعة."
+      },
+      "lifecycle": {
+        "heading": "النشر",
+        "statusIs": "حالة هذا الدرس: {status}.",
+        "publishedOn": "نُشر أول مرة في {date}.",
+        "neverPublished": "لم يُنشر من قبل.",
+        "publish": "نشر",
+        "unpublish": "إعادة إلى مسودة",
+        "archive": "أرشفة",
+        "delete": "سحب الدرس",
+        "restore": "استعادة كمسودة",
+        "cannotPublish": "لا يمكن نشر هذا الدرس بعد:",
+        "changed": "تم تحديث حالة النشر",
+        "failed": "لم يتغير شيء",
+        "confirmDeleteTitle": "سحب هذا الدرس؟",
+        "confirmDeleteBody": "سيختفي من الموقع العام فورًا. لا يُحذف شيء — التعليقات والمحفوظات والنتائج تظل مرتبطة به — ويمكنك استعادته كمسودة. اكتب المُعرِّف للتأكيد.",
+        "confirmDeleteLabel": "اكتب {slug} للتأكيد",
+        "confirmDeleteAction": "سحب",
+        "confirmPublishTitle": "نشر هذا الدرس؟",
+        "confirmPublishBody": "سيصبح مرئيًا للجميع على ‎/lessons/{slug}‎.",
+        "confirmPublishAction": "نشر",
+        "cancel": "إلغاء"
+      },
+      "blockers": {
+        "missingTitle": "ليس له عنوان.",
+        "missingDescription": "ليس له وصف.",
+        "missingCategory": "ليس له تصنيف.",
+        "missingBody": "لا يحتوي على محتوى — لم تُكتب أي أقسام.",
+        "deleted": "تم سحبه. استعده أولًا."
+      }
     }
   }
 }

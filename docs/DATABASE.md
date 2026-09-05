@@ -238,4 +238,15 @@ exists and content changes have a known cadence.
   is seeded — Arabic content is commissioned, not machine-translated.
 - **The twelve body-less lessons seed as summary-only rows.** They have no
   `sections` file; inventing placeholder sections would put fake content in
-  front of students.
+  front of students. They are also why publishing refuses an empty body only
+  going forward — see Q32 in `docs/DEFERRED_QUESTIONS.md`.
+- **`lessons.status` decides visibility, `published_at` only records when.**
+  Three states (`draft`, `published`, `archived`) do not fit in one nullable
+  timestamp, and a pair of columns that can disagree about whether a row is
+  live is a bug waiting for a query that checks the wrong one. Migration 0005
+  backfills the column from the old rule rather than defaulting every existing
+  lesson to `draft` and silently emptying the catalogue.
+- **`lessons.position` orders the curriculum.** Lessons build on each other, so
+  the catalogue is a sequence; ordering by slug put "acids-bases" before
+  "atomic-structure". Seeded in tens, so a lesson can be moved between two
+  others without renumbering the rest.

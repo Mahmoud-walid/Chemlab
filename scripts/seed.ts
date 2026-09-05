@@ -54,7 +54,7 @@ async function main() {
       }
 
       // ── Lessons ────────────────────────────────────────────────────────
-      for (const json of lessonsJson) {
+      for (const [index, json] of lessonsJson.entries()) {
         const row = toLessonRow(json);
         const [lesson] = await tx
           .insert(schema.lessons)
@@ -62,7 +62,19 @@ async function main() {
           // first insert. On conflict the date is COALESCEd rather than
           // overwritten: re-seeding backfills a lesson that has none but must
           // never reset the publication date of one already live.
-          .values({ ...row, publishedAt: sql`now()` })
+          //
+          // `status` and `position` are set on insert but deliberately absent
+          // from the conflict branch: they are the editor's to change, and a
+          // re-seed that republished a lesson someone had taken back to draft
+          // would undo an editorial decision without saying so.
+          .values({
+            ...row,
+            status: "published",
+            // Gaps of ten, so a lesson can be moved between two others without
+            // renumbering the rest.
+            position: (index + 1) * 10,
+            publishedAt: sql`now()`,
+          })
           .onConflictDoUpdate({
             target: schema.lessons.slug,
             set: {

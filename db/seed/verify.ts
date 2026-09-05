@@ -106,9 +106,14 @@ export async function verifyContent(db: SeedDatabase): Promise<string[]> {
       problems.push(`lessons: ${json.slug}.references differ`);
     }
     // A lesson nobody can see is indistinguishable from one that failed to
-    // seed, so publication is verified rather than assumed.
+    // seed, so publication is verified rather than assumed. Both halves are
+    // checked: `status` is what the public queries filter on, `published_at`
+    // is the record of when it went live, and one without the other is a row
+    // whose two answers to "is this live" disagree.
+    if (row.status !== "published")
+      problems.push(`lessons: ${json.slug} is ${row.status}, not published`);
     if (row.publishedAt === null)
-      problems.push(`lessons: ${json.slug} is not published`);
+      problems.push(`lessons: ${json.slug} has no publication date`);
 
     const body = source.bodies.get(json.slug);
     const sections = await db

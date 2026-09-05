@@ -36,6 +36,13 @@
       "when": 1788564567624,
       "tag": "0004_rbac_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788571621436,
+      "tag": "0005_lesson_lifecycle",
+      "breakpoints": true
     }
   ]
 }

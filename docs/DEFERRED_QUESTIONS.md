@@ -372,6 +372,30 @@ worth solving together.
 **Question:** worth a dedicated task, or is "correct body, wrong status"
 acceptable while `/admin` itself still 404s?
 
+### Q32 — unpublishing a body-less lesson is currently one-way
+
+#16 asks that a lesson with an empty body cannot be published, and the lesson
+admin enforces it. Twelve of the thirteen seeded lessons have no sections: they
+are summary-only rows, published since the migration, and they are the
+catalogue people see today.
+
+So the rule bites in one direction only. Those twelve stay live, but the moment
+an editor takes one back to draft — to fix a typo in its description, say — the
+publish button refuses until somebody writes a body. The rich body editor is
+#20, so today that means "until #20 ships".
+
+The list screen shows the "No content yet" state up front so nobody discovers
+this by clicking publish and being refused. But the trap is real.
+
+Three ways out: leave it (the rule is right, and the twelve should have bodies);
+grandfather rows that have a `published_at` (weakens the rule exactly where it
+is least verifiable); or downgrade the empty body from a blocker to a warning
+until #20 lands.
+
+**My default is to leave it**, because the alternative is publishing pages with
+nothing on them. **Question:** do you want an editor to be able to republish a
+body-less lesson before #20?
+
 ---
 
 ## Per-issue open questions

@@ -1,0 +1,210 @@
+import { expect, test } from "@playwright/test";
+import { like } from "drizzle-orm";
+
+import { connect, seedUrl, type SeedDatabase } from "@/db/seed/connect";
+import * as schema from "@/db/schema";
+import { signInAs } from "./support/accounts";
+
+/**
+ * The lesson admin, end to end.
+ *
+ * Proves what the integration suite cannot: that the form posts what the
+ * author typed, that the server actions accept it, that publication is refused
+ * for the right reason, and that a role without lesson permissions sees
+ * nothing of the section.
+ */
+
+/**
+ * Every test here signs up a real account, and the password hash is
+ * deliberately slow — that is the point of it. With several workers on a small
+ * runner the default 30s test budget is not enough, and shortening the hash to
+ * suit the tests would weaken the thing being tested.
+ */
+test.describe.configure({ timeout: 90_000 });
+
+let db: SeedDatabase;
+let close: () => Promise<void>;
+
+/** Every lesson this file creates carries the prefix, so cleanup is exact. */
+const PREFIX = "e2e-lesson-";
+
+const uniqueSlug = () =>
+  `${PREFIX}${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+test.beforeAll(() => {
+  const url = seedUrl();
+  if (!url) throw new Error("no database URL");
+  ({ db, close } = connect(url));
+});
+
+test.afterAll(async () => {
+  // Leaving these behind would make `pnpm db:verify` report thirteen expected
+  // lessons and find more.
+  await db
+    .delete(schema.lessons)
+    .where(like(schema.lessons.slug, `${PREFIX}%`));
+  await close?.();
+});
+
+/** Fills the metadata form and submits it. */
+async function createLesson(
+  page: import("@playwright/test").Page,
+  slug: string,
+  title: string,
+) {
+  await page.goto("/admin/lessons/new");
+  await page.getByLabel("Title", { exact: true }).fill(title);
+  await page.getByLabel("Slug", { exact: true }).fill(slug);
+  await page
+    .getByLabel("Description", { exact: true })
+    .fill("Created by the e2e suite.");
+  await page.getByLabel("Category", { exact: true }).fill("Testing");
+  await page.getByRole("button", { name: /create lesson/i }).click();
+}
+
+test.describe("the lesson admin", () => {
+  test("lists, searches and filters by status through the URL", async ({
+    page,
+  }) => {
+    await signInAs(page, db, "editor");
+    await page.goto("/admin/lessons");
+
+    await expect(
+      page.getByRole("link", { name: "Introduction / Basics" }),
+    ).toBeVisible();
+
+    // Filtering narrows the list and lands in the URL, so the view is linkable.
+    await page.getByRole("link", { name: "Draft", exact: true }).click();
+    await expect(page).toHaveURL(/status=draft/);
+
+    // Every seeded lesson is published, so the draft view is empty rather than
+    // showing the same rows under a different heading.
+    await expect(
+      page.getByRole("link", { name: "Introduction / Basics" }),
+    ).toHaveCount(0);
+
+    // A copied URL reproduces the exact view.
+    await page.goto("/admin/lessons?status=published&q=redox");
+    await expect(page.getByRole("link", { name: /redox/i })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Introduction / Basics" }),
+    ).toHaveCount(0);
+  });
+
+  test("creates a draft that the public catalogue does not show", async ({
+    page,
+  }) => {
+    await signInAs(page, db, "editor");
+    const slug = uniqueSlug();
+    const title = "A lesson from the e2e suite";
+
+    await createLesson(page, slug, title);
+
+    // The editor is now the created lesson's own URL.
+    await expect(page).toHaveURL(new RegExp(`/admin/lessons/${slug}$`), {
+      timeout: 15_000,
+    });
+    await expect(page.getByText(/this lesson is draft/i)).toBeVisible();
+
+    // The criterion: a draft is not reachable from the public site.
+    await page.goto("/lessons");
+    await expect(page.getByText(title)).toHaveCount(0);
+  });
+
+  test("refuses to publish a lesson with no content, naming the reason", async ({
+    page,
+  }) => {
+    await signInAs(page, db, "editor");
+    const slug = uniqueSlug();
+    await createLesson(page, slug, "Nothing written yet");
+
+    await expect(page).toHaveURL(new RegExp(`/admin/lessons/${slug}$`), {
+      timeout: 15_000,
+    });
+
+    // Said up front rather than after a click that is then refused.
+    await expect(page.getByText(/it has no content/i)).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /^publish$/i }),
+    ).toBeDisabled();
+  });
+
+  test("reports a slug that is already taken instead of failing silently", async ({
+    page,
+  }) => {
+    await signInAs(page, db, "editor");
+    await createLesson(page, "introduction-basics", "A clashing slug");
+
+    await expect(page.getByText(/slug is already in use/i)).toBeVisible({
+      timeout: 15_000,
+    });
+    // Still on the create screen: nothing was written.
+    await expect(page).toHaveURL(/\/admin\/lessons\/new/);
+  });
+
+  test("renames a lesson and warns before breaking its public links", async ({
+    page,
+  }) => {
+    await signInAs(page, db, "editor");
+    const slug = uniqueSlug();
+    await createLesson(page, slug, "Renameable");
+    await expect(page).toHaveURL(new RegExp(`/admin/lessons/${slug}$`), {
+      timeout: 15_000,
+    });
+
+    const renamed = `${slug}-renamed`;
+    await page.getByLabel("Slug", { exact: true }).fill(renamed);
+    await page.getByRole("button", { name: /save changes/i }).click();
+
+    // The editor follows the rename; staying put would leave the author on a
+    // URL that no longer resolves.
+    await expect(page).toHaveURL(new RegExp(`/admin/lessons/${renamed}$`), {
+      timeout: 15_000,
+    });
+  });
+
+  test("offers withdrawal only to a role that holds lesson:delete", async ({
+    page,
+  }) => {
+    // `editor` publishes but does not delete; `admin` does both.
+    await signInAs(page, db, "editor");
+    const slug = uniqueSlug();
+    await createLesson(page, slug, "Withdrawable");
+    await expect(page).toHaveURL(new RegExp(`/admin/lessons/${slug}$`), {
+      timeout: 15_000,
+    });
+    await expect(
+      page.getByRole("button", { name: /withdraw lesson/i }),
+    ).toHaveCount(0);
+  });
+
+  test("shows a role without lesson permissions nothing of the section", async ({
+    page,
+  }) => {
+    // `moderator` holds admin:access but nothing on lessons.
+    await signInAs(page, db, "moderator");
+
+    for (const path of [
+      "/admin/lessons",
+      "/admin/lessons/new",
+      "/admin/lessons/introduction-basics",
+    ]) {
+      await page.goto(path);
+
+      // Asserted on the CONTENT, not the status. The refusal renders the
+      // not-found page, but Next has already committed a 200 by the time a
+      // section check can run — see the note in the admin layout and Q31.
+      // What matters is that nothing of the section reaches the browser.
+      await expect(
+        page.getByRole("heading", { name: /not found/i }),
+        path,
+      ).toBeVisible();
+
+      const html = await page.content();
+      expect(html, path).not.toContain("Introduction / Basics");
+      expect(html, path).not.toContain(
+        'href="/admin/lessons/introduction-basics"',
+      );
+    }
+  });
+});
