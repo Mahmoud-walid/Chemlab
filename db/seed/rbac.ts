@@ -29,6 +29,11 @@ export const RESOURCES = [
   "notification",
   "audit",
   "activity",
+  // Translating content is its own resource, not an action on `lesson` and
+  // `quiz`. A translator works across every content type and must not thereby
+  // gain the right to edit the English originals — which `lesson:update`
+  // would give them.
+  "translation",
 ] as const;
 
 export const ACTIONS = [
@@ -53,6 +58,17 @@ export const ACTIONS = [
   // `exam:void`. Striking out a sitting is not editing it: the row stays, the
   // reason is recorded, and the mark stops counting.
   "void",
+  // `translation:write`. One grant rather than `create` plus `update`,
+  // because starting a translation and finishing one are the same job — a
+  // translator who could open a draft but not edit it back would be a
+  // permission set nobody wants.
+  "write",
+  // `translation:review`. Checking a chemistry translation is a language
+  // competence, not a publishing right, so it is separate from `write` and
+  // from `lesson:publish`. A mistranslated definition is a factual error, and
+  // the point of the separate grant is that somebody other than the author
+  // signed it off.
+  "review",
 ] as const;
 
 export type Resource = (typeof RESOURCES)[number];
@@ -256,6 +272,22 @@ export const PERMISSIONS: PermissionSpec[] = [
     action: "export",
     description: "Export activity data",
   },
+
+  {
+    resource: "translation",
+    action: "read",
+    description: "See translation status, ownership and staleness",
+  },
+  {
+    resource: "translation",
+    action: "write",
+    description: "Write and edit translations of content",
+  },
+  {
+    resource: "translation",
+    action: "review",
+    description: "Approve a translation, or send it back to draft",
+  },
 ];
 
 export interface RoleSpec {
@@ -331,6 +363,9 @@ export const ROLES: RoleSpec[] = [
       p("activity", "read"),
       p("activity", "read_pii"),
       p("activity", "export"),
+      p("translation", "read"),
+      p("translation", "write"),
+      p("translation", "review"),
     ],
   },
   {
@@ -354,6 +389,11 @@ export const ROLES: RoleSpec[] = [
       p("quiz", "publish"),
       p("media", "read"),
       p("media", "create"),
+      p("translation", "read"),
+      // Write but not review: an editor can translate, and somebody else
+      // signs it off. Self-approval is how an unchecked translation reaches
+      // a reader looking exactly like a checked one.
+      p("translation", "write"),
     ],
   },
   {
