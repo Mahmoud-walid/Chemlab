@@ -77,3 +77,30 @@ export async function requireUser(): Promise<CurrentUser> {
   const next = safeRedirect(pathname, "/profile");
   redirect(`/sign-in?next=${encodeURIComponent(next)}`);
 }
+
+/**
+ * The gate for a ROUTE HANDLER, where a redirect would be the wrong answer.
+ *
+ * `requireUser()` sends an anonymous visitor to the sign-in page, which is
+ * right for a page and wrong for an API: a `fetch` follows the redirect, gets
+ * 200 and a mountain of HTML, and the caller has no way to tell its request
+ * failed.
+ *
+ * Returns EITHER the user or a ready-made 401, never both, so a handler cannot
+ * carry on without one. A helper that returned `CurrentUser | null` would be a
+ * rubber stamp — it would satisfy `tests/lib/authz-enforcement.test.ts` while
+ * letting the caller ignore the null, which is the exact failure that test
+ * exists to catch.
+ */
+export type ApiSession =
+  | { user: CurrentUser; response?: undefined }
+  | { user?: undefined; response: Response };
+
+export async function requireUserOr401(): Promise<ApiSession> {
+  const user = await getCurrentUser();
+  if (user) return { user };
+
+  return {
+    response: Response.json({ error: "sign in" }, { status: 401 }),
+  };
+}

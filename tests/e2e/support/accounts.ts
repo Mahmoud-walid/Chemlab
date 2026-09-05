@@ -33,6 +33,11 @@ async function sleep(ms: number) {
  *
  * The 429 is the product working. Backing off is what a real client would do,
  * and it keeps the suite honest about the limit existing.
+ *
+ * The backoff is JITTERED, which is the part that matters with more than one
+ * worker: several workers rejected at the same moment and sleeping for exactly
+ * the same interval wake together and collide again, so a fixed schedule turns
+ * one burst into several. Randomising each wait spreads them out.
  */
 export async function signUpViaApi(page: Page, email: string): Promise<void> {
   let lastStatus = 0;
@@ -47,7 +52,7 @@ export async function signUpViaApi(page: Page, email: string): Promise<void> {
     lastStatus = response.status();
     if (response.ok()) return;
     if (lastStatus !== 429) break;
-    await sleep(1_500 * (attempt + 1));
+    await sleep(1_200 * (attempt + 1) + Math.random() * 1_200);
   }
 
   throw new Error(`sign-up for ${email} failed with ${lastStatus}`);
