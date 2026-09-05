@@ -12,7 +12,7 @@ import {
   type SQL,
 } from "drizzle-orm";
 
-import { getDb } from "@/db/client";
+import { getAnalyticsDb } from "@/db/analytics-client";
 import { activityEvents } from "@/db/schema/activity";
 import { users } from "@/db/schema/auth";
 import { examAttempts } from "@/db/schema/attempts";
@@ -87,7 +87,7 @@ export function exportEvents(
   ];
 
   async function* rows(): AsyncGenerator<string[][]> {
-    const db = getDb();
+    const db = getAnalyticsDb();
     let after: string | null = null;
     let written = 0;
 
@@ -219,7 +219,7 @@ export function exportAttempts(
   ];
 
   async function* rows(): AsyncGenerator<string[][]> {
-    const db = getDb();
+    const db = getAnalyticsDb();
     let after: string | null = null;
     let written = 0;
 
@@ -344,7 +344,7 @@ export async function recentExportTimes(
   actorId: string,
   since: Date,
 ): Promise<Date[]> {
-  const rows = await getDb()
+  const rows = await getAnalyticsDb()
     .select({ createdAt: activityEvents.createdAt })
     .from(activityEvents)
     .where(
