@@ -19,7 +19,13 @@ test.describe.configure({ timeout: 90_000, mode: "serial" });
 let db: SeedDatabase;
 let close: () => Promise<void>;
 
-const ENDPOINT = `https://push.test/e2e-${Date.now()}`;
+/**
+ * Per worker as well as per run. A timestamp alone can repeat across two
+ * worker processes started in the same millisecond, and the endpoint is the
+ * subscription's IDENTITY — two workers sharing one would each be
+ * re-subscribing the other's device.
+ */
+const ENDPOINT = `https://push.test/e2e-w${process.env.TEST_WORKER_INDEX ?? "0"}-${Date.now()}`;
 
 const BODY = {
   endpoint: ENDPOINT,

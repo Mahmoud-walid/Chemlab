@@ -19,7 +19,13 @@ import { connect, seedUrl, type SeedDatabase } from "@/db/seed/connect";
 test.describe.configure({ timeout: 60_000 });
 
 const SECRET = process.env.CI_NOTIFY_SECRET;
-const REPO = "Mahmoud-walid/ci-e2e";
+/**
+ * Per worker: `afterAll` deletes every run under this repository, and
+ * Playwright runs one `afterAll` per WORKER rather than per file. Sharing the
+ * name means the worker that finishes first deletes the rows the other is
+ * still asserting on — and one test counts them.
+ */
+const REPO = `Mahmoud-walid/ci-e2e-w${process.env.TEST_WORKER_INDEX ?? "0"}`;
 
 let db: SeedDatabase;
 let close: () => Promise<void>;
