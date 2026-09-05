@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   assertDifficulty,
-  richTextToText,
-  textToRichText,
+  blocksToPlainText,
+  textToBlocks,
   toElementRow,
   toLessonRow,
   toLessonSectionRows,
@@ -65,8 +65,12 @@ describe("lessons", () => {
     const rows = (lessons as Parameters<typeof toLessonRow>[0][]).map(
       toLessonRow,
     );
-    expect(rows).toHaveLength(13);
+    // Counted from the file rather than hard-coded: the number is a fact
+    // about the dataset, and a test asserting a literal 13 fails when a
+    // lesson is added, which is not a defect.
+    expect(rows).toHaveLength(lessons.length);
     expect(rows.every((r) => r.slug && r.title)).toBe(true);
+    expect(new Set(rows.map((r) => r.slug)).size).toBe(rows.length);
   });
 
   it("defaults missing references to an empty array, not null", () => {
@@ -93,22 +97,21 @@ describe("lessons", () => {
   });
 });
 
-describe("rich text conversion", () => {
-  it("wraps plain prose in a ProseMirror document", () => {
-    const doc = textToRichText("Chemistry is the study of matter.");
-    expect(doc.type).toBe("doc");
-    expect(doc.content).toHaveLength(1);
+describe("block conversion", () => {
+  it("turns plain prose into one paragraph block", () => {
+    const blocks = textToBlocks("Chemistry is the study of matter.", "k");
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0]!.type).toBe("paragraph");
   });
 
   it("splits on blank lines into separate paragraphs", () => {
-    const doc = textToRichText("First para.\n\nSecond para.");
-    expect(doc.content).toHaveLength(2);
+    expect(textToBlocks("First para.\n\nSecond para.", "k")).toHaveLength(2);
   });
 
   it("round-trips the text verbatim", () => {
     // The migration must be lossless: existing lessons render identically.
     const original = "One.\n\nTwo.\n\nThree.";
-    expect(richTextToText(textToRichText(original))).toBe(original);
+    expect(blocksToPlainText(textToBlocks(original, "k"))).toBe(original);
   });
 
   it("round-trips every section of the real lesson body", () => {
@@ -118,18 +121,32 @@ describe("rich text conversion", () => {
         .map((p) => p.trim())
         .filter(Boolean)
         .join("\n\n");
-      expect(richTextToText(textToRichText(section.body))).toBe(normalised);
+      expect(blocksToPlainText(textToBlocks(section.body, "k"))).toBe(
+        normalised,
+      );
     }
   });
 
-  it("produces a valid document even for an empty body", () => {
-    const doc = textToRichText("");
-    expect(doc.type).toBe("doc");
-    expect(doc.content).toHaveLength(1);
+  it("produces a valid block even for an empty body", () => {
+    const blocks = textToBlocks("", "k");
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0]).toMatchObject({ type: "paragraph", text: [] });
+  });
+
+  it("gives every block an id that survives a re-run", () => {
+    // A translation addresses a block by id. Random ids would mean every
+    // re-seed orphans every translation.
+    const once = textToBlocks("One.\n\nTwo.", "intro-s1");
+    const again = textToBlocks("One.\n\nTwo.", "intro-s1");
+    expect(once.map((b) => b.id)).toEqual(again.map((b) => b.id));
+    expect(new Set(once.map((b) => b.id)).size).toBe(2);
   });
 
   it("numbers sections from zero, in file order", () => {
-    const rows = toLessonSectionRows(introduction.sections);
+    const rows = toLessonSectionRows(
+      "introduction-basics",
+      introduction.sections,
+    );
     expect(rows.map((r) => r.position)).toEqual(
       introduction.sections.map((_, i) => i),
     );

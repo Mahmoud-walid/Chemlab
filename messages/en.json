@@ -147,7 +147,12 @@
     "filterLabel": "Filter",
     "lessonCount": "{count, plural, one {# lesson} other {# lessons}}",
     "lessonNumber": "Lesson {number}",
-    "studyGuide": "Study guide available"
+    "studyGuide": "Study guide available",
+    "readingProgress": "Reading progress",
+    "backToLessons": "Back to lessons",
+    "readingTime": "About {minutes} min read",
+    "bodyComingSoon": "This lesson's content is being written.",
+    "readNext": "Read next"
   },
   "element": {
     "atomicNumber": "Atomic number",

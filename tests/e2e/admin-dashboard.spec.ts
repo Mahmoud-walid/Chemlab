@@ -56,19 +56,21 @@ test.describe("the dashboard", () => {
     await expect(page.getByText(/invented denominator/i)).toBeVisible();
   });
 
-  test("marks a stage nothing emits as unrecorded, not as zero", async ({
+  test("reports the lesson stage as a number now that it is measured", async ({
     page,
   }) => {
-    // Nothing emits `lesson.viewed` yet — the lessons are static routes and
-    // the model that would carry view tracking is #20's. "0 people read a
-    // lesson" is a false claim, and the claim somebody quotes back later.
+    // Until #20 nothing emitted `lesson.viewed`, and the row said "not
+    // recorded yet" rather than 0 — "0 people read a lesson" is a false claim,
+    // and the claim somebody quotes back later. The lesson page's beacon
+    // records views now, so the row must carry a real count.
     await signInAs(page, db, "admin");
     await page.goto("/admin");
 
     const row = page
       .getByRole("listitem")
       .filter({ hasText: /read a lesson/i });
-    await expect(row).toContainText(/not recorded yet/i);
+    await expect(row).not.toContainText(/not recorded yet/i);
+    await expect(row).toContainText(/\d/);
   });
 
   test("puts every chart's numbers in text as well", async ({ page }) => {

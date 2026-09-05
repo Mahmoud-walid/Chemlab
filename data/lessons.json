@@ -11,6 +11,18 @@
     ]
   },
   {
+    "slug": "studying-chemistry",
+    "title": "Studying Chemistry",
+    "description": "Chemistry is the study of matter and the changes material substances undergo — perhaps the most extensively connected of all scientific disciplines.",
+    "difficulty": "easy",
+    "category": "Basics",
+    "references": [
+      "Chemistry: The Central Science by Brown et al.",
+      "LibreTexts: Chemistry — The Central Science (https://chem.libretexts.org/Bookshelves/General_Chemistry/Map%3A_Chemistry_-_The_Central_Science_(Brown_et_al.))",
+      "Khan Academy — Chemistry (https://www.khanacademy.org/science/chemistry)"
+    ]
+  },
+  {
     "slug": "atomic-structure",
     "title": "Atomic Structure",
     "description": "Atomic theory history, subatomic particles, atomic number, isotopes, electron configuration, quantum numbers, and periodic trends.",

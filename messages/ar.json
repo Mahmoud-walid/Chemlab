@@ -147,7 +147,12 @@
     "filterLabel": "تصفية",
     "lessonCount": "{count, plural, zero {لا توجد دروس} one {درس واحد} two {درسان} few {# دروس} many {# درسًا} other {# درس}}",
     "lessonNumber": "الدرس {number}",
-    "studyGuide": "دليل المذاكرة متاح"
+    "studyGuide": "دليل المذاكرة متاح",
+    "readingProgress": "تقدّم القراءة",
+    "backToLessons": "العودة إلى الدروس",
+    "readingTime": "قراءة في نحو {minutes} دقيقة",
+    "bodyComingSoon": "محتوى هذا الدرس قيد الكتابة.",
+    "readNext": "اقرأ بعد ذلك"
   },
   "element": {
     "atomicNumber": "العدد الذري",

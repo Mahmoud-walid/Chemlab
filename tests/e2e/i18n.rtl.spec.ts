@@ -61,6 +61,41 @@ test.describe("Arabic locale", () => {
    */
   const KNOWN_VIOLATIONS: string[] = [];
 
+  test("the reading-progress bar fills from the inline start", async ({
+    page,
+  }) => {
+    // `scaleX` with a left origin fills from the wrong side under RTL — a
+    // progress bar that empties as an Arabic reader advances. There is no
+    // logical keyword for `transform-origin`, so the side is a CSS variant
+    // and this is the assertion that it is wired the right way round.
+    await page.goto("/ar/lessons/introduction-basics");
+
+    const bar = page.getByRole("progressbar");
+    await expect(bar).toBeAttached();
+
+    const origin = await bar
+      .locator("div")
+      .first()
+      .evaluate((node) => getComputedStyle(node).transformOrigin);
+    // "<x> <y>" in pixels: an x at the element's own width is its right edge.
+    const [x] = origin.split(" ").map(Number.parseFloat);
+    const width = await bar
+      .locator("div")
+      .first()
+      .evaluate((node) => node.getBoundingClientRect().width);
+    expect(x).toBeGreaterThan(width / 2);
+  });
+
+  test("an Arabic reader gets the untranslated-body notice", async ({
+    page,
+  }) => {
+    // The lesson bodies are English chemistry source material. Serving them
+    // unannounced would let an Arabic reader take an unreviewed page for a
+    // translated one.
+    await page.goto("/ar/lessons/introduction-basics");
+    await expect(page.getByRole("note").first()).toBeVisible();
+  });
+
   test("the Arabic home page has no violations beyond the tracked ones", async ({
     page,
   }) => {

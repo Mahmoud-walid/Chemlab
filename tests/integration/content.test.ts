@@ -179,8 +179,9 @@ describe("lessons", () => {
     expect(sections.length).toBeGreaterThan(0);
     sections.forEach((section, index) => {
       expect(section.position).toBe(index);
-      expect(section.body.type).toBe("doc");
-      expect(section.body.content.length).toBeGreaterThan(0);
+      expect(Array.isArray(section.body)).toBe(true);
+      expect(section.body.length).toBeGreaterThan(0);
+      expect(section.body[0]!.type).toBe("paragraph");
     });
   });
 
@@ -202,7 +203,7 @@ describe("lessons", () => {
       lessonId: lesson!.id,
       position: 0,
       heading: "Probe",
-      body: { type: "doc", content: [] },
+      body: [],
     });
 
     await db.delete(schema.lessons).where(eq(schema.lessons.id, lesson!.id));

@@ -5,7 +5,7 @@
  * errors actually live — is unit-testable without Postgres. The seed script
  * does the I/O; this file decides what the rows should be.
  */
-import type { RichTextDoc } from "@/db/schema/content";
+import { blocksSchema, type LessonBlock } from "@/lib/lessons/blocks";
 
 export type Difficulty = "easy" | "medium" | "hard";
 
@@ -112,48 +112,86 @@ export function toLessonRow(json: LessonJson) {
 }
 
 /**
- * Wraps a plain-text body in a minimal ProseMirror document.
+ * Turns a plain-text body into blocks.
  *
  * One-way and lossless: blank lines separate paragraphs, and the text survives
- * verbatim inside them. Existing lesson prose renders identically, while the
- * column is already the right shape for the rich editor that arrives later.
+ * verbatim inside them. The seed's prose has no emphasis, images or links, so
+ * every block it produces is a paragraph — but the column is already the shape
+ * the editor writes, so a lesson edited in the admin panel and a lesson from
+ * the seed are the same kind of document.
+ *
+ * Block ids are derived from the section key and the paragraph's position
+ * rather than generated randomly, because **re-running the seed must not
+ * change them**. A translation addresses a block by id; random ids would mean
+ * every re-seed orphans every translation.
  */
-export function textToRichText(body: string): RichTextDoc {
+export function textToBlocks(body: string, keyPrefix: string): LessonBlock[] {
   const paragraphs = body
     .split(/\n{2,}/)
     .map((part) => part.trim())
     .filter(Boolean);
 
-  return {
-    type: "doc",
-    content: (paragraphs.length > 0 ? paragraphs : [""]).map((text) => ({
-      type: "paragraph",
-      content: text ? [{ type: "text", text }] : [],
-    })),
-  };
+  return (paragraphs.length > 0 ? paragraphs : [""]).map((text, index) => ({
+    id: `${keyPrefix}-p${index + 1}`,
+    type: "paragraph" as const,
+    text: text ? [{ text }] : [],
+  }));
 }
 
-/** Recovers the plain text from a document produced by `textToRichText`. */
-export function richTextToText(doc: RichTextDoc): string {
-  return (doc.content ?? [])
-    .map((node) => {
-      const content = (node as { content?: { text?: string }[] }).content ?? [];
-      return content.map((child) => child.text ?? "").join("");
-    })
+/** Recovers the plain text from blocks produced by `textToBlocks`. */
+export function blocksToPlainText(blocks: LessonBlock[]): string {
+  return blocks
+    .map((block) =>
+      block.type === "paragraph"
+        ? block.text.map((run) => run.text).join("")
+        : "",
+    )
     .join("\n\n");
 }
 
 export interface LessonSectionJson {
   heading: string;
-  body: string;
+  /** Prose, blank lines between paragraphs. Absent when `blocks` is used. */
+  body?: string;
+  /** Authored blocks, validated here rather than trusted. */
+  blocks?: unknown[];
 }
 
-export function toLessonSectionRows(sections: LessonSectionJson[]) {
-  return sections.map((section, index) => ({
-    position: index,
-    heading: section.heading,
-    body: textToRichText(section.body),
-  }));
+/**
+ * `slug` is part of the block-id prefix so ids are unique across lessons and
+ * stable across re-seeds — see `textToBlocks`.
+ */
+export function toLessonSectionRows(
+  slug: string,
+  sections: LessonSectionJson[],
+) {
+  return sections.map((section, index) => {
+    const prefix = `${slug}-s${index + 1}`;
+
+    // Authored blocks go through the same schema an editor's write does. The
+    // seed is content somebody typed into a file, not privileged input, and a
+    // malformed block that reaches the column renders as a gap on the page
+    // with nothing saying why.
+    const blocks = section.blocks
+      ? blocksSchema.parse(withIds(section.blocks, prefix))
+      : textToBlocks(section.body ?? "", prefix);
+
+    return { position: index, heading: section.heading, body: blocks };
+  });
+}
+
+/**
+ * Fills in a block id where the author left one out.
+ *
+ * Derived from position, like `textToBlocks`, so re-seeding is stable —
+ * an author who does supply an id keeps it, which is what makes a block's
+ * translation survive being moved.
+ */
+function withIds(blocks: unknown[], prefix: string): unknown[] {
+  return blocks.map((block, index) => {
+    const record = block as Record<string, unknown>;
+    return record.id ? record : { ...record, id: `${prefix}-b${index + 1}` };
+  });
 }
 
 // ── Quizzes ─────────────────────────────────────────────────────────────────

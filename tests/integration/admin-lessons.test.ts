@@ -109,7 +109,7 @@ describe("publishing", () => {
       lessonId: OWNED.id,
       position: 0,
       heading: "A section",
-      body: { type: "doc", content: [] },
+      body: [],
     });
 
     try {

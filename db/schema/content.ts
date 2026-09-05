@@ -13,6 +13,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { id, timestamps } from "./_shared";
+import type { LessonBlock } from "@/lib/lessons/blocks";
 
 /** Shared by lessons and quizzes; matches `types/quiz.ts`. */
 export const difficulty = pgEnum("difficulty", ["easy", "medium", "hard"]);
@@ -33,16 +34,21 @@ export const contentStatus = pgEnum("content_status", [
 ]);
 
 /**
- * A rich-text document, stored as ProseMirror/TipTap JSON rather than an HTML
- * string. Lessons become Medium-style posts with images, video and callouts:
- * a structured document round-trips losslessly through the editor and renders
- * by a pure function, where HTML would need sanitising on every read and
- * re-parsing on every edit.
+ * A section body: an ordered array of typed blocks, defined and validated in
+ * `lib/lessons/blocks.ts`.
+ *
+ * Blocks rather than the ProseMirror document this column used to hold, and
+ * rather than an HTML string. The reasons are argued where the schema lives;
+ * the one that decides it here is translation. `lesson_section_translations`
+ * carries a per-locale body, and a block array lets a translation address a
+ * block by its stable id — so images, video and layout stay shared, and a
+ * structural edit to the English copy is detectable rather than a silent
+ * desynchronisation of the Arabic.
+ *
+ * The editor still speaks ProseMirror; the bridge between the two is #20's
+ * `toBlocks`/`fromBlocks` pair, not this column.
  */
-export type RichTextDoc = {
-  type: "doc";
-  content: Array<Record<string, unknown>>;
-};
+export type LessonBody = LessonBlock[];
 
 // ── Elements ────────────────────────────────────────────────────────────────
 
@@ -126,6 +132,20 @@ export const lessons = pgTable(
     coverImageUrl: text("cover_image_url"),
     status: contentStatus("status").notNull().default("draft"),
     /**
+     * Computed from the blocks when the lesson is saved — never per request,
+     * and never in the browser. It is the same number for every reader, so
+     * recomputing it on each render is work paid for by the reader, and two
+     * clients computing it separately would disagree.
+     */
+    readingTimeSeconds: integer("reading_time_seconds").notNull().default(0),
+    /**
+     * Bumped whenever the body changes. Translation staleness is the point:
+     * a translation row records the revision it was made from, so an Arabic
+     * copy of a lesson whose English body has since moved on can be shown as
+     * out of date rather than silently served as current.
+     */
+    revision: integer("revision").notNull().default(1),
+    /**
      * Curriculum order. Lessons build on each other, so the catalogue is a
      * sequence, not an alphabet — ordering by slug put "acids-bases" before
      * "atomic-structure", which reads as a syllabus nobody wrote.
@@ -152,7 +172,7 @@ export const lessonSections = pgTable(
       .references(() => lessons.id, { onDelete: "cascade" }),
     position: integer("position").notNull(),
     heading: text("heading").notNull(),
-    body: jsonb("body").$type<RichTextDoc>().notNull(),
+    body: jsonb("body").$type<LessonBody>().notNull(),
     ...timestamps,
   },
   (t) => [uniqueIndex("lesson_sections_order_idx").on(t.lessonId, t.position)],
@@ -390,7 +410,7 @@ export const lessonSectionTranslations = pgTable(
       .references(() => lessonSections.id, { onDelete: "cascade" }),
     locale: text("locale").notNull(),
     heading: text("heading").notNull(),
-    body: jsonb("body").$type<RichTextDoc>().notNull(),
+    body: jsonb("body").$type<LessonBody>().notNull(),
     ...timestamps,
   },
   (t) => [
