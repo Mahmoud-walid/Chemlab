@@ -71,6 +71,13 @@
       "when": 1788585163536,
       "tag": "0009_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1788589596568,
+      "tag": "0010_exam_attempts",
+      "breakpoints": true
     }
   ]
 }

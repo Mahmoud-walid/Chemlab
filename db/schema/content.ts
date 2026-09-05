@@ -160,6 +160,37 @@ export const lessonSections = pgTable(
 
 // ── Quizzes ─────────────────────────────────────────────────────────────────
 
+/**
+ * Which sitting counts, when a quiz allows several. Declared here rather than
+ * beside the attempts table because it is a property of the QUIZ — the rule an
+ * author sets, not a state a sitting is in.
+ */
+export const attemptPolicy = pgEnum("attempt_policy", [
+  "best",
+  "latest",
+  "average",
+]);
+
+/** When the candidate may see the answers. Also the author's decision. */
+export const reviewPolicy = pgEnum("review_policy", [
+  "immediate",
+  "after_attempts_exhausted",
+  "never",
+]);
+
+/**
+ * How a question is answered.
+ *
+ * `true_false` is not a type: it is `single_choice` with two options, and
+ * modelling it separately would mean two code paths that must agree forever.
+ * `numeric` is deliberately absent — it needs tolerance-based grading, which
+ * #26 puts out of scope.
+ */
+export const questionType = pgEnum("question_type", [
+  "single_choice",
+  "multiple_choice",
+]);
+
 export const quizzes = pgTable(
   "quizzes",
   {
@@ -180,8 +211,20 @@ export const quizzes = pgTable(
      * kind of value a forgotten default quietly writes.
      */
     timeLimitSeconds: integer("time_limit_seconds"),
+    /**
+     * Latency and clock-skew allowance on every deadline check.
+     *
+     * An honest answer sent at T-1s must not be lost to a 400ms round trip.
+     * A fixed server-side value per quiz, never something the client sends —
+     * a client-supplied grace period is not a grace period.
+     */
+    graceSeconds: integer("grace_seconds").notNull().default(10),
     passMarkPercent: integer("pass_mark_percent").notNull().default(60),
     maxAttempts: integer("max_attempts"),
+    /** Enforced wait between sittings. 0 means straight back in. */
+    cooldownMinutes: integer("cooldown_minutes").notNull().default(0),
+    attemptPolicy: attemptPolicy("attempt_policy").notNull().default("best"),
+    reviewPolicy: reviewPolicy("review_policy").notNull().default("immediate"),
     shuffleQuestions: boolean("shuffle_questions").notNull().default(false),
     shuffleOptions: boolean("shuffle_options").notNull().default(false),
 
@@ -217,9 +260,26 @@ export const quizQuestions = pgTable(
       .notNull()
       .references(() => quizzes.id, { onDelete: "cascade" }),
     position: integer("position").notNull(),
+    type: questionType("type").notNull().default("single_choice"),
     prompt: text("prompt").notNull(),
+    /**
+     * Never sent to a browser before the attempt is submitted. The in-progress
+     * query names its columns explicitly so this one cannot be included by
+     * forgetting to exclude it.
+     */
     explanation: text("explanation").notNull(),
+    /**
+     * The single-choice answer. Kept as the FK it always should have been.
+     *
+     * Multiple choice cannot express its answer here, so it uses
+     * `quiz_options.is_correct` instead; a check constraint keeps the two from
+     * disagreeing. Single-choice rows are mirrored into `is_correct` by the
+     * migration and by the admin action, so scoring reads one column for both
+     * types rather than branching on the question's type to find its answer.
+     */
     correctOptionId: uuid("correct_option_id"),
+    /** Multiple choice only: whether a partly-right answer earns part marks. */
+    partialCredit: boolean("partial_credit").notNull().default(false),
     /**
      * What this question is worth. Defaults to 1, so a scoring pass that
      * ignores it still counts questions — which is what the quiz page does
@@ -244,6 +304,14 @@ export const quizOptions = pgTable(
       .references(() => quizQuestions.id, { onDelete: "cascade" }),
     position: integer("position").notNull(),
     label: text("label").notNull(),
+    /**
+     * The answer, for both question types.
+     *
+     * NEVER selected by the in-progress query — that query lists its columns
+     * explicitly, so shipping the answer key requires adding this column by
+     * name rather than merely forgetting to remove it.
+     */
+    isCorrect: boolean("is_correct").notNull().default(false),
     ...timestamps,
   },
   (t) => [uniqueIndex("quiz_options_order_idx").on(t.questionId, t.position)],
