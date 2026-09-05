@@ -16,29 +16,34 @@ import {
 
 describe("round trip", () => {
   it("survives encoding for both orderings", () => {
-    const time = {
-      kind: "time" as const,
-      createdAt: "2026-03-10T09:00:00.000Z",
-      id: "abc",
-    };
+    const byId = { kind: "id" as const, id: "abc" };
     const score = { kind: "score" as const, score: -3, id: "def" };
 
-    expect(decodeCursor(encodeCursor(time))).toEqual(time);
+    expect(decodeCursor(encodeCursor(byId))).toEqual(byId);
     expect(decodeCursor(encodeCursor(score))).toEqual(score);
   });
 
-  it("is opaque, so no client can come to depend on its fields", () => {
-    const encoded = encodeCursor({
-      kind: "time",
-      createdAt: "2026-03-10T09:00:00.000Z",
+  it("carries no timestamp, which is what made a page come back empty", () => {
+    // `Date.toISOString()` is millisecond precision; Postgres `timestamptz` is
+    // microsecond. A cursor carrying the truncated value matched no row on the
+    // equality half of the keyset predicate and excluded the whole millisecond
+    // on the other — so the page after a burst of comments was EMPTY. UUID v7
+    // ids order by time, are unique, and round-trip exactly.
+    const encoded = encodeCursor({ kind: "id", id: "abc" });
+    expect(JSON.parse(Buffer.from(encoded, "base64url").toString())).toEqual({
+      kind: "id",
       id: "abc",
     });
+  });
+
+  it("is opaque, so no client can come to depend on its fields", () => {
+    const encoded = encodeCursor({ kind: "id", id: "abc" });
     // base64url: no padding, no characters that need escaping in a query
     // string.
     expect(encoded).not.toContain("=");
     expect(encoded).not.toContain("+");
     expect(encoded).not.toContain("/");
-    expect(encoded).not.toContain("createdAt");
+    expect(encoded).not.toContain('id":');
   });
 });
 
@@ -62,9 +67,8 @@ describe("a cursor we did not issue", () => {
   it("is rejected when a field has the wrong type", () => {
     // The types are checked because these values reach a comparison in SQL.
     const bad = [
-      { kind: "time", createdAt: 12345, id: "a" },
-      { kind: "time", createdAt: "2026-03-10T09:00:00.000Z", id: 7 },
-      { kind: "time", createdAt: "not a date", id: "a" },
+      { kind: "id", id: 7 },
+      { kind: "id" },
       { kind: "score", score: "9", id: "a" },
       { kind: "score", score: Number.POSITIVE_INFINITY, id: "a" },
     ];
