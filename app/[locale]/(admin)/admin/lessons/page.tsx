@@ -18,10 +18,27 @@ import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { LessonsTable } from "./features/lessons-table";
 import { StatusFilter } from "@/components/admin/status-filter";
+import { translationTargetLocale } from "@/lib/translations/target-locale";
+import {
+  TRANSLATION_STATES,
+  isTranslationState,
+  type TranslationState,
+} from "@/lib/translations/state";
 
 export const dynamic = "force-dynamic";
 
 const STATUSES = ["draft", "published", "archived"] as const;
+
+/** The `?translation=` value, or undefined for "all". */
+function translationFilter(
+  raw: string | string[] | undefined,
+): TranslationState | undefined {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  // Validated against the ladder rather than passed through: an unrecognised
+  // value must widen to "all", not reach the query as a rank of NaN and
+  // return an empty list that looks like "nothing is missing".
+  return isTranslationState(value) ? value : undefined;
+}
 
 /** The `?status=` value, or undefined for "all". Anything unknown is "all". */
 function statusFilter(raw: string | string[] | undefined) {
@@ -50,7 +67,17 @@ export default async function AdminLessonsPage({
   const raw = await searchParams;
   const list = parseListParams<LessonSort>(raw, LESSON_LIST_SPEC);
   const status = statusFilter(raw.status);
-  const { rows, total, pages } = await listLessonsForAdmin(list, status);
+
+  // The one non-default locale. Undefined only if the site is ever configured
+  // with a single language, in which case there is nothing to ask about.
+  const translationLocale = translationTargetLocale();
+  const translationState = translationFilter(raw.translation);
+
+  const { rows, total, pages } = await listLessonsForAdmin(list, {
+    status,
+    translationLocale,
+    translationState,
+  });
 
   const t = await getTranslations("admin.lessons");
   const tTable = await getTranslations("admin.table");
@@ -61,6 +88,11 @@ export default async function AdminLessonsPage({
     published: t("status.published"),
     archived: t("status.archived"),
   } as const;
+
+  const tXlate = await getTranslations("admin.translations");
+  const translationNames = Object.fromEntries(
+    TRANSLATION_STATES.map((state) => [state, tXlate(state)]),
+  ) as Record<TranslationState, string>;
 
   const difficultyNames = {
     easy: t("difficulty.easy"),
@@ -93,6 +125,30 @@ export default async function AdminLessonsPage({
         ]}
       />
 
+      {/* Its own row, captioned. Two unlabelled rows of filter links side by
+          side are two rows of words an editor has to guess between — and
+          "Draft" would mean the lesson in one and its translation in the
+          other. */}
+      {translationLocale && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            {tXlate("rowLabel")}
+          </span>
+          <StatusFilter
+            param="translation"
+            label={tXlate("filter")}
+            current={translationState ?? "all"}
+            options={[
+              { value: "all", label: tXlate("all") },
+              ...TRANSLATION_STATES.map((value) => ({
+                value,
+                label: translationNames[value],
+              })),
+            ]}
+          />
+        </div>
+      )}
+
       <LessonsTable
         rows={rows.map((row) => ({
           ...row,
@@ -118,6 +174,8 @@ export default async function AdminLessonsPage({
           content: t("columns.content"),
           updated: t("columns.updated"),
           statusNames,
+          translation: translationLocale ? tXlate("label") : undefined,
+          translationNames: translationLocale ? translationNames : undefined,
           table: {
             search: tTable("search"),
             searchPlaceholder: t("searchPlaceholder"),

@@ -13,10 +13,23 @@ import {
   type SQL,
 } from "drizzle-orm";
 
+import type { PgSelectQueryBuilder } from "drizzle-orm/pg-core";
+
 import { getDb } from "@/db/client";
-import { lessonSections, lessons } from "@/db/schema/content";
+import {
+  lessonSectionTranslations,
+  lessonSections,
+  lessonTranslations,
+  lessons,
+} from "@/db/schema/content";
 import type { ContentStatus } from "@/db/schema/content";
 import { offsetFor, pageCount, type ListParams } from "./list-params";
+import { childRankExpression, rowRank, worstRank } from "./translation-rank";
+import {
+  TRANSLATION_RANK,
+  stateFromRank,
+  type TranslationState,
+} from "@/lib/translations/state";
 
 /**
  * Lessons for the admin list and editor.
@@ -53,6 +66,12 @@ export interface LessonRow {
   position: number;
   /** Zero means there is nothing to read yet — and nothing to publish. */
   sectionCount: number;
+  /**
+   * How translated this lesson is into the target locale, counting its
+   * sections — worst part wins. Absent when the target locale IS the default
+   * one, where the question does not arise.
+   */
+  translation?: TranslationState;
   updatedAt: Date;
 }
 
@@ -121,21 +140,115 @@ function sectionCounts(db: ReturnType<typeof getDb>) {
     .as("section_counts");
 }
 
+/**
+ * The worst translation rank across a lesson's sections, per lesson.
+ *
+ * A derived table rather than a correlated subquery, for the same reason
+ * `sectionCounts` is one: inside a correlated subquery drizzle renders
+ * columns unqualified, and `"id"` binds to the inner table. A lesson with no
+ * sections gets no row here at all, and the caller's `coalesce(..., 0)` reads
+ * that as "nothing outstanding" — which is right: a summary-only lesson has
+ * nothing left to translate.
+ */
+function sectionTranslationRanks(db: ReturnType<typeof getDb>, locale: string) {
+  return db
+    .select({
+      lessonId: lessonSections.lessonId,
+      rank: childRankExpression(lessonSectionTranslations, lessonSections).as(
+        "rank",
+      ),
+    })
+    .from(lessonSections)
+    .leftJoin(
+      lessonSectionTranslations,
+      and(
+        eq(lessonSectionTranslations.sectionId, lessonSections.id),
+        eq(lessonSectionTranslations.locale, locale),
+      ),
+    )
+    .groupBy(lessonSections.lessonId)
+    .as("section_translation_ranks");
+}
+
+export interface AdminLessonListOptions {
+  status?: ContentStatus;
+  /**
+   * Which locale the translation column is about. Omit — or pass the default
+   * locale — and the column is not computed at all: the joins cost nothing
+   * to skip, and "how translated is English into English" is not a question.
+   */
+  translationLocale?: string;
+  /** Narrow to lessons in one translation state, e.g. `missing` or `stale`. */
+  translationState?: TranslationState;
+}
+
 export async function listLessonsForAdmin(
   params: ListParams<LessonSort>,
-  status?: ContentStatus,
+  options: ContentStatus | AdminLessonListOptions = {},
 ): Promise<LessonPage> {
+  // The second argument used to be the status alone. Both shapes are accepted
+  // rather than updating every call site to pass an object for one field.
+  const { status, translationLocale, translationState } =
+    typeof options === "string" ? { status: options } : options;
+
   const db = getDb();
-  const where = filters(params, status);
   const order = params.direction === "desc" ? desc : asc;
   const counts = sectionCounts(db);
 
-  const [{ total }] = await db
-    .select({ total: count() })
-    .from(lessons)
-    .where(where);
+  const wantsTranslation = Boolean(translationLocale);
+  const sectionRanks = translationLocale
+    ? sectionTranslationRanks(db, translationLocale)
+    : undefined;
 
-  const rows = await db
+  // The rank, once: selected AND filtered on, so the column an editor reads
+  // and the filter that narrowed to it are the same expression by
+  // construction rather than by two definitions agreeing.
+  const rank =
+    sectionRanks && translationLocale
+      ? worstRank(
+          rowRank(lessonTranslations, lessons),
+          sql<number>`${sectionRanks.rank}`,
+        )
+      : undefined;
+
+  function joinTranslations<T extends PgSelectQueryBuilder>(query: T): T {
+    if (!translationLocale || !sectionRanks) return query;
+    return (
+      query
+        .leftJoin(
+          lessonTranslations,
+          and(
+            eq(lessonTranslations.lessonId, lessons.id),
+            eq(lessonTranslations.locale, translationLocale),
+          ),
+        )
+        // The cast: adding a left join widens the builder's type, but nothing
+        // downstream selects from the joined tables — the rank expression
+        // already carries their columns — so the narrower type is the accurate
+        // one for the caller.
+        .leftJoin(
+          sectionRanks,
+          eq(sectionRanks.lessonId, lessons.id),
+        ) as unknown as T
+    );
+  }
+
+  const where =
+    rank && translationState !== undefined
+      ? and(
+          filters(params, status),
+          sql`${rank} = ${TRANSLATION_RANK[translationState]}`,
+        )
+      : filters(params, status);
+
+  // `$dynamic()` so the two translation joins can be added conditionally.
+  // Without it the builder's type is fixed at construction and the branch has
+  // to be written as two whole copies of the query — which is how one copy
+  // gains a filter the other does not, and the count stops matching the rows.
+  const totalQuery = db.select({ total: count() }).from(lessons).$dynamic();
+  const [{ total }] = await joinTranslations(totalQuery).where(where);
+
+  const rowsQuery = db
     .select({
       id: lessons.id,
       slug: lessons.slug,
@@ -147,10 +260,14 @@ export async function listLessonsForAdmin(
       // A lesson with no sections has no row in the derived table at all, so
       // the join yields null — which is zero, not "unknown".
       sectionCount: sql<number>`coalesce(${counts.total}, 0)::int`,
+      translationRank: rank ?? sql<number | null>`null::int`,
       updatedAt: lessons.updatedAt,
     })
     .from(lessons)
     .leftJoin(counts, eq(counts.lessonId, lessons.id))
+    .$dynamic();
+
+  const rows = await joinTranslations(rowsQuery)
     .where(where)
     .orderBy(
       order(orderColumn(params.sort)),
@@ -162,7 +279,12 @@ export async function listLessonsForAdmin(
     .offset(offsetFor(params.page, params.pageSize, total ?? 0));
 
   return {
-    rows,
+    rows: rows.map(({ translationRank, ...row }) => ({
+      ...row,
+      translation: wantsTranslation
+        ? stateFromRank(Number(translationRank ?? 0))
+        : undefined,
+    })),
     total: total ?? 0,
     pages: pageCount(total ?? 0, params.pageSize),
   };

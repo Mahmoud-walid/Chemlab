@@ -1086,6 +1086,17 @@
       "done": "Done.",
       "failed": "That did not go through. Nothing was changed.",
       "deletedBody": "This comment was already deleted. Its body is gone; the report is not."
+    },
+    "translations": {
+      "label": "Arabic",
+      "filter": "Filter by translation",
+      "rowLabel": "Arabic:",
+      "all": "Any",
+      "missing": "Not translated",
+      "draft": "Draft translation",
+      "in_review": "Awaiting review",
+      "stale": "Out of date",
+      "published": "Translated"
     }
   },
   "pages": {

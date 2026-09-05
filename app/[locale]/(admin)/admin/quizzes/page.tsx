@@ -14,6 +14,12 @@ import type { ContentStatus } from "@/db/schema/content";
 import { requireAdminPermission } from "@/lib/admin/guard";
 import { hasPermission } from "@/lib/authz";
 import { StatusFilter } from "@/components/admin/status-filter";
+import { translationTargetLocale } from "@/lib/translations/target-locale";
+import {
+  TRANSLATION_STATES,
+  isTranslationState,
+  type TranslationState,
+} from "@/lib/translations/state";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
@@ -24,6 +30,17 @@ export const dynamic = "force-dynamic";
 const STATUSES = ["draft", "published", "archived"] as const;
 
 /** The `?status=` value, or undefined for "all". Anything unknown is "all". */
+/** The `?translation=` value, or undefined for "all". */
+function translationFilter(
+  raw: string | string[] | undefined,
+): TranslationState | undefined {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  // Validated rather than passed through: an unrecognised value must widen to
+  // "all", not reach the query as a rank of NaN and return an empty list that
+  // reads as "nothing is missing".
+  return isTranslationState(value) ? value : undefined;
+}
+
 function statusFilter(raw: string | string[] | undefined) {
   const value = Array.isArray(raw) ? raw[0] : raw;
   return STATUSES.includes(value as ContentStatus)
@@ -50,7 +67,15 @@ export default async function AdminQuizzesPage({
   const raw = await searchParams;
   const list = parseListParams<QuizSort>(raw, QUIZ_LIST_SPEC);
   const status = statusFilter(raw.status);
-  const { rows, total, pages } = await listQuizzesForAdmin(list, status);
+
+  const translationLocale = translationTargetLocale();
+  const translationState = translationFilter(raw.translation);
+
+  const { rows, total, pages } = await listQuizzesForAdmin(list, {
+    status,
+    translationLocale,
+    translationState,
+  });
 
   const t = await getTranslations("admin.quizzes");
   const tTable = await getTranslations("admin.table");
@@ -61,6 +86,11 @@ export default async function AdminQuizzesPage({
     published: t("status.published"),
     archived: t("status.archived"),
   } as const;
+
+  const tXlate = await getTranslations("admin.translations");
+  const translationNames = Object.fromEntries(
+    TRANSLATION_STATES.map((state) => [state, tXlate(state)]),
+  ) as Record<TranslationState, string>;
 
   const difficultyNames = {
     easy: t("difficulty.easy"),
@@ -93,6 +123,30 @@ export default async function AdminQuizzesPage({
         ]}
       />
 
+      {/* Its own row, captioned. Two unlabelled rows of filter links side by
+          side are two rows of words an editor has to guess between — and
+          "Draft" would mean the lesson in one and its translation in the
+          other. */}
+      {translationLocale && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            {tXlate("rowLabel")}
+          </span>
+          <StatusFilter
+            param="translation"
+            label={tXlate("filter")}
+            current={translationState ?? "all"}
+            options={[
+              { value: "all", label: tXlate("all") },
+              ...TRANSLATION_STATES.map((value) => ({
+                value,
+                label: translationNames[value],
+              })),
+            ]}
+          />
+        </div>
+      )}
+
       <QuizzesTable
         rows={rows.map((row) => ({
           ...row,
@@ -117,6 +171,8 @@ export default async function AdminQuizzesPage({
           questions: t("columns.questions"),
           updated: t("columns.updated"),
           statusNames,
+          translation: translationLocale ? tXlate("label") : undefined,
+          translationNames: translationLocale ? translationNames : undefined,
           table: {
             search: tTable("search"),
             searchPlaceholder: t("searchPlaceholder"),
