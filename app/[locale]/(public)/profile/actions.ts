@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
-import { profiles } from "@/db/schema/auth";
+import { profiles, users } from "@/db/schema/auth";
 import { profileSchema } from "@/lib/auth-schemas";
 import { requireUser } from "@/lib/session";
 
@@ -48,14 +48,25 @@ export async function updateProfile(
     return { ok: false, errors };
   }
 
-  await getDb()
-    .update(profiles)
-    .set({
-      displayName: parsed.data.displayName,
-      bio: parsed.data.bio || null,
-      locale: parsed.data.locale,
-    })
-    .where(eq(profiles.userId, user.id));
+  const db = getDb();
+  await db.transaction(async (tx) => {
+    await tx
+      .update(profiles)
+      .set({
+        displayName: parsed.data.displayName,
+        bio: parsed.data.bio || null,
+        locale: parsed.data.locale,
+      })
+      .where(eq(profiles.userId, user.id));
+
+    // The header reads `users.name` (it resolves the session in the browser),
+    // so leaving this behind would show the old name everywhere except this
+    // page. One transaction, so they cannot diverge.
+    await tx
+      .update(users)
+      .set({ name: parsed.data.displayName })
+      .where(eq(users.id, user.id));
+  });
 
   revalidatePath("/profile");
   return { ok: true };
