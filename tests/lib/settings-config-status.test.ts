@@ -1,0 +1,77 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  CONFIG_TARGETS,
+  configStatusFrom,
+  configuredOAuthProviders,
+} from "@/lib/settings/config-status-core";
+
+const full = {
+  GOOGLE_CLIENT_ID: "id",
+  GOOGLE_CLIENT_SECRET: "secret",
+  VAPID_PUBLIC_KEY: "pub",
+  VAPID_PRIVATE_KEY: "priv",
+  SLACK_WEBHOOK_URL: "https://hooks.example/x",
+  CLOUDINARY_CLOUD_NAME: "cloud",
+  CLOUDINARY_API_KEY: "key",
+  CLOUDINARY_API_SECRET: "secret",
+  RESEND_API_KEY: "re_x",
+};
+
+describe("configuration status", () => {
+  it("reports nothing configured for an empty environment", () => {
+    const status = configStatusFrom({});
+    for (const target of CONFIG_TARGETS) {
+      expect(status[target], target).toBe(false);
+    }
+  });
+
+  it("reports everything configured when every variable is set", () => {
+    const status = configStatusFrom(full);
+    for (const target of CONFIG_TARGETS) {
+      expect(status[target], target).toBe(true);
+    }
+  });
+
+  it("treats half a credential as not configured", () => {
+    // A client id without its secret fails at the callback with an error that
+    // reads like a bug in the app. Calling that "configured" sends whoever is
+    // debugging it to entirely the wrong place.
+    expect(configStatusFrom({ GOOGLE_CLIENT_ID: "id" }).googleOAuth).toBe(
+      false,
+    );
+    expect(configStatusFrom({ VAPID_PUBLIC_KEY: "pub" }).webPush).toBe(false);
+    expect(
+      configStatusFrom({
+        CLOUDINARY_CLOUD_NAME: "cloud",
+        CLOUDINARY_API_KEY: "key",
+      }).cloudinary,
+    ).toBe(false);
+  });
+
+  it("treats an empty or whitespace value as unset", () => {
+    // A `.env` line left as `GOOGLE_CLIENT_ID=` is not a configuration.
+    expect(
+      configStatusFrom({ ...full, GOOGLE_CLIENT_ID: "" }).googleOAuth,
+    ).toBe(false);
+    expect(configStatusFrom({ ...full, SLACK_WEBHOOK_URL: "   " }).slack).toBe(
+      false,
+    );
+  });
+
+  it("returns only booleans, never anything derived from a value", () => {
+    // The assertion behind the whole module: no value, no prefix, no length
+    // can be read back out of what this returns.
+    const status = configStatusFrom(full);
+    for (const value of Object.values(status)) {
+      expect(typeof value).toBe("boolean");
+    }
+    expect(JSON.stringify(status)).not.toContain("secret");
+  });
+
+  it("lists a provider as available only when its credentials are complete", () => {
+    expect(configuredOAuthProviders(full)).toEqual(["google"]);
+    expect(configuredOAuthProviders({ GOOGLE_CLIENT_ID: "id" })).toEqual([]);
+    expect(configuredOAuthProviders({})).toEqual([]);
+  });
+});

@@ -719,7 +719,11 @@
       "pagesLink": "إدارة الصفحات",
       "sections": {
         "general": "عام",
-        "features": "الميزات"
+        "features": "الميزات",
+        "content": "المحتوى",
+        "notifications": "الإشعارات",
+        "security": "الأمان",
+        "localization": "اللغات"
       },
       "fields": {
         "general": {
@@ -735,6 +739,35 @@
           "likesEnabled": "الإعجابات",
           "savesEnabled": "الدروس المحفوظة",
           "examsEnabled": "الاختبارات"
+        },
+        "content": {
+          "lessonsPerPage": "عدد الدروس في الصفحة",
+          "commentsPerPage": "عدد التعليقات في الصفحة",
+          "defaultDifficulty": "مستوى الصعوبة الافتراضي",
+          "defaultExamTimeLimitSeconds": "المهلة الافتراضية للاختبار (ثوانٍ)",
+          "defaultPassMarkPercent": "درجة النجاح الافتراضية (%)",
+          "defaultMaxAttempts": "عدد المحاولات المسموح بها افتراضيًا"
+        },
+        "notifications": {
+          "commentReply": "الردود على التعليقات",
+          "examResult": "نتائج الاختبارات",
+          "newLesson": "الدروس الجديدة",
+          "weeklyDigest": "الملخّص الأسبوعي",
+          "fromAddress": "عنوان المُرسِل"
+        },
+        "security": {
+          "sessionLifetimeDays": "مدة الجلسة (أيام)",
+          "idleTimeoutMinutes": "مهلة الخمول (دقائق)",
+          "rateLimitWindowMinutes": "نافذة تحديد المعدل (دقائق)",
+          "authAttemptsPerWindow": "محاولات تسجيل الدخول لكل نافذة",
+          "commentPostsPerWindow": "التعليقات لكل نافذة",
+          "examSubmissionsPerWindow": "محاولات إرسال الاختبار لكل نافذة",
+          "requireEmailVerification": "اشتراط بريد مُفعَّل",
+          "allowedOAuthProviders": "مزوّدو تسجيل الدخول"
+        },
+        "localization": {
+          "offeredLocales": "اللغات المعروضة",
+          "fallbackLocale": "لغة الاحتياط"
         }
       },
       "help": {
@@ -748,6 +781,29 @@
         "features": {
           "registrationOpen": "عند الإيقاف يُغلق نموذج التسجيل. تظل الحسابات القائمة قادرة على الدخول.",
           "examsEnabled": "عند الإيقاف تُخفى الاختبارات من الموقع. تُحفظ النتائج المسجَّلة مسبقًا."
+        },
+        "content": {
+          "lessonsPerPage": "يُطبَّق على التحميلات الجديدة للصفحات. الروابط الحالية تظل تعمل.",
+          "defaultDifficulty": "يُطبَّق على الدرس أو الاختبار الجديد عند إنشائه. السجلات المحفوظة تحتفظ بمستواها.",
+          "defaultExamTimeLimitSeconds": "القيمة 0 تعني بلا مهلة. يُطبَّق على الاختبارات الجديدة فقط؛ الاختبارات القائمة تحتفظ بمهلتها.",
+          "defaultPassMarkPercent": "يُطبَّق على الاختبارات الجديدة فقط. المحاولات المصحَّحة لا يُعاد تصحيحها.",
+          "defaultMaxAttempts": "القيمة 0 تعني بلا حد. يُطبَّق على الاختبارات الجديدة فقط."
+        },
+        "notifications": {
+          "commentReply": "الإعداد الافتراضي للحساب الجديد. يمكن لكل شخص تغييره لنفسه.",
+          "weeklyDigest": "مغلق افتراضيًا: ملخّص لم يطلبه أحد هو أسرع طريق لتصنيف الرسائل كمزعجة.",
+          "fromAddress": "اتركه فارغًا لاستخدام عنوان التواصل من قسم «عام»."
+        },
+        "security": {
+          "sessionLifetimeDays": "المدة التي تبقى فيها الجلسة صالحة دون تسجيل دخول جديد.",
+          "idleTimeoutMinutes": "القيمة 0 تعني بلا مهلة خمول.",
+          "rateLimitWindowMinutes": "النافذة الزمنية التي تُحسب عليها الحدود أدناه.",
+          "requireEmailVerification": "عند التفعيل، يجب على الحساب الجديد تأكيد عنوانه قبل تسجيل الدخول.",
+          "allowedOAuthProviders": "لا يمكن تفعيل مزوّد إلا بعد توفّر بياناته في بيئة الخادم."
+        },
+        "localization": {
+          "offeredLocales": "يحدد أين تُعرض اللغة — مبدّل اللغة وروابط hreflang. لا يوقف لغة منشورة بالفعل؛ ذلك تغيير في التوجيه لا إعداد.",
+          "fallbackLocale": "تُستخدم عند غياب نص من اللغة المعروضة."
         }
       },
       "locales": {
@@ -759,6 +815,35 @@
         "empty": "لم يتغير شيء بعد.",
         "entry": "غيّر {actor} الإعداد {key}",
         "unknownActor": "حساب محذوف"
+      },
+      "readOnlySecurity": "يمكنك رؤية هذا القسم دون تغييره — يتطلب ذلك صلاحية setting:update_security.",
+      "providerNotConfigured": "غير مُهيَّأ على الخادم",
+      "localeNote": "اللغة الافتراضية تُضبط في قسم «عام»، وهي حاليًا {locale}. لا تتكرر هنا: وجود مكانين لتغيير قيمة واحدة هو ما يجعلهما يختلفان.",
+      "status": {
+        "configured": "مُهيَّأ",
+        "notConfigured": "غير مُهيَّأ",
+        "webPush": "الإشعارات الفورية (مفاتيح VAPID)",
+        "webPushHelp": "يجب ضبط مفتاحَي VAPID في بيئة الخادم. لا تُعرض قيمتهما هنا أبدًا.",
+        "slack": "رابط Slack",
+        "email": "البريد الصادر",
+        "googleOAuth": "بيانات دخول Google",
+        "googleOAuthHelp": "اضبط GOOGLE_CLIENT_ID و GOOGLE_CLIENT_SECRET في بيئة الخادم. لا يمكن تفعيل Google أدناه قبل توفّرهما معًا.",
+        "cloudinary": "رفع الملفات عبر Cloudinary",
+        "cloudinaryHelp": "مطلوب للشعار وصورة المشاركة عند تفعيل الرفع."
+      },
+      "options": {
+        "content": {
+          "defaultDifficulty": {
+            "easy": "سهل",
+            "medium": "متوسط",
+            "hard": "صعب"
+          }
+        },
+        "security": {
+          "allowedOAuthProviders": {
+            "google": "Google"
+          }
+        }
       }
     }
   },

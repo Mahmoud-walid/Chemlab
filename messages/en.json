@@ -719,7 +719,11 @@
       "pagesLink": "Manage pages",
       "sections": {
         "general": "General",
-        "features": "Features"
+        "features": "Features",
+        "content": "Content",
+        "notifications": "Notifications",
+        "security": "Security",
+        "localization": "Languages"
       },
       "fields": {
         "general": {
@@ -735,6 +739,35 @@
           "likesEnabled": "Likes",
           "savesEnabled": "Saved lessons",
           "examsEnabled": "Quizzes"
+        },
+        "content": {
+          "lessonsPerPage": "Lessons per page",
+          "commentsPerPage": "Comments per page",
+          "defaultDifficulty": "Default difficulty",
+          "defaultExamTimeLimitSeconds": "Default quiz time limit (seconds)",
+          "defaultPassMarkPercent": "Default pass mark (%)",
+          "defaultMaxAttempts": "Default attempts allowed"
+        },
+        "notifications": {
+          "commentReply": "Replies to a comment",
+          "examResult": "Quiz results",
+          "newLesson": "New lessons",
+          "weeklyDigest": "Weekly digest",
+          "fromAddress": "From address"
+        },
+        "security": {
+          "sessionLifetimeDays": "Session length (days)",
+          "idleTimeoutMinutes": "Idle timeout (minutes)",
+          "rateLimitWindowMinutes": "Rate limit window (minutes)",
+          "authAttemptsPerWindow": "Sign-in attempts per window",
+          "commentPostsPerWindow": "Comments per window",
+          "examSubmissionsPerWindow": "Quiz submissions per window",
+          "requireEmailVerification": "Require a verified email",
+          "allowedOAuthProviders": "Sign-in providers"
+        },
+        "localization": {
+          "offeredLocales": "Languages offered",
+          "fallbackLocale": "Fallback language"
         }
       },
       "help": {
@@ -748,6 +781,29 @@
         "features": {
           "registrationOpen": "When off, the sign-up form is closed. Existing accounts can still sign in.",
           "examsEnabled": "When off, quizzes are hidden from the site. Results already recorded are kept."
+        },
+        "content": {
+          "lessonsPerPage": "Applies to new page loads. Existing links keep working.",
+          "defaultDifficulty": "Applied to a NEW lesson or quiz at creation. Records already saved keep the difficulty they were given.",
+          "defaultExamTimeLimitSeconds": "0 means no limit. Applied to new quizzes only — quizzes already created keep their own limit.",
+          "defaultPassMarkPercent": "Applied to new quizzes only. Attempts already marked are not re-graded.",
+          "defaultMaxAttempts": "0 means unlimited. Applied to new quizzes only."
+        },
+        "notifications": {
+          "commentReply": "The default for a new account. Each person can change their own.",
+          "weeklyDigest": "Off by default: a digest nobody asked for is the fastest way to be marked as spam.",
+          "fromAddress": "Leave empty to use the contact address from the General section."
+        },
+        "security": {
+          "sessionLifetimeDays": "How long a signed-in session stays valid without signing in again.",
+          "idleTimeoutMinutes": "0 means no idle timeout.",
+          "rateLimitWindowMinutes": "The window each of the limits below is counted over.",
+          "requireEmailVerification": "When on, a new account must confirm its address before signing in.",
+          "allowedOAuthProviders": "A provider can only be enabled once its credentials exist in the environment."
+        },
+        "localization": {
+          "offeredLocales": "Where a language is OFFERED — the language switcher and the hreflang links. It does not take an already-published language offline; that is a routing change, not a setting.",
+          "fallbackLocale": "Used when a message is missing from the language being served."
         }
       },
       "locales": {
@@ -759,6 +815,35 @@
         "empty": "Nothing has been changed yet.",
         "entry": "{key} changed by {actor}",
         "unknownActor": "an account since deleted"
+      },
+      "readOnlySecurity": "You can see this section but not change it — that needs the setting:update_security permission.",
+      "providerNotConfigured": "not configured on the server",
+      "localeNote": "The default language is set under General, and is currently {locale}. It is not repeated here: two places to change one value is how they end up disagreeing.",
+      "status": {
+        "configured": "Configured",
+        "notConfigured": "Not configured",
+        "webPush": "Web push (VAPID keys)",
+        "webPushHelp": "Both VAPID keys must be set in the environment. Their values are never shown here.",
+        "slack": "Slack webhook",
+        "email": "Outgoing email",
+        "googleOAuth": "Google sign-in credentials",
+        "googleOAuthHelp": "Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in the environment. Google cannot be enabled below until both are present.",
+        "cloudinary": "Cloudinary uploads",
+        "cloudinaryHelp": "Needed for the logo and sharing image once uploads land."
+      },
+      "options": {
+        "content": {
+          "defaultDifficulty": {
+            "easy": "Easy",
+            "medium": "Medium",
+            "hard": "Hard"
+          }
+        },
+        "security": {
+          "allowedOAuthProviders": {
+            "google": "Google"
+          }
+        }
       }
     }
   },

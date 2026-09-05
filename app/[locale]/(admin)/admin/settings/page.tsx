@@ -13,6 +13,10 @@ import { requireAdminPermission } from "@/lib/admin/guard";
 import { hasPermission } from "@/lib/authz";
 import { getSettings } from "@/lib/settings/get";
 import {
+  configStatus,
+  configuredOAuthProviders,
+} from "@/lib/settings/config-status";
+import {
   SETTING_SECTIONS,
   settingsInSection,
   type SettingSection,
@@ -23,18 +27,11 @@ import { locales, type Locale } from "@/i18n/routing";
 import {
   SettingsForm,
   type SettingField,
-  type SettingKind,
+  type SettingOption,
+  type SettingStatusRow,
 } from "./features/settings-form";
 
 export const dynamic = "force-dynamic";
-
-/** How a key is rendered. Derived from the key, not stored on it. */
-function kindOf(key: string, value: unknown): SettingKind {
-  if (typeof value === "boolean") return "boolean";
-  if (key === "general.defaultLocale") return "select";
-  if (key === "general.siteDescription") return "longText";
-  return "text";
-}
 
 export default async function AdminSettingsPage({
   params,
@@ -45,7 +42,16 @@ export default async function AdminSettingsPage({
   setRequestLocale(locale as Locale);
 
   const actor = await requireAdminPermission("setting:read");
-  const canEdit = hasPermission(actor, "setting:update");
+  // Per key, from the registry — the Security section is guarded by its own
+  // permission, so "can edit" is not one answer for the whole screen.
+  const canEditSection = (section: SettingSection) =>
+    settingsInSection(section).every((definition) =>
+      hasPermission(actor, definition.permission),
+    );
+
+  // Environment presence only. Booleans cross this boundary, never a value.
+  const status = configStatus();
+  const availableProviders = new Set(configuredOAuthProviders());
 
   const resolved = await getSettings();
 
@@ -69,12 +75,31 @@ export default async function AdminSettingsPage({
         .catch(() => [])
     : [];
 
+  /** Option labels: locales get their own names, everything else its key. */
+  const optionsFor = (key: string, values?: readonly string[]) => {
+    if (!values) return undefined;
+    return values.map((value): SettingOption => {
+      const isLocale = (locales as readonly string[]).includes(value);
+      return {
+        value,
+        label: isLocale
+          ? t(`locales.${value}` as never)
+          : t(`options.${key}.${value}` as never),
+        disabledReason:
+          key === "security.allowedOAuthProviders" &&
+          !availableProviders.has(value)
+            ? t("providerNotConfigured")
+            : undefined,
+      };
+    });
+  };
+
   const fieldsFor = (section: SettingSection): SettingField[] =>
     settingsInSection(section).map((definition) => {
       const current = resolved[definition.key];
       return {
         key: definition.key,
-        kind: kindOf(definition.key, current?.value ?? definition.default),
+        kind: definition.kind,
         value: current?.value ?? definition.default,
         // Null when no row exists, which is a distinct state from "a row
         // exists and was written at this time" — the write action compares it.
@@ -83,15 +108,53 @@ export default async function AdminSettingsPage({
         help: t.has(`help.${definition.key}` as never)
           ? t(`help.${definition.key}` as never)
           : undefined,
-        options:
-          definition.key === "general.defaultLocale"
-            ? locales.map((value) => ({
-                value,
-                label: t(`locales.${value}` as never),
-              }))
-            : undefined,
+        options: optionsFor(definition.key, definition.options),
       };
     });
+
+  const statusFor = (section: SettingSection): SettingStatusRow[] => {
+    if (section === "notifications") {
+      return [
+        {
+          id: "webPush",
+          label: t("status.webPush"),
+          configured: status.webPush,
+          help: t("status.webPushHelp"),
+        },
+        {
+          id: "slack",
+          label: t("status.slack"),
+          configured: status.slack,
+        },
+        {
+          id: "email",
+          label: t("status.email"),
+          configured: status.email,
+        },
+      ];
+    }
+    if (section === "security") {
+      return [
+        {
+          id: "googleOAuth",
+          label: t("status.googleOAuth"),
+          configured: status.googleOAuth,
+          help: t("status.googleOAuthHelp"),
+        },
+      ];
+    }
+    if (section === "general") {
+      return [
+        {
+          id: "cloudinary",
+          label: t("status.cloudinary"),
+          configured: status.cloudinary,
+          help: t("status.cloudinaryHelp"),
+        },
+      ];
+    }
+    return [];
+  };
 
   return (
     <div className="space-y-6">
@@ -119,15 +182,31 @@ export default async function AdminSettingsPage({
           <TabsContent key={section} value={section} className="space-y-6 pt-4">
             <SettingsForm
               section={section}
-              canEdit={canEdit}
+              canEdit={canEditSection(section)}
               fields={fieldsFor(section)}
+              status={statusFor(section)}
               labels={{
                 save: t("save"),
                 saving: t("saving"),
                 saved: t("saved"),
-                readOnly: t("readOnly"),
+                readOnly:
+                  section === "security"
+                    ? t("readOnlySecurity")
+                    : t("readOnly"),
+                configured: t("status.configured"),
+                notConfigured: t("status.notConfigured"),
               }}
             />
+
+            {section === "localization" && (
+              <p className="text-sm text-muted-foreground">
+                {t("localeNote", {
+                  locale: String(
+                    resolved["general.defaultLocale"]?.value ?? "en",
+                  ),
+                })}
+              </p>
+            )}
 
             {section === "features" && (
               <p className="text-sm text-muted-foreground">
