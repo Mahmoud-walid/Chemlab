@@ -184,7 +184,6 @@ describe("the nav filter", () => {
 });
 
 describe("the bypass", () => {
-  const email = `bypass-${Date.now()}@pages.invalid`;
   let userId: string;
 
   afterEach(async () => {
@@ -195,9 +194,14 @@ describe("the bypass", () => {
 
   async function makeSession(roleKey: string | null): Promise<string> {
     userId = uuidv7();
+    // A fresh address per session, not one shared by the whole describe.
+    // `users.email` is unique, and the shared address only worked while every
+    // `afterEach` ran: one failing test left its user behind and the NEXT
+    // test died on a unique violation, so a single failure took the rest of
+    // the suite with it. Deriving it from the id cannot collide.
     await db.insert(schema.users).values({
       id: userId,
-      email,
+      email: `bypass-${userId}@pages.invalid`,
       name: "Bypass Probe",
       emailVerified: false,
     });
