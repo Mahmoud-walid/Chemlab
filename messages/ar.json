@@ -707,28 +707,39 @@
         "admin": "الإدارة"
       },
       "verbs": {
-        "auth.signed_in": "سجّل الدخول",
-        "auth.signed_up": "أنشأ حسابًا",
-        "auth.signed_out": "سجّل الخروج",
-        "lesson.viewed": "شاهد درسًا",
-        "lesson.completed": "أكمل درسًا",
-        "lesson.liked": "أعجب بدرس",
-        "lesson.unliked": "ألغى إعجابه بدرس",
-        "lesson.saved": "حفظ درسًا",
-        "lesson.shared": "شارك درسًا",
-        "comment.posted": "نشر تعليقًا",
-        "comment.liked": "أعجب بتعليق",
-        "comment.deleted": "حذف تعليقًا",
-        "exam.started": "بدأ اختبارًا",
-        "exam.submitted": "سلّم اختبارًا",
-        "exam.abandoned": "ترك اختبارًا",
-        "admin.created": "أنشأ",
-        "admin.updated": "حدّث",
-        "admin.deleted": "حذف",
-        "admin.published": "نشر",
-        "admin.page_toggled": "فتح أو أغلق صفحة",
-        "admin.settings_changed": "غيّر الإعدادات",
-        "admin.exported": "صدّر بيانات"
+        "auth": {
+          "signed_in": "سجّل الدخول",
+          "signed_up": "أنشأ حسابًا",
+          "signed_out": "سجّل الخروج"
+        },
+        "lesson": {
+          "viewed": "شاهد درسًا",
+          "completed": "أكمل درسًا",
+          "liked": "أعجب بدرس",
+          "unliked": "ألغى إعجابه بدرس",
+          "saved": "حفظ درسًا",
+          "shared": "شارك درسًا"
+        },
+        "comment": {
+          "posted": "نشر تعليقًا",
+          "liked": "أعجب بتعليق",
+          "deleted": "حذف تعليقًا"
+        },
+        "exam": {
+          "started": "بدأ اختبارًا",
+          "submitted": "سلّم اختبارًا",
+          "abandoned": "ترك اختبارًا",
+          "voided": "أُلغيت له محاولة اختبار"
+        },
+        "admin": {
+          "created": "أنشأ",
+          "updated": "حدّث",
+          "deleted": "حذف",
+          "published": "نشر",
+          "page_toggled": "فتح أو أغلق صفحة",
+          "settings_changed": "غيّر الإعدادات",
+          "exported": "صدّر بيانات"
+        }
       }
     },
     "settings": {
@@ -927,6 +938,52 @@
         "cancel": "تراجع",
         "deletedUser": "حساب محذوف",
         "empty": "لا توجد محاولات بعد."
+      }
+    },
+    "users": {
+      "title": "المستخدمون",
+      "subtitle": "حسابات المنصّة، وما قام به كل حساب.",
+      "searchLabel": "ابحث عن شخص",
+      "searchPlaceholder": "الاسم أو البريد",
+      "empty": "لا توجد حسابات مطابقة لهذا البحث.",
+      "pageOf": "الصفحة {page} من {pages} · {total} إجمالًا",
+      "backToUsers": "العودة إلى المستخدمين",
+      "unverified": "البريد غير مُفعَّل",
+      "joined": "تاريخ الانضمام",
+      "lastSignIn": "آخر تسجيل دخول",
+      "never": "أبدًا",
+      "locale": "اللغة",
+      "columns": {
+        "person": "الشخص",
+        "roles": "الأدوار",
+        "joined": "تاريخ الانضمام",
+        "lastSeen": "آخر تسجيل دخول"
+      },
+      "counts": {
+        "lessonsViewed": "دروس شوهدت",
+        "lessonsCompleted": "دروس أُكملت",
+        "comments": "تعليقات",
+        "likes": "إعجابات",
+        "examsTaken": "اختبارات خِيضت",
+        "examsPassed": "اختبارات نُجحت"
+      },
+      "quizzes": {
+        "heading": "سجل الاختبارات",
+        "empty": "لم يُنهِ هذا الشخص أي اختبار.",
+        "quiz": "الاختبار",
+        "attempts": "المحاولات",
+        "best": "الأفضل",
+        "latest": "الأخيرة",
+        "passed": "نجح",
+        "yes": "نعم",
+        "no": "لا"
+      },
+      "timeline": {
+        "heading": "النشاط",
+        "more": "تحميل المزيد",
+        "loading": "جارٍ التحميل…",
+        "end": "هذا كامل السجل المحفوظ لهذا الحساب.",
+        "empty": "لم يُسجَّل شيء لهذا الحساب بعد."
       }
     }
   },

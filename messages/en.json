@@ -707,28 +707,39 @@
         "admin": "Administration"
       },
       "verbs": {
-        "auth.signed_in": "Signed in",
-        "auth.signed_up": "Signed up",
-        "auth.signed_out": "Signed out",
-        "lesson.viewed": "Viewed a lesson",
-        "lesson.completed": "Completed a lesson",
-        "lesson.liked": "Liked a lesson",
-        "lesson.unliked": "Unliked a lesson",
-        "lesson.saved": "Saved a lesson",
-        "lesson.shared": "Shared a lesson",
-        "comment.posted": "Posted a comment",
-        "comment.liked": "Liked a comment",
-        "comment.deleted": "Deleted a comment",
-        "exam.started": "Started an exam",
-        "exam.submitted": "Submitted an exam",
-        "exam.abandoned": "Abandoned an exam",
-        "admin.created": "Created",
-        "admin.updated": "Updated",
-        "admin.deleted": "Deleted",
-        "admin.published": "Published",
-        "admin.page_toggled": "Opened or closed a page",
-        "admin.settings_changed": "Changed settings",
-        "admin.exported": "Exported data"
+        "auth": {
+          "signed_in": "Signed in",
+          "signed_up": "Signed up",
+          "signed_out": "Signed out"
+        },
+        "lesson": {
+          "viewed": "Viewed a lesson",
+          "completed": "Completed a lesson",
+          "liked": "Liked a lesson",
+          "unliked": "Unliked a lesson",
+          "saved": "Saved a lesson",
+          "shared": "Shared a lesson"
+        },
+        "comment": {
+          "posted": "Posted a comment",
+          "liked": "Liked a comment",
+          "deleted": "Deleted a comment"
+        },
+        "exam": {
+          "started": "Started an exam",
+          "submitted": "Submitted an exam",
+          "abandoned": "Abandoned an exam",
+          "voided": "Had an exam attempt voided"
+        },
+        "admin": {
+          "created": "Created",
+          "updated": "Updated",
+          "deleted": "Deleted",
+          "published": "Published",
+          "page_toggled": "Opened or closed a page",
+          "settings_changed": "Changed settings",
+          "exported": "Exported data"
+        }
       }
     },
     "settings": {
@@ -927,6 +938,52 @@
         "cancel": "Cancel",
         "deletedUser": "an account since deleted",
         "empty": "No sittings yet."
+      }
+    },
+    "users": {
+      "title": "Users",
+      "subtitle": "Accounts on the platform, and what each one has done.",
+      "searchLabel": "Search people",
+      "searchPlaceholder": "Name or email",
+      "empty": "No accounts match that search.",
+      "pageOf": "Page {page} of {pages} · {total} in total",
+      "backToUsers": "Back to users",
+      "unverified": "Email not verified",
+      "joined": "Joined",
+      "lastSignIn": "Last sign-in",
+      "never": "Never",
+      "locale": "Language",
+      "columns": {
+        "person": "Person",
+        "roles": "Roles",
+        "joined": "Joined",
+        "lastSeen": "Last sign-in"
+      },
+      "counts": {
+        "lessonsViewed": "Lessons viewed",
+        "lessonsCompleted": "Lessons completed",
+        "comments": "Comments",
+        "likes": "Likes",
+        "examsTaken": "Exams taken",
+        "examsPassed": "Exams passed"
+      },
+      "quizzes": {
+        "heading": "Exam record",
+        "empty": "This person has not finished an exam.",
+        "quiz": "Quiz",
+        "attempts": "Sittings",
+        "best": "Best",
+        "latest": "Latest",
+        "passed": "Passed",
+        "yes": "Yes",
+        "no": "No"
+      },
+      "timeline": {
+        "heading": "Activity",
+        "more": "Load more",
+        "loading": "Loading…",
+        "end": "That is the whole history held for this account.",
+        "empty": "Nothing recorded for this account yet."
       }
     }
   },

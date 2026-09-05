@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
+import { uuidv7 } from "uuidv7";
 
 import { connect, seedUrl, type SeedDatabase } from "@/db/seed/connect";
 import * as schema from "@/db/schema";
@@ -19,6 +20,9 @@ let db: SeedDatabase;
 let close: () => Promise<void>;
 
 const SLUG = "periodic-table-basics";
+
+/** The candidate whose sitting the void test strikes out. */
+let voidableEmail: string;
 
 test.beforeAll(() => {
   const url = seedUrl();
@@ -49,6 +53,7 @@ test.describe("exam results", () => {
     // A real sitting first, so the screen has something to show.
     await page.goto("/");
     const email = uniqueEmail("admin-exams");
+    voidableEmail = email;
     await signUpViaApi(page, email);
     await page.goto(`/quiz/${SLUG}`);
     await page.getByRole("button", { name: /start quiz/i }).click();
@@ -101,7 +106,10 @@ test.describe("exam results", () => {
     // first version of this test read the database while the void was still
     // in flight and found nothing. The form closing is the success signal.
     await expect(reason).toHaveCount(0, { timeout: 15_000 });
-    await expect(page.getByText("Suspected collusion")).toBeVisible();
+    // `.first()`: a local database accumulates voided sittings across runs, so
+    // the reason can legitimately appear on several rows. CI starts clean and
+    // sees one.
+    await expect(page.getByText("Suspected collusion").first()).toBeVisible();
 
     const [row] = await db
       .select({

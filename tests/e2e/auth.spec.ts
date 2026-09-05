@@ -27,13 +27,24 @@ async function submitSignUp(page: import("@playwright/test").Page) {
   });
 
   for (let attempt = 0; attempt < 5; attempt++) {
-    await submit.click();
+    // Only click while the form is still on screen. A successful sign-up
+    // navigates away, and if the account menu is merely SLOW to appear the
+    // retry used to click a button that no longer exists — which then hung
+    // until the whole test timed out, reported as "waiting for Sign up".
+    if (await submit.isVisible().catch(() => false)) {
+      await submit.click();
+    }
+
     try {
       await expect(accountMenu).toBeVisible({ timeout: 12_000 });
       return;
     } catch {
-      // Almost certainly the limiter. Wait out its window and try again.
-      await page.waitForTimeout(3_000 * (attempt + 1));
+      // Still on the form: almost certainly the limiter. Wait out its window
+      // and try again. Off the form: the sign-up landed and the header is
+      // just slow, so give it another pass without clicking anything.
+      if (await submit.isVisible().catch(() => false)) {
+        await page.waitForTimeout(3_000 * (attempt + 1));
+      }
     }
   }
 
