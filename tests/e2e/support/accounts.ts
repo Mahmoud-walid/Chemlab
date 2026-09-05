@@ -28,6 +28,9 @@ async function sleep(ms: number) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** What a sign-up attempt turned into. */
+export type SignUpOutcome = "created" | "exists";
+
 /**
  * Signs up, retrying while the rate limiter says no.
  *
@@ -38,8 +41,15 @@ async function sleep(ms: number) {
  * worker: several workers rejected at the same moment and sleeping for exactly
  * the same interval wake together and collide again, so a fixed schedule turns
  * one burst into several. Randomising each wait spreads them out.
+ *
+ * An account that already exists is an OUTCOME, not an error. Two workers
+ * racing to create the shared account for a role is normal, and the loser has
+ * nothing to recover from — the account it wanted is there.
  */
-export async function signUpViaApi(page: Page, email: string): Promise<void> {
+export async function signUpViaApi(
+  page: Page,
+  email: string,
+): Promise<SignUpOutcome> {
   let lastStatus = 0;
 
   for (let attempt = 0; attempt < 8; attempt++) {
@@ -50,7 +60,9 @@ export async function signUpViaApi(page: Page, email: string): Promise<void> {
       },
     });
     lastStatus = response.status();
-    if (response.ok()) return;
+    if (response.ok()) return "created";
+    // 422: Better Auth's "that address is taken".
+    if (lastStatus === 422) return "exists";
     if (lastStatus !== 429) break;
     await sleep(1_200 * (attempt + 1) + Math.random() * 1_200);
   }
@@ -82,13 +94,32 @@ export async function grantRole(
     .onConflictDoNothing();
 }
 
-/** Signs an existing account in. Cheap, and not what the limiter guards. */
+/**
+ * Signs an existing account in, retrying while the limiter says no.
+ *
+ * Sign-in is rate limited too, and a 429 is NOT a wrong password — treating
+ * the two the same is what made a shared account look like a broken one:
+ * several workers signing in as the same role at the same moment are refused
+ * for pace, and a caller that reads that as "no such account" goes on to sign
+ * up an account that already exists.
+ */
 async function signInViaApi(page: Page, email: string): Promise<boolean> {
-  const response = await page.request.post("/api/auth/sign-in/email", {
-    data: { email, password: TEST_PASSWORD },
-    headers: { Origin: new URL(page.url() || "http://localhost:3000").origin },
-  });
-  return response.ok();
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const response = await page.request.post("/api/auth/sign-in/email", {
+      data: { email, password: TEST_PASSWORD },
+      headers: {
+        Origin: new URL(page.url() || "http://localhost:3000").origin,
+      },
+    });
+
+    if (response.ok()) return true;
+    // Anything else — 401 for an account that does not exist, 403 — is a real
+    // answer and retrying it would only waste the window.
+    if (response.status() !== 429) return false;
+
+    await sleep(1_200 * (attempt + 1) + Math.random() * 1_200);
+  }
+  return false;
 }
 
 /**
@@ -97,14 +128,37 @@ async function signInViaApi(page: Page, email: string): Promise<boolean> {
  * Module scope, so it is per worker process — Playwright gives each test a
  * fresh browser context but reuses the worker. Every admin test signing up its
  * own account meant a dozen-plus sign-ups per run against a limiter sized for
- * a handful, and the suite started failing on 429s as it grew. Signing in to
- * an account this worker already made costs one cheap request instead.
+ * a handful, and the suite started failing on 429s as it grew.
  *
- * Deliberately NOT a shared fixture across workers: two workers signing into
- * the same account is fine, but creating it twice concurrently is a race on
- * the unique email.
+ * The address is deterministic per (role, worker) — no timestamp. Two
+ * properties fall out of that, and both were learned the hard way:
+ *
+ * - **No timestamp** means the account is reused across RUNS. Against a
+ *   database that persists, the first run signs up and every run after it
+ *   only signs in, so the sign-up limiter is never approached at all.
+ * - **Per worker** means no two workers ever compete for one identifier. A
+ *   single shared account per role looked tidier and was worse: the limiter
+ *   is per identifier, so concentrating every worker's traffic on one address
+ *   is the fastest way to have it refused, and the suite failed that way.
+ *
+ * Sign-UP comes first and sign-in only after it reports the address taken.
+ * The order matters: our own limiter locks an identifier after five failed
+ * sign-ins in a window, so opening with a doomed sign-in against an account
+ * that does not exist yet spends that budget for nothing.
  */
 const accountsByRole = new Map<string, string>();
+
+/**
+ * This worker's address for a role. `.invalid` is reserved, so it can never
+ * collide with a real one.
+ *
+ * Playwright sets `TEST_WORKER_INDEX`; outside a Playwright run there is one
+ * notional worker, which keeps the helper usable from a script.
+ */
+export function accountEmailFor(roleKey: string): string {
+  const worker = process.env.TEST_WORKER_INDEX ?? "0";
+  return `e2e-${roleKey}-w${worker}@admin-e2e.invalid`;
+}
 
 /** Signs up (or reuses) an account holding `roleKey`, leaving it signed in. */
 export async function signInAs(
@@ -115,11 +169,23 @@ export async function signInAs(
   // A page needs an origin before `page.request` can resolve a relative URL.
   await page.goto("/");
 
-  const cached = accountsByRole.get(roleKey);
-  if (cached && (await signInViaApi(page, cached))) return cached;
+  const email = accountEmailFor(roleKey);
 
-  const email = uniqueEmail(roleKey);
-  await signUpViaApi(page, email);
+  // Known to this worker already: the account exists, so sign in directly.
+  if (accountsByRole.has(roleKey)) {
+    if (await signInViaApi(page, email)) return email;
+    throw new Error(`sign-in for ${email} failed`);
+  }
+
+  const outcome = await signUpViaApi(page, email);
+
+  if (outcome === "exists" && !(await signInViaApi(page, email))) {
+    throw new Error(`sign-in for existing ${email} failed`);
+  }
+
+  // Granted every time, not only on creation: the role may have been granted
+  // by a previous run against a database that has since been reseeded, and
+  // `onConflictDoNothing` makes a second grant free.
   await grantRole(db, email, roleKey);
   accountsByRole.set(roleKey, email);
   return email;

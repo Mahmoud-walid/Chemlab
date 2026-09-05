@@ -17,6 +17,7 @@ import {
 import "../globals.css";
 import { Providers } from "@/providers/providers";
 import { Toaster } from "@/components/ui/sonner";
+import { PushRegistrar } from "@/components/customs/push-registrar";
 import { absoluteUrl, env } from "@/lib/env";
 import { direction, locales, routing, type Locale } from "@/i18n/routing";
 import { getSettings } from "@/lib/settings/get";
@@ -188,6 +189,10 @@ export default async function LocaleLayout({
           <Providers>
             {children}
             <Toaster />
+            {/* Registers the service worker and keeps it from going stale. It
+                requests no permission — a prompt on first paint is the most
+                reliable way to be refused for ever. */}
+            <PushRegistrar />
           </Providers>
         </NextIntlClientProvider>
       </body>

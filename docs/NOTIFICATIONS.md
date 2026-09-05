@@ -110,5 +110,61 @@ Screen as a standalone web app. A plain Safari tab will never receive one, no
 matter how correct the code is, and `Notification.requestPermission()` in that
 context throws or resolves to `denied`. This is Apple's design.
 
-The manifest that makes installation possible, and the UI that explains this
-case instead of showing a button that cannot work, are the browser half of #17.
+`app/manifest.ts` is what makes installation possible, and the settings toggle
+shows instructions rather than a button in this case — a control that cannot
+work is worse than no control.
+
+## The service worker
+
+`public/sw.js` is hand-written and served from the origin root, so its scope
+covers the whole site. It handles `push`, `notificationclick` and
+`pushsubscriptionchange`, and does no caching: a generated worker would add a
+plugin, a build step and an offline strategy nobody asked for.
+
+**A stale worker is the classic failure mode of this whole feature** — a
+browser caches `sw.js` and, once installed, keeps running the old copy
+indefinitely, which surfaces as "push stopped working for some people" rather
+than as a caching bug. Three things together prevent it:
+
+1. `/sw.js` is served with `Cache-Control: no-cache`.
+2. The worker calls `skipWaiting()` and `clients.claim()`, so a new one takes
+   over immediately instead of waiting for every tab to close.
+3. `PushRegistrar` calls `registration.update()` on load and whenever the tab
+   becomes visible — a tab left open for a week is otherwise a tab running last
+   week's worker.
+
+`SW_VERSION` is logged on activate, so "which worker is actually running" is
+answerable from a console rather than inferred. **Bump it when the file
+changes.**
+
+The worker's decisions are mirrored, with tests, in
+`lib/push/service-worker-logic.ts`. `sw.js` cannot import from `lib/` — it is
+served as-is, not compiled — so `tests/lib/service-worker.test.ts` asserts the
+two still agree.
+
+## Permission
+
+Never requested on page load. A permission dialog on first paint is the most
+reliable way to be refused for ever, because a browser that has been refused
+will not show its dialog again no matter how good the reason is later. The
+prompt lives on `/profile/settings`, behind a button.
+
+Each state gets different copy, because the right thing to say differs:
+
+| State                   | What is shown                                                                                                                                            |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Never asked             | A button                                                                                                                                                 |
+| Granted, subscribed     | A confirmation and a way to turn it off                                                                                                                  |
+| Granted, not subscribed | Nothing — it re-subscribes silently, since the user never withdrew consent                                                                               |
+| Denied                  | How to re-enable it in browser settings. **No button** — the browser will not show its dialog again, so one that "asks" would do nothing and look broken |
+| iOS Safari in a tab     | Add-to-Home-Screen instructions. **No button** — `requestPermission()` here throws or resolves denied, spending the one chance to ask                    |
+| No `PushManager`        | A plain statement that this browser cannot                                                                                                               |
+
+## Icons
+
+`public/icons/*` are **placeholders**, drawn by `pnpm icons:generate`. #17's
+first open question asks whether the owner has a source logo at 512 px; until
+one exists, an installable app needs icons of the right sizes more than it
+needs the right artwork — without them iOS cannot install the site, and without
+that iOS can never receive a push at all. Replace them and the script becomes
+unnecessary.

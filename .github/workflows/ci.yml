@@ -36,6 +36,14 @@ jobs:
   build:
     name: build
     runs-on: ubuntu-latest
+    env:
+      # The same throwaway VAPID pair the e2e job uses. Set here so
+      # `pnpm bundle:check` has a real value to grep the built client output
+      # for — without one it searches for an empty string and passes for the
+      # wrong reason, which is exactly how that guard failed silently once.
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: BG8yTZes4g1RimvHLRYVAJwFQ3MfzAZmwDdRuMLcHwobhHQSOVHum2QAZQlLwGL00j4DkMPVtd-iMhMTZdxUVIU
+      VAPID_PRIVATE_KEY: x3PPHgvu6UeIR3aXt0vqpbw6txVkNcfWxesGePG1TCo
+      VAPID_SUBJECT: mailto:ci@chemlab.invalid
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -118,6 +126,16 @@ jobs:
       # lives in the deployment's environment.
       BETTER_AUTH_SECRET: ci-only-secret-at-least-32-characters-long
       BETTER_AUTH_URL: http://localhost:3000
+      # A throwaway VAPID pair, generated once for CI with `pnpm vapid:keys`.
+      # The PUBLIC half is public by definition — it is inlined into the client
+      # bundle in every deployment. The private half signs nothing that leaves
+      # this runner: no push is ever sent here, and the real pair lives in the
+      # deployment's environment. It is set anyway so `pnpm bundle:check` has a
+      # value to grep the built client output for, which is the only way that
+      # guard proves anything in CI.
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: BG8yTZes4g1RimvHLRYVAJwFQ3MfzAZmwDdRuMLcHwobhHQSOVHum2QAZQlLwGL00j4DkMPVtd-iMhMTZdxUVIU
+      VAPID_PRIVATE_KEY: x3PPHgvu6UeIR3aXt0vqpbw6txVkNcfWxesGePG1TCo
+      VAPID_SUBJECT: mailto:ci@chemlab.invalid
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4

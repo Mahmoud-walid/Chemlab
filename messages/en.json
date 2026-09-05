@@ -324,7 +324,17 @@
     "savedTitle": "Saved items",
     "savedEmpty": "Nothing saved yet. Save a lesson and it will appear here.",
     "browseQuizzes": "Browse quizzes",
-    "browseLessons": "Browse lessons"
+    "browseLessons": "Browse lessons",
+    "notifications": "Notifications",
+    "pushDescription": "Get notified on this device when someone replies to you or a new lesson is published.",
+    "pushEnable": "Turn on notifications",
+    "pushEnabling": "Asking…",
+    "pushEnabled": "Notifications are on for this device.",
+    "pushDisable": "Turn off",
+    "pushUnsupported": "This browser cannot receive notifications.",
+    "pushDenied": "Notifications are blocked for this site. To turn them on, allow notifications for Chemlab in your browser's site settings — the browser will not ask again on its own.",
+    "pushIosInstall": "On iPhone and iPad, notifications work only once Chemlab is added to your Home Screen. Tap Share, then “Add to Home Screen”, and open Chemlab from there.",
+    "pushFailed": "That did not go through. Nothing was changed."
   },
   "admin": {
     "title": "Chemlab admin",
