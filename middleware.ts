@@ -18,15 +18,21 @@ const SESSION_COOKIES = [
   "__Secure-better-auth.session_token",
 ];
 
-/** Strips a leading `/en` or `/ar` so the check is locale-independent. */
-function withoutLocale(pathname: string): string {
+/** The locale prefix on a path, or "" when there is none (the default locale). */
+function localePrefixOf(pathname: string): string {
   for (const locale of routing.locales) {
-    if (pathname === `/${locale}`) return "/";
-    if (pathname.startsWith(`/${locale}/`)) {
-      return pathname.slice(locale.length + 1);
+    if (pathname === `/${locale}` || pathname.startsWith(`/${locale}/`)) {
+      return `/${locale}`;
     }
   }
-  return pathname;
+  return "";
+}
+
+/** Strips a leading `/en` or `/ar` so the check is locale-independent. */
+function withoutLocale(pathname: string): string {
+  const prefix = localePrefixOf(pathname);
+  if (!prefix) return pathname;
+  return pathname.slice(prefix.length) || "/";
 }
 
 /**
@@ -50,7 +56,11 @@ export default function middleware(request: NextRequest) {
       (name) => request.cookies.get(name)?.value,
     );
     if (!hasCookie) {
-      const signIn = new URL("/sign-in", request.url);
+      // Prefixed with the visitor's locale, or an Arabic reader is bounced to
+      // the English sign-in page. `localePrefix: "as-needed"` means the
+      // default locale carries no prefix, so "" is correct for English.
+      const prefix = localePrefixOf(request.nextUrl.pathname);
+      const signIn = new URL(`${prefix}/sign-in`, request.url);
       // Round-tripped through the same validator the sign-in page uses, so a
       // crafted path cannot become an off-origin redirect after sign-in.
       signIn.searchParams.set(

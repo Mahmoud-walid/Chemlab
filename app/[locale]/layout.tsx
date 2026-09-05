@@ -2,7 +2,11 @@ import "@/configs/setup-console";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import {
+  getMessages,
+  getTranslations,
+  setRequestLocale,
+} from "next-intl/server";
 import {
   Geist,
   Geist_Mono,
@@ -135,6 +139,8 @@ export default async function LocaleLayout({
   // Opts every route in this segment into static rendering.
   setRequestLocale(locale);
 
+  const { admin: _admin, ...publicMessages } = await getMessages();
+
   const dir = direction(locale);
   const isArabic = locale === "ar";
   const fontVariables = isArabic
@@ -150,7 +156,13 @@ export default async function LocaleLayout({
         className={`${fontVariables} antialiased`}
         style={{ fontFamily: `var(--active-font, ${defaultFont})` }}
       >
-        <NextIntlClientProvider>
+        {/* The admin namespace is withheld from the public bundle.
+            NextIntlClientProvider serialises whatever it is given into every
+            response, so passing the whole catalogue shipped every admin label
+            — "Roles and permissions", "Activity" — to every visitor, including
+            in the 404 an unauthorised viewer receives. The admin layout
+            provides them again for its own subtree. */}
+        <NextIntlClientProvider messages={publicMessages}>
           {/* Only what EVERY route needs: the providers, the theme and the
               toaster. Public-site chrome lives in (public)/layout.tsx and the
               admin chrome in (admin)/admin/layout.tsx, so an admin page is not
