@@ -524,11 +524,28 @@
         "tags": "Separated by commas."
       },
       "body": {
-        "heading": "Lesson content",
+        "backToLesson": "Back to the lesson",
+        "title": "Writing: {title}",
+        "subtitle": "Changes save themselves. The preview uses the same renderer the published page does.",
+        "sectionHeading": "Section",
+        "headingPlaceholder": "What this section covers",
+        "bodyPlaceholder": "Write the lesson…",
+        "bodyLabel": "Body of section",
+        "addSection": "Add a section",
+        "removeSection": "Remove section",
+        "preview": "Preview",
+        "readingTime": "About {minutes} min read",
         "empty": "This lesson has no content yet, so it cannot be published.",
+        "save": {
+          "idle": "No unsaved changes.",
+          "dirty": "Unsaved changes…",
+          "saving": "Saving…",
+          "saved": "Saved.",
+          "failed": "Could not save. Your changes are still here."
+        },
+        "heading": "Lesson content",
         "count": "{count, plural, one {# section} other {# sections}} written.",
-        "editDisabled": "Edit content",
-        "editDisabledReason": "The rich content editor is not built yet. Until it lands, sections come from the seeded data."
+        "edit": "Write the lesson"
       },
       "lifecycle": {
         "heading": "Publication",
