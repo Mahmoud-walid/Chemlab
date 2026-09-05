@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   doublePrecision,
   index,
   integer,
@@ -159,15 +160,45 @@ export const lessonSections = pgTable(
 
 // ── Quizzes ─────────────────────────────────────────────────────────────────
 
-export const quizzes = pgTable("quizzes", {
-  id: id(),
-  slug: text("slug").notNull().unique(),
-  title: text("title").notNull(),
-  description: text("description").notNull(),
-  difficulty: difficulty("difficulty").notNull(),
-  category: text("category").notNull(),
-  ...timestamps,
-});
+export const quizzes = pgTable(
+  "quizzes",
+  {
+    id: id(),
+    slug: text("slug").notNull().unique(),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    difficulty: difficulty("difficulty").notNull(),
+    category: text("category").notNull(),
+
+    /**
+     * Sitting rules. All nullable-or-defaulted, because an exam that has not
+     * been configured should behave like the quizzes that exist today rather
+     * than refuse to run.
+     *
+     * Null means "no limit" for both the timer and the attempt cap. Zero would
+     * be a different claim — no time at all, no attempts allowed — and is the
+     * kind of value a forgotten default quietly writes.
+     */
+    timeLimitSeconds: integer("time_limit_seconds"),
+    passMarkPercent: integer("pass_mark_percent").notNull().default(60),
+    maxAttempts: integer("max_attempts"),
+    shuffleQuestions: boolean("shuffle_questions").notNull().default(false),
+    shuffleOptions: boolean("shuffle_options").notNull().default(false),
+
+    status: contentStatus("status").notNull().default("draft"),
+    position: integer("position").notNull().default(0),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    // Soft-deletable for the same reason lessons are: attempts and results
+    // will reference these rows, and a hard delete would take a student's
+    // history with it.
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [
+    index("quizzes_status_idx").on(t.status),
+    index("quizzes_position_idx").on(t.position),
+  ],
+);
 
 /**
  * `correctOptionId` is the fix for the JSON's biggest data smell: today the
@@ -189,6 +220,12 @@ export const quizQuestions = pgTable(
     prompt: text("prompt").notNull(),
     explanation: text("explanation").notNull(),
     correctOptionId: uuid("correct_option_id"),
+    /**
+     * What this question is worth. Defaults to 1, so a scoring pass that
+     * ignores it still counts questions — which is what the quiz page does
+     * today.
+     */
+    points: integer("points").notNull().default(1),
     ...timestamps,
   },
   (t) => [uniqueIndex("quiz_questions_order_idx").on(t.quizId, t.position)],

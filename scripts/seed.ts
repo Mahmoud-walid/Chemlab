@@ -121,12 +121,31 @@ async function main() {
       }
 
       // ── Quizzes ────────────────────────────────────────────────────────
-      for (const json of quizzesJson) {
+      for (const [index, json] of quizzesJson.entries()) {
         const row = toQuizRow(json);
         const [quiz] = await tx
           .insert(schema.quizzes)
-          .values(row)
-          .onConflictDoUpdate({ target: schema.quizzes.slug, set: row })
+          // Live content, so it is published on first insert; on conflict the
+          // date is COALESCEd rather than overwritten. `status` and `position`
+          // are absent from the conflict branch for the same reason they are
+          // for lessons: they are the editor's to change, and a re-seed that
+          // republished a withdrawn quiz would undo an editorial decision
+          // without saying so.
+          .values({
+            ...row,
+            status: "published",
+            // Gaps of ten, so a quiz can be moved between two others without
+            // renumbering the rest.
+            position: (index + 1) * 10,
+            publishedAt: sql`now()`,
+          })
+          .onConflictDoUpdate({
+            target: schema.quizzes.slug,
+            set: {
+              ...row,
+              publishedAt: sql`coalesce(${schema.quizzes.publishedAt}, now())`,
+            },
+          })
           .returning({ id: schema.quizzes.id });
 
         await tx

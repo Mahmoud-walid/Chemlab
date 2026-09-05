@@ -77,7 +77,31 @@ export async function grantRole(
     .onConflictDoNothing();
 }
 
-/** Signs up and grants a role, leaving the page signed in. */
+/** Signs an existing account in. Cheap, and not what the limiter guards. */
+async function signInViaApi(page: Page, email: string): Promise<boolean> {
+  const response = await page.request.post("/api/auth/sign-in/email", {
+    data: { email, password: TEST_PASSWORD },
+    headers: { Origin: new URL(page.url() || "http://localhost:3000").origin },
+  });
+  return response.ok();
+}
+
+/**
+ * One account per role, per worker.
+ *
+ * Module scope, so it is per worker process — Playwright gives each test a
+ * fresh browser context but reuses the worker. Every admin test signing up its
+ * own account meant a dozen-plus sign-ups per run against a limiter sized for
+ * a handful, and the suite started failing on 429s as it grew. Signing in to
+ * an account this worker already made costs one cheap request instead.
+ *
+ * Deliberately NOT a shared fixture across workers: two workers signing into
+ * the same account is fine, but creating it twice concurrently is a race on
+ * the unique email.
+ */
+const accountsByRole = new Map<string, string>();
+
+/** Signs up (or reuses) an account holding `roleKey`, leaving it signed in. */
 export async function signInAs(
   page: Page,
   db: SeedDatabase,
@@ -85,8 +109,13 @@ export async function signInAs(
 ): Promise<string> {
   // A page needs an origin before `page.request` can resolve a relative URL.
   await page.goto("/");
+
+  const cached = accountsByRole.get(roleKey);
+  if (cached && (await signInViaApi(page, cached))) return cached;
+
   const email = uniqueEmail(roleKey);
   await signUpViaApi(page, email);
   await grantRole(db, email, roleKey);
+  accountsByRole.set(roleKey, email);
   return email;
 }

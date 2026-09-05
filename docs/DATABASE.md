@@ -246,6 +246,18 @@ exists and content changes have a known cadence.
   live is a bug waiting for a query that checks the wrong one. Migration 0005
   backfills the column from the old rule rather than defaulting every existing
   lesson to `draft` and silently emptying the catalogue.
+- **Quizzes carry the same lifecycle as lessons** — `status`, `position`,
+  `published_at`, `deleted_at` — plus the sitting rules #16 asks for
+  (`time_limit_seconds`, `pass_mark_percent`, `max_attempts`, the two shuffle
+  flags) and `points` per question. The rules are stored and edited but not yet
+  read: taking a quiz still ignores them, which belongs to the exam-engine
+  work. Null means "no limit" for both the timer and the attempt cap; zero
+  would be a different claim.
+- **`quiz_questions.correct_option_id` is not a declared foreign key.** The
+  reference is circular — question → option → question — so it cannot be one
+  without a deferrable constraint. A dangling answer is therefore possible and
+  is _detected_ rather than prevented: publishing refuses a quiz with one, and
+  `getQuizBySlug` throws rather than serving an unanswerable question.
 - **`lessons.position` orders the curriculum.** Lessons build on each other, so
   the catalogue is a sequence; ordering by slug put "acids-bases" before
   "atomic-structure". Seeded in tens, so a lesson can be moved between two

@@ -396,6 +396,30 @@ until #20 lands.
 nothing on them. **Question:** do you want an editor to be able to republish a
 body-less lesson before #20?
 
+### Q33 — should a question be allowed more than one correct answer?
+
+#16 asks for "options with one or more correct answers". The stored model has
+one: `quiz_questions.correct_option_id` points at a single option, which #14
+chose deliberately over the JSON's string answer — a rename of an option used
+to orphan the answer silently.
+
+All sixty seeded questions are single-answer, so nothing is lost today. But
+supporting several would mean replacing that reference with `is_correct` on
+each option, which trades one guarantee for another: a question would no longer
+be structurally unable to have zero correct answers, so a CHECK or a trigger
+would have to enforce what the reference enforces now. It also changes what
+scoring means — partial credit, all-or-nothing, negative marking — and scoring
+belongs to #26.
+
+The question editor therefore uses a radio group per question, which is honest
+about what can be stored. Swapping it for checkboxes later is a contained
+change; the schema and the scoring rules are not.
+
+**My default is to keep single-answer until #26**, where the scoring rule and
+the storage change can be decided together. **Question:** do you want
+multiple-answer questions, and if so, how should a partly-correct answer be
+scored?
+
 ---
 
 ## Per-issue open questions
@@ -412,22 +436,23 @@ Worth reading before the relevant phase starts: #10 and #14 (data modelling),
 
 ## Resolved decisions
 
-| Date       | Question           | Decision                                                                                                                                                                                     |
-| ---------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-09-04 | Auth stack         | **Better Auth** — TypeScript-first, Drizzle-native, roles/permissions plugins fit dynamic RBAC                                                                                               |
-| 2026-09-04 | Media storage      | **Cloudinary** — signed uploads, image and video transforms, CDN                                                                                                                             |
-| 2026-09-04 | Production push    | **Self-hosted Web Push / VAPID** — standard, no vendor, subscriptions in our DB                                                                                                              |
-| 2026-09-04 | CI alerts          | **Web Push** through the same pipeline, **plus Slack**                                                                                                                                       |
-| 2026-09-04 | Database           | **Neon Postgres + Drizzle ORM**                                                                                                                                                              |
-| 2026-09-04 | i18n library       | **next-intl** — already a dependency, App Router native                                                                                                                                      |
-| 2026-09-04 | UI components      | **shadcn/ui via its CLI**, never hand-copied                                                                                                                                                 |
-| 2026-09-04 | Local database     | **Local PostgreSQL in development**, Neon kept as the hosted option; the driver is chosen from the connection string                                                                         |
-| 2026-09-04 | Content rendering  | **`/`, `/lessons` and `/quiz` render on demand**, so `pnpm build` still works with no database; detail routes prerender when one is present. Revisit with ISR once the admin panel exists    |
-| 2026-09-04 | Email verification | **Not required to sign in**, but required for Google account linking. Requiring it needs an email provider, which is not chosen yet                                                          |
-| 2026-09-04 | Cookie cache       | **5 minutes** (`COOKIE_CACHE_SECONDS`). Bounds how long a revoked session — and later a revoked permission — keeps working                                                                   |
-| 2026-09-04 | Anonymous attempts | **Discarded at sign-in**, not adopted. Adopting them means trusting a client-supplied score                                                                                                  |
-| 2026-09-04 | Deny rules         | **None.** Pure allow-lists; an exception like "editor but cannot delete" is a narrower role. Deny rules make effective permissions impossible to display honestly                            |
-| 2026-09-04 | Page open/close    | **Its own `page:toggle` permission** under a `page` resource, not `setting:update`. Keeps the admin nav's `page:read` meaningful and separates "change a setting" from "take a page offline" |
-| 2026-09-05 | Admin landing      | **A dashboard**, not a redirect to the first accessible section. A redirect makes `/admin` mean something different per role, so a bookmark lands somewhere unpredictable                    |
-| 2026-09-05 | Admin locale       | **Follows the visitor's locale**, like the rest of the site. Pinning the panel to English would make Arabic the second-class half of a bilingual product                                     |
-| 2026-09-05 | Admin styling      | **Visual continuity** with the public site, distinguished by the sidebar chrome rather than a separate accent. Revisit if operators report confusing the two                                 |
+| Date       | Question           | Decision                                                                                                                                                                                            |
+| ---------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-04 | Auth stack         | **Better Auth** — TypeScript-first, Drizzle-native, roles/permissions plugins fit dynamic RBAC                                                                                                      |
+| 2026-09-04 | Media storage      | **Cloudinary** — signed uploads, image and video transforms, CDN                                                                                                                                    |
+| 2026-09-04 | Production push    | **Self-hosted Web Push / VAPID** — standard, no vendor, subscriptions in our DB                                                                                                                     |
+| 2026-09-04 | CI alerts          | **Web Push** through the same pipeline, **plus Slack**                                                                                                                                              |
+| 2026-09-04 | Database           | **Neon Postgres + Drizzle ORM**                                                                                                                                                                     |
+| 2026-09-04 | i18n library       | **next-intl** — already a dependency, App Router native                                                                                                                                             |
+| 2026-09-04 | UI components      | **shadcn/ui via its CLI**, never hand-copied                                                                                                                                                        |
+| 2026-09-04 | Local database     | **Local PostgreSQL in development**, Neon kept as the hosted option; the driver is chosen from the connection string                                                                                |
+| 2026-09-04 | Content rendering  | **`/`, `/lessons` and `/quiz` render on demand**, so `pnpm build` still works with no database; detail routes prerender when one is present. Revisit with ISR once the admin panel exists           |
+| 2026-09-04 | Email verification | **Not required to sign in**, but required for Google account linking. Requiring it needs an email provider, which is not chosen yet                                                                 |
+| 2026-09-04 | Cookie cache       | **5 minutes** (`COOKIE_CACHE_SECONDS`). Bounds how long a revoked session — and later a revoked permission — keeps working                                                                          |
+| 2026-09-04 | Anonymous attempts | **Discarded at sign-in**, not adopted. Adopting them means trusting a client-supplied score                                                                                                         |
+| 2026-09-04 | Deny rules         | **None.** Pure allow-lists; an exception like "editor but cannot delete" is a narrower role. Deny rules make effective permissions impossible to display honestly                                   |
+| 2026-09-04 | Page open/close    | **Its own `page:toggle` permission** under a `page` resource, not `setting:update`. Keeps the admin nav's `page:read` meaningful and separates "change a setting" from "take a page offline"        |
+| 2026-09-05 | Admin landing      | **A dashboard**, not a redirect to the first accessible section. A redirect makes `/admin` mean something different per role, so a bookmark lands somewhere unpredictable                           |
+| 2026-09-05 | Admin locale       | **Follows the visitor's locale**, like the rest of the site. Pinning the panel to English would make Arabic the second-class half of a bilingual product                                            |
+| 2026-09-05 | Admin styling      | **Visual continuity** with the public site, distinguished by the sidebar chrome rather than a separate accent. Revisit if operators report confusing the two                                        |
+| 2026-09-05 | Quizzes vs exams   | **"Quizzes" everywhere** — the table, the public `/quiz` route, the seed data and the `quiz:*` permissions all say quiz. #16 says "exams", but `exam:read` already means _view attempts and scores_ |
