@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.4.0...v0.5.0) (2026-09-05)
+
+
+### Features
+
+* **admin:** admin panel shell with a server-side gate and filtered navigation ([#54](https://github.com/Mahmoud-walid/Chemlab/issues/54)) ([fef3450](https://github.com/Mahmoud-walid/Chemlab/commit/fef3450a8e7656a458e469cf4b70af6b58f60d80))
+
 ## [0.4.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.3.0...v0.4.0) (2026-09-05)
 
 
