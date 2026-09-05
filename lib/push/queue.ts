@@ -1,7 +1,7 @@
 import { and, eq, inArray, lte, sql } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
 
-import type { SeedDatabase } from "@/db/seed/connect";
+import type { AnyDatabase } from "@/db/any-database";
 import { pushDeliveries, pushSubscriptions } from "@/db/schema/push";
 import {
   isWithinSizeLimit,
@@ -39,7 +39,7 @@ export interface EnqueueResult {
  * the lesson author" must not fail because the author has never enabled push.
  */
 export async function enqueueForUsers(
-  db: SeedDatabase,
+  db: AnyDatabase,
   userIds: readonly string[],
   payload: NotificationPayload,
   scheduledFor: Date = new Date(),
@@ -100,7 +100,7 @@ export interface ClaimedDelivery {
  * record of what happened untrue, which is the one thing it exists to be.
  */
 export async function claimDue(
-  db: SeedDatabase,
+  db: AnyDatabase,
   now: Date = new Date(),
   limit: number = DRAIN_BATCH_SIZE,
 ): Promise<ClaimedDelivery[]> {
@@ -133,7 +133,7 @@ export async function claimDue(
 
 /** Delivered. */
 export async function markSent(
-  db: SeedDatabase,
+  db: AnyDatabase,
   deliveryId: string,
   subscriptionId: string,
 ): Promise<void> {
@@ -159,7 +159,7 @@ export async function markSent(
  * reach" slowly becomes a lie. The deliveries cascade with it.
  */
 export async function markExpired(
-  db: SeedDatabase,
+  db: AnyDatabase,
   subscriptionId: string,
 ): Promise<void> {
   await db
@@ -179,7 +179,7 @@ export async function markExpired(
 
 /** Retry later, with the caller's backoff. */
 export async function markRetry(
-  db: SeedDatabase,
+  db: AnyDatabase,
   deliveryId: string,
   subscriptionId: string,
   afterSeconds: number,
@@ -202,7 +202,7 @@ export async function markRetry(
 
 /** Abandoned: our fault, or out of attempts. */
 export async function markFailed(
-  db: SeedDatabase,
+  db: AnyDatabase,
   deliveryId: string,
   reason: string,
 ): Promise<void> {
@@ -218,7 +218,7 @@ export async function markFailed(
 
 /** Subscriptions that have failed too often to be worth keeping. */
 export async function pruneFailedSubscriptions(
-  db: SeedDatabase,
+  db: AnyDatabase,
   threshold: number,
 ): Promise<number> {
   const result = await db
@@ -231,7 +231,7 @@ export async function pruneFailedSubscriptions(
 /** Deliveries that have exhausted their attempts, closed out in one statement
  * rather than one at a time. */
 export async function failExhausted(
-  db: SeedDatabase,
+  db: AnyDatabase,
   maxAttempts: number,
 ): Promise<number> {
   const result = await db
@@ -250,7 +250,7 @@ export async function failExhausted(
 /** Old, finished rows. Kept briefly for "I never got it" reports, then
  * removed — the queue is a queue, not an archive. */
 export async function pruneFinished(
-  db: SeedDatabase,
+  db: AnyDatabase,
   before: Date,
 ): Promise<number> {
   const result = await db

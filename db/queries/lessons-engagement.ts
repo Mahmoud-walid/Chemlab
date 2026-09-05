@@ -78,6 +78,14 @@ export async function getEngagement(
   };
 }
 
+/**
+ * Likes a lesson.
+ *
+ * No notification is emitted, and that is deliberate rather than an omission:
+ * `lessons` has no author column, so there is nobody to notify. #21 defines
+ * `lesson.liked`, and it stays without an emitter until a lesson knows who
+ * wrote it — inventing a recipient would be worse than notifying nobody.
+ */
 export async function likeLesson(
   lessonId: string,
   userId: string,

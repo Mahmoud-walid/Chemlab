@@ -1,7 +1,7 @@
 import "server-only";
 import webpush from "web-push";
 
-import type { SeedDatabase } from "@/db/seed/connect";
+import type { AnyDatabase } from "@/db/any-database";
 import { getServerEnv } from "@/lib/env.server";
 import { env } from "@/lib/env";
 import { pushConfigured } from "@/lib/env.server.schema";
@@ -87,7 +87,7 @@ export async function deliver(
  * loop would do.
  */
 export async function drain(
-  db: SeedDatabase,
+  db: AnyDatabase,
   options: {
     now?: Date;
     limit?: number;

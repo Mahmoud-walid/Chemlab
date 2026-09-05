@@ -61,12 +61,18 @@ export const CLOSABLE_ROUTES: ClosableRoute[] = [
  *   thing, and it would strand anyone mid-session.
  * - `/maintenance` — the page a closed route rewrites TO. Closing it would
  *   rewrite the maintenance page to the maintenance page.
+ * - `/notifications` — a person's own inbox, for the same reason as
+ *   `/profile`. It is also the SOURCE OF TRUTH for anything they were told:
+ *   push is best-effort and may never have arrived, so closing this route
+ *   could be the difference between somebody learning that they were replied
+ *   to and never finding out at all.
  */
 export const ALWAYS_OPEN = [
   "/admin",
   "/sign-in",
   "/sign-up",
   "/profile",
+  "/notifications",
   "/maintenance",
 ] as const;
 

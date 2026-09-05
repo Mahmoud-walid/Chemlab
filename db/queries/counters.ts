@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 
-import type { SeedDatabase } from "@/db/seed/connect";
+import type { AnyDatabase } from "@/db/any-database";
 
 /**
  * Recomputing the denormalised counters from their source tables.
@@ -28,7 +28,7 @@ export interface CounterDrift {
 }
 
 export async function findCounterDrift(
-  db: SeedDatabase,
+  db: AnyDatabase,
 ): Promise<CounterDrift[]> {
   const result = await db.execute<{
     slug: string;
@@ -70,7 +70,7 @@ export async function findCounterDrift(
 }
 
 /** Repairs every counter from source. Only ever called deliberately. */
-export async function repairCounters(db: SeedDatabase): Promise<void> {
+export async function repairCounters(db: AnyDatabase): Promise<void> {
   await db.execute(sql`
     update "lessons" l set
       "like_count" = (select count(*) from "lesson_likes" k where k."lesson_id" = l."id"),

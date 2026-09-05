@@ -136,6 +136,21 @@ export default defineConfig({
         // ignored, a forgotten key left alone — is proven against real
         // Postgres in tests/integration/settings.test.ts.
         "lib/settings/get.ts",
+        // The notification and push modules that are nothing BUT database
+        // work. Each is a query or a transaction — `for update skip locked`
+        // claims, an outbox drain, a web-push send — and the unit project has
+        // no database to run one against. Every decision they make was pulled
+        // out into modules that ARE measured here: notifications/rules.ts,
+        // notifications/render.ts and notifications/types.ts, push/payload.ts
+        // and push/errors.ts, all at or near 100%. What is left is the SQL,
+        // and SQL is only worth testing against Postgres:
+        // tests/integration/notifications.test.ts covers the outbox, the
+        // fan-out and the aggregation, and tests/integration/push-queue.test.ts
+        // covers the claim, the retry and the dead endpoint.
+        "lib/notifications/emit.ts",
+        "lib/notifications/fanout.ts",
+        "lib/push/queue.ts",
+        "lib/push/send.ts",
       ],
       // Deliberately per-area rather than one global gate. A single 80% number
       // drives people to write assertion-free tests over presentational code

@@ -19,6 +19,7 @@ import {
   type PublishBlocker,
 } from "@/lib/admin/lesson-schema";
 import { recordActivity } from "@/lib/activity/record";
+import { emitNotificationEvent } from "@/lib/notifications/emit";
 import { requirePermission } from "@/lib/authz";
 
 export interface LessonSaveResult {
@@ -315,6 +316,21 @@ export async function setLessonStatus(
       before: { status: before.status },
       after: { status },
     });
+
+    // Only on the transition INTO published, and only the first time: a
+    // lesson archived and republished is not news, and re-announcing it is
+    // how a category gets muted for ever.
+    if (status === "published" && before.status !== "published") {
+      // In the same transaction as the status change, so a rolled-back
+      // publish cannot leave an announcement about a lesson nobody can read.
+      await emitNotificationEvent(tx, {
+        type: "lesson.published",
+        actorId: actor.userId,
+        subjectType: "lesson",
+        subjectId: id,
+        data: { lessonSlug: before.slug },
+      });
+    }
   });
 
   await recordActivity({

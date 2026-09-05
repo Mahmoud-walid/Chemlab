@@ -18,9 +18,19 @@ function flatten(tree: Tree, prefix = ""): Map<string, string> {
 const enFlat = flatten(en as Tree);
 const arFlat = flatten(ar as Tree);
 
-/** ICU placeholders, e.g. {count} or {value, number, percent} -> "value". */
+/**
+ * ICU placeholders, e.g. {count} or {value, number, percent} -> "value".
+ *
+ * The name must be followed by `}` or `,`. Without that the plural CASE
+ * bodies count as placeholders too — `=0 {No unread notifications}` yields a
+ * phantom "No" — and the check then fails whenever two locales word a case
+ * differently, which is most of the time. That is a false positive, not a
+ * dropped placeholder, and it would train people to edit copy to appease it.
+ */
 function placeholders(message: string): Set<string> {
-  return new Set([...message.matchAll(/\{\s*(\w+)/g)].map((match) => match[1]));
+  return new Set(
+    [...message.matchAll(/\{\s*(\w+)\s*[},]/g)].map((match) => match[1]),
+  );
 }
 
 describe("message catalogues", () => {
