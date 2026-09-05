@@ -11,3 +11,4 @@ export * from "./content";
 export * from "./auth";
 export * from "./rbac";
 export * from "./activity";
+export * from "./settings";

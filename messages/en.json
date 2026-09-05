@@ -704,6 +704,62 @@
         "admin.settings_changed": "Changed settings",
         "admin.exported": "Exported data"
       }
+    },
+    "settings": {
+      "title": "Settings",
+      "subtitle": "Platform configuration. Changes apply without a deploy.",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "saveFailed": "Nothing was saved",
+      "readOnly": "You can see this section but not change it — that needs the setting:update permission.",
+      "conflict": "Somebody changed {key} while this page was open. Reload to see their change before saving yours.",
+      "envNote": "Secrets and infrastructure live in environment variables, not here. This screen holds product configuration only.",
+      "pagesNote": "Opening and closing individual pages lives on its own screen, so there is only one answer to \"is this page live\".",
+      "pagesLink": "Manage pages",
+      "sections": {
+        "general": "General",
+        "features": "Features"
+      },
+      "fields": {
+        "general": {
+          "siteName": "Site name",
+          "siteDescription": "Site description",
+          "defaultLocale": "Default language",
+          "contactEmail": "Contact email",
+          "supportUrl": "Support link"
+        },
+        "features": {
+          "registrationOpen": "Allow new accounts",
+          "commentsEnabled": "Comments",
+          "likesEnabled": "Likes",
+          "savesEnabled": "Saved lessons",
+          "examsEnabled": "Quizzes"
+        }
+      },
+      "help": {
+        "general": {
+          "siteName": "Shown in the browser tab, on sharing cards and in the header.",
+          "siteDescription": "Used as the default meta description.",
+          "defaultLocale": "The language served when a visitor has expressed no preference.",
+          "contactEmail": "Leave empty to show no contact address.",
+          "supportUrl": "Leave empty to hide the support link."
+        },
+        "features": {
+          "registrationOpen": "When off, the sign-up form is closed. Existing accounts can still sign in.",
+          "examsEnabled": "When off, quizzes are hidden from the site. Results already recorded are kept."
+        }
+      },
+      "locales": {
+        "en": "English",
+        "ar": "العربية"
+      },
+      "history": {
+        "heading": "Recent changes",
+        "empty": "Nothing has been changed yet.",
+        "entry": "{key} changed by {actor}",
+        "unknownActor": "an account since deleted"
+      }
     }
   },
   "pages": {
