@@ -14,7 +14,7 @@ import { asc, eq } from "drizzle-orm";
 import * as schema from "@/db/schema";
 import type { SeedDatabase } from "./connect";
 import { loadSeedSource } from "./source";
-import { richTextToText, toElementRow } from "./transform";
+import { blocksToPlainText, toElementRow } from "./transform";
 
 /** Floats survive the JSON -> double precision round trip exactly, but only
  * within the precision Postgres stores. Compared with a relative epsilon so a
@@ -136,7 +136,10 @@ export async function verifyContent(db: SeedDatabase): Promise<string[]> {
         );
       // The rich-text wrapping must be lossless: unwrapping it has to give the
       // original prose back, or the migration quietly rewrote the lesson.
-      if (richTextToText(got.body) !== want.body.trim())
+      if (
+        want.body !== undefined &&
+        blocksToPlainText(got.body) !== want.body.trim()
+      )
         problems.push(`lesson_sections: ${json.slug}[${index}].body differs`);
     });
   }

@@ -24,6 +24,7 @@ import {
   toQuestionRows,
   toQuizRow,
 } from "@/db/seed/transform";
+import { readingTimeSeconds } from "@/lib/lessons/reading-time";
 
 async function main() {
   const url = seedUrl();
@@ -101,11 +102,12 @@ async function main() {
             set: { title: row.title, description: row.description },
           });
 
-        // Only one lesson has a body written so far; the rest seed as
+        // Not every lesson has a body written yet; the rest seed as
         // summary-only rows until their content exists.
         const body = source.bodies.get(json.slug);
         if (body) {
-          for (const section of toLessonSectionRows(body.sections)) {
+          const rows = toLessonSectionRows(json.slug, body.sections);
+          for (const section of rows) {
             await tx
               .insert(schema.lessonSections)
               .values({ lessonId: lesson.id, ...section })
@@ -117,6 +119,19 @@ async function main() {
                 set: { heading: section.heading, body: section.body },
               });
           }
+
+          // Computed here, at write time, for the same reason the editor will
+          // compute it at save time: it is the same number for every reader,
+          // and a page that recomputes it per request charges the reader for
+          // work whose answer never changes.
+          await tx
+            .update(schema.lessons)
+            .set({
+              readingTimeSeconds: readingTimeSeconds(
+                rows.flatMap((section) => section.body),
+              ),
+            })
+            .where(eq(schema.lessons.id, lesson.id));
         }
       }
 

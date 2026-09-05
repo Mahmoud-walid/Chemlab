@@ -228,7 +228,7 @@ describe("exportAttempts", () => {
 });
 
 describe("exportFunnel", () => {
-  it("writes a stage nothing emits as not-recorded rather than as zero", async () => {
+  it("carries the not-recorded column, so a gap can never read as a zero", async () => {
     const { header, rows } = await drain(
       exportFunnel(
         new Date(Date.UTC(2026, 1, 1)),
@@ -236,14 +236,31 @@ describe("exportFunnel", () => {
       ),
     );
 
+    // Every shipped stage has an emitter since #20, so nothing is flagged
+    // today. The column stays because the next stage added to the funnel will
+    // be unmeasured on the day it lands, and "0 people read a lesson" is a
+    // false claim rather than a measurement.
+    expect(header).toContain("not_recorded");
+
     const notRecorded = header.indexOf("not_recorded");
     const people = header.indexOf("people");
-    const lesson = rows.find((row) => row[0] === "lessonRead")!;
 
-    expect(lesson[notRecorded]).toBe("true");
-    // Blank, not "0". A spreadsheet reading 0 there would report that nobody
-    // read a lesson, which is a claim the data cannot support.
-    expect(lesson[people]).toBe("");
+    for (const row of rows) {
+      expect(row[notRecorded]).toBe("false");
+      // A measured stage reports a number, never a blank.
+      expect(row[people]).toMatch(/^\d+$/);
+    }
+  });
+
+  it("writes one row per stage, in funnel order", async () => {
+    const { rows } = await drain(
+      exportFunnel(
+        new Date(Date.UTC(2026, 1, 1)),
+        new Date(Date.UTC(2026, 3, 1)),
+      ),
+    );
+    expect(rows[0]![0]).toBe("registered");
+    expect(rows[rows.length - 1]![0]).toBe("passed");
   });
 });
 

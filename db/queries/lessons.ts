@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, ne, sql } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import {
@@ -8,8 +8,12 @@ import {
   lessonTranslations,
   lessons,
 } from "@/db/schema/content";
-import { richTextToText } from "@/db/seed/transform";
-import type { RichTextDoc } from "@/db/schema/content";
+
+import {
+  blocksToText,
+  parseBlocks,
+  type LessonBlock,
+} from "@/lib/lessons/blocks";
 import { preferred } from "./_locale";
 
 export interface LessonSummary {
@@ -23,15 +27,29 @@ export interface LessonSummary {
 }
 
 export interface LessonSectionView {
+  /** Stable across locales: the anchor a table-of-contents entry links to. */
+  id: string;
+  anchor: string;
   heading: string;
-  body: RichTextDoc;
-  /** Plain-text rendering, for the components that have not moved to rich text yet. */
+  body: LessonBlock[];
+  /** Plain text, for the excerpt and for anything not rendering blocks. */
   text: string;
 }
 
 export interface LessonDetail extends LessonSummary {
   references: string[];
   sections: LessonSectionView[];
+  /** Stored, not computed per request — see lib/lessons/reading-time.ts. */
+  readingTimeSeconds: number;
+  position: number;
+}
+
+/** A card in the "read next" strip. */
+export interface RelatedLesson {
+  slug: string;
+  title: string;
+  category: string;
+  difficulty: "easy" | "medium" | "hard";
 }
 
 /**
@@ -95,6 +113,8 @@ export async function getLessonBySlug(
       difficulty: lessons.difficulty,
       category: lessons.category,
       references: lessons.references,
+      readingTimeSeconds: lessons.readingTimeSeconds,
+      position: lessons.position,
       translatedTitle: lessonTranslations.title,
       translatedDescription: lessonTranslations.description,
     })
@@ -119,6 +139,8 @@ export async function getLessonBySlug(
 
   const sections = await db
     .select({
+      id: lessonSections.id,
+      position: lessonSections.position,
       heading: lessonSections.heading,
       body: lessonSections.body,
       translatedHeading: lessonSectionTranslations.heading,
@@ -142,13 +164,22 @@ export async function getLessonBySlug(
     difficulty: lesson.difficulty,
     category: lesson.category,
     references: lesson.references,
+    readingTimeSeconds: lesson.readingTimeSeconds,
+    position: lesson.position,
     isTranslated: lesson.translatedTitle !== null,
     sections: sections.map((section) => {
       const body = preferred(section.translatedBody, section.body);
+      const heading = preferred(section.translatedHeading, section.heading);
       return {
-        heading: preferred(section.translatedHeading, section.heading),
-        body,
-        text: richTextToText(body),
+        id: section.id,
+        // Anchored on POSITION, not on the heading text: the anchor has to be
+        // the same in both locales or a link shared from the Arabic page would
+        // not resolve on the English one, and translating a heading would
+        // silently break every link into it.
+        anchor: `section-${section.position + 1}`,
+        heading,
+        body: parseBlocks(body),
+        text: blocksToText(parseBlocks(body)),
       };
     }),
   };
@@ -162,4 +193,75 @@ export async function listLessonSlugs(): Promise<string[]> {
     .where(and(eq(lessons.status, "published"), isNull(lessons.deletedAt)))
     .orderBy(asc(lessons.position), asc(lessons.slug));
   return rows.map((row) => row.slug);
+}
+
+/**
+ * What to read next: same category first, then the neighbours in curriculum
+ * order.
+ *
+ * Ranked in SQL rather than by loading the catalogue and sorting in
+ * TypeScript — the catalogue is small today, and a query that only gets slower
+ * with the content is the wrong shape to leave behind.
+ */
+export async function relatedLessons(
+  slug: string,
+  locale: string,
+  limit = 3,
+): Promise<RelatedLesson[]> {
+  const db = getDb();
+
+  const [current] = await db
+    .select({
+      id: lessons.id,
+      category: lessons.category,
+      difficulty: lessons.difficulty,
+      position: lessons.position,
+    })
+    .from(lessons)
+    .where(eq(lessons.slug, slug))
+    .limit(1);
+
+  if (!current) return [];
+
+  const rows = await db
+    .select({
+      slug: lessons.slug,
+      title: lessons.title,
+      category: lessons.category,
+      difficulty: lessons.difficulty,
+      translatedTitle: lessonTranslations.title,
+      score: sql<number>`
+        (case when ${lessons.category} = ${current.category} then 2 else 0 end)
+        + (case when ${lessons.difficulty} = ${current.difficulty} then 1 else 0 end)
+      `.as("score"),
+      distance: sql<number>`abs(${lessons.position} - ${current.position})`.as(
+        "distance",
+      ),
+    })
+    .from(lessons)
+    .leftJoin(
+      lessonTranslations,
+      and(
+        eq(lessonTranslations.lessonId, lessons.id),
+        eq(lessonTranslations.locale, locale),
+      ),
+    )
+    .where(
+      and(
+        eq(lessons.status, "published"),
+        isNull(lessons.deletedAt),
+        ne(lessons.id, current.id),
+      ),
+    )
+    // Overlap first, then curriculum proximity, then slug so the strip is the
+    // same on every request rather than following physical row order.
+    .orderBy(desc(sql`score`), asc(sql`distance`), asc(lessons.slug))
+    .limit(limit);
+
+  return rows.map((row) => ({
+    slug: row.slug,
+    title: preferred(row.translatedTitle, row.title),
+    category: row.category,
+    difficulty: row.difficulty,
+  }));
 }

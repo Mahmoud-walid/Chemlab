@@ -92,6 +92,13 @@
       "when": 1788599640453,
       "tag": "0012_activity_rollup",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1788604362390,
+      "tag": "0013_lesson_blocks",
+      "breakpoints": true
     }
   ]
 }

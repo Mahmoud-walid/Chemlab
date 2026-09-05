@@ -46,12 +46,12 @@ export const FUNNEL_STAGES: FunnelStage[] = [
   {
     key: "lessonRead",
     source: { kind: "verb", verbs: ["lesson.viewed", "lesson.completed"] },
-    // Nothing emits `lesson.viewed` yet: the lessons are two hard-coded
-    // static routes, and the `[slug]` model that would carry view tracking
-    // is #20's. Instrumenting the two pages now would be work #20 deletes,
-    // and reading `headers()` in them would cost their prerendering. Remove
-    // this flag when #20 lands.
-    notYetRecorded: true,
+    // Recorded since #20: the `[slug]` lesson page posts to
+    // `/api/lessons/[slug]/view`. The beacon exists rather than an `after()`
+    // in the page because the page is prerendered — see view-beacon.tsx.
+    // `lesson.completed` still has no emitter; a lesson has no completion
+    // action yet, and the stage counts either verb, so the count is honest
+    // either way.
   },
   { key: "examStarted", source: { kind: "attempt", status: "any" } },
   { key: "examSubmitted", source: { kind: "attempt", status: "finished" } },
@@ -77,16 +77,22 @@ export interface FunnelRow {
  * Pure, so the arithmetic can be checked against hand-computed values without
  * a database — which is exactly what #19's acceptance criterion asks for.
  */
-export function funnelRows(counts: Record<string, number>): FunnelRow[] {
-  const first = counts[FUNNEL_STAGES[0]!.key] ?? 0;
+export function funnelRows(
+  counts: Record<string, number>,
+  // Injectable so the `notYetRecorded` machinery stays testable even when no
+  // shipped stage carries the flag. A mechanism with no test is a mechanism
+  // that rots quietly until the next stage needs it.
+  stages: readonly FunnelStage[] = FUNNEL_STAGES,
+): FunnelRow[] {
+  const first = counts[stages[0]!.key] ?? 0;
 
-  return FUNNEL_STAGES.map((stage, index) => {
+  return stages.map((stage, index) => {
     const people = counts[stage.key] ?? 0;
     // A stage nothing emits is not a denominator either: converting against a
     // structural zero would report a drop-off that never happened, and one
     // gap would swallow every stage after it. The nearest earlier MEASURED
     // stage is the honest comparison.
-    const previousStage = lastMeasuredBefore(index);
+    const previousStage = lastMeasuredBefore(stages, index);
     const previous =
       previousStage === null ? null : (counts[previousStage.key] ?? 0);
 
@@ -113,9 +119,12 @@ function percent(part: number, whole: number): number {
 }
 
 /** The nearest earlier stage that something actually emits. */
-function lastMeasuredBefore(index: number): FunnelStage | null {
+function lastMeasuredBefore(
+  stages: readonly FunnelStage[],
+  index: number,
+): FunnelStage | null {
   for (let i = index - 1; i >= 0; i--) {
-    const stage = FUNNEL_STAGES[i]!;
+    const stage = stages[i]!;
     if (!stage.notYetRecorded) return stage;
   }
   return null;

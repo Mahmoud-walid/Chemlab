@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { FUNNEL_STAGES, funnelRows } from "@/lib/activity/funnel";
+import {
+  FUNNEL_STAGES,
+  funnelRows,
+  type FunnelStage,
+} from "@/lib/activity/funnel";
 
 /**
  * The arithmetic behind the pipeline view, checked against hand-computed
@@ -106,39 +110,61 @@ describe("conversion arithmetic", () => {
 
 describe("a stage nothing emits yet", () => {
   /**
-   * `lesson.viewed` has no call site: the lessons are two hard-coded static
-   * routes and the `[slug]` model that would carry view tracking is #20's.
-   * Counting that as "0 people read a lesson" would be a false claim rather
-   * than a measurement, and — worse — would make the NEXT stage's conversion
-   * a division by a structural zero.
+   * Every shipped stage has an emitter as of #20 — `lesson.viewed` is
+   * recorded by the lesson page's beacon. The machinery stays, and stays
+   * tested against a fabricated stage list, because the next stage added to
+   * the funnel will be unmeasured on the day it lands. Counting an unemitted
+   * stage as "0 people" would be a false claim rather than a measurement,
+   * and would make the NEXT stage's conversion a division by a structural
+   * zero.
    */
+  const STAGES: FunnelStage[] = [
+    { key: "registered", source: { kind: "verb", verbs: ["auth.signed_up"] } },
+    {
+      key: "unmeasured",
+      source: { kind: "verb", verbs: ["lesson.completed"] },
+      notYetRecorded: true,
+    },
+    { key: "examStarted", source: { kind: "attempt", status: "any" } },
+    { key: "examSubmitted", source: { kind: "attempt", status: "finished" } },
+    { key: "passed", source: { kind: "attempt", status: "passed" } },
+  ];
+
+  it("every shipped stage now has something emitting it", () => {
+    // The flag names a gap. One that outlives the gap is a screen saying
+    // "not recorded yet" about data that is being recorded.
+    expect(FUNNEL_STAGES.filter((stage) => stage.notYetRecorded)).toEqual([]);
+  });
+
   it("marks the stage rather than reporting a zero as data", () => {
-    const rows = funnelRows({ registered: 100, examStarted: 30 });
-    expect(at(rows, "lessonRead").notYetRecorded).toBe(true);
+    const rows = funnelRows({ registered: 100, examStarted: 30 }, STAGES);
+    expect(at(rows, "unmeasured").notYetRecorded).toBe(true);
     expect(at(rows, "registered").notYetRecorded).toBe(false);
   });
 
   it("converts the next stage against the last MEASURED one", () => {
     // 30 of the 100 who registered started a quiz. Converting against the
-    // unmeasured lesson stage would report "no answer" for every stage after
-    // it, which is how one gap swallows the rest of the funnel.
-    const rows = funnelRows({
-      registered: 100,
-      lessonRead: 0,
-      examStarted: 30,
-    });
+    // unmeasured stage would report "no answer" for every stage after it,
+    // which is how one gap swallows the rest of the funnel.
+    const rows = funnelRows(
+      { registered: 100, unmeasured: 0, examStarted: 30 },
+      STAGES,
+    );
     expect(at(rows, "examStarted").conversion).toBe(30);
     expect(at(rows, "examStarted").dropOff).toBe(70);
   });
 
   it("still reports the measured stages after it normally", () => {
-    const rows = funnelRows({
-      registered: 100,
-      lessonRead: 0,
-      examStarted: 30,
-      examSubmitted: 24,
-      passed: 18,
-    });
+    const rows = funnelRows(
+      {
+        registered: 100,
+        unmeasured: 0,
+        examStarted: 30,
+        examSubmitted: 24,
+        passed: 18,
+      },
+      STAGES,
+    );
     expect(at(rows, "examSubmitted").conversion).toBe(80);
     expect(at(rows, "passed").conversion).toBe(75);
   });
