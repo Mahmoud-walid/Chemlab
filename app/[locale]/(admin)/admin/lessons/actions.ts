@@ -14,6 +14,7 @@ import type { ContentStatus } from "@/db/schema/content";
 import { auditLog } from "@/db/schema/rbac";
 import { isSlugTaken } from "@/db/queries/admin/lessons";
 import { currentSourceHash } from "@/db/queries/translations";
+import { localizedPaths } from "@/i18n/paths";
 import {
   lessonEditSchema,
   publishBlockers,
@@ -79,15 +80,25 @@ function readForm(formData: FormData) {
  * public URLs — the one that no longer exists and the one that now does.
  */
 function revalidateLesson(slug: string, previousSlug?: string) {
+  // Public paths go through `localizedPaths`, because under
+  // `localePrefix: "as-needed"` the Arabic page is a separate cache entry at
+  // a separate URL — and an English edit is exactly what changes it, whether
+  // the Arabic falls back to this copy or is now out of date against it. See
+  // i18n/paths.ts. The admin screens are not localised in the URL.
+  const publicPaths = [
+    ...localizedPaths("/lessons"),
+    ...localizedPaths(`/lessons/${slug}`),
+    ...localizedPaths("/"),
+  ];
+
   revalidatePath("/admin/lessons");
   revalidatePath(`/admin/lessons/${slug}`);
-  revalidatePath("/lessons");
-  revalidatePath(`/lessons/${slug}`);
   if (previousSlug && previousSlug !== slug) {
     revalidatePath(`/admin/lessons/${previousSlug}`);
-    revalidatePath(`/lessons/${previousSlug}`);
+    publicPaths.push(...localizedPaths(`/lessons/${previousSlug}`));
   }
-  revalidatePath("/");
+
+  for (const path of publicPaths) revalidatePath(path);
 }
 
 /**

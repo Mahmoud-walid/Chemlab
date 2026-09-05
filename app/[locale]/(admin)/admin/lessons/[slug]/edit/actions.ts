@@ -14,6 +14,7 @@ import {
 import { recordActivity } from "@/lib/activity/record";
 import { requirePermission } from "@/lib/authz";
 import { blocksSchema } from "@/lib/lessons/blocks";
+import { localizedPaths } from "@/i18n/paths";
 
 /**
  * Saving a lesson body.
@@ -93,8 +94,15 @@ export async function saveLessonBody(
 
   // Both the editor and the public page: the lesson is prerendered, so without
   // this the reader keeps the old body until something else rebuilds it.
+  //
+  // Every locale, not just the default one. The Arabic page is a separate
+  // cache entry at a separate URL, and an English edit changes what it shows:
+  // an untranslated section falls back to this body, and a translated one
+  // becomes out of date and gains a notice. See i18n/paths.ts.
   revalidatePath(`/admin/lessons/${slug}/edit`);
-  revalidatePath(`/lessons/${slug}`, "page");
+  for (const path of localizedPaths(`/lessons/${slug}`)) {
+    revalidatePath(path);
+  }
 
   return {
     ok: true,
