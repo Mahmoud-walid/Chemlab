@@ -293,6 +293,13 @@
     "navLabel": "تنقّل لوحة التحكم",
     "breadcrumbLabel": "مسار التنقّل",
     "toggleSidebar": "إظهار الشريط الجانبي أو إخفاؤه",
+    "palette": {
+      "open": "بحث",
+      "placeholder": "انتقل إلى قسم…",
+      "empty": "لا توجد نتائج.",
+      "title": "لوحة الأوامر",
+      "description": "ابحث في لوحة التحكم وانتقل إلى قسم."
+    },
     "backToSite": "العودة إلى الموقع",
     "groups": {
       "overview": "نظرة عامة",

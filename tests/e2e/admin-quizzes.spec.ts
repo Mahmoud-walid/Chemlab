@@ -200,15 +200,15 @@ test.describe("the quiz admin", () => {
       "/admin/quizzes/new",
       "/admin/quizzes/acids-and-bases",
     ]) {
-      await page.goto(path);
+      const response = await page.goto(path);
 
-      // Asserted on the CONTENT, not the status. The refusal renders the
-      // not-found page, but Next has already committed a 200 by the time a
-      // section check can run — see the note in the admin layout and Q31.
-      await expect(
-        page.getByRole("heading", { name: /not found/i }),
-        path,
-      ).toBeVisible();
+      // A real 404, not a 200 carrying an apology. This became true when the
+      // proxy's `x-pathname` forwarding was fixed: the admin layout resolves
+      // the section's permission from that header, so until the header
+      // arrived the layout only ever checked `admin:access` and the refusal
+      // fell to the page — by which point Next had committed a 200. That was
+      // recorded as Q31; it is now closed.
+      expect(response?.status(), path).toBe(404);
 
       const html = await page.content();
       expect(html, path).not.toContain('href="/admin/quizzes/acids-and-bases"');

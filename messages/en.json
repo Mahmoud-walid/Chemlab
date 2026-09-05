@@ -293,6 +293,13 @@
     "navLabel": "Admin navigation",
     "breadcrumbLabel": "Breadcrumb",
     "toggleSidebar": "Toggle the sidebar",
+    "palette": {
+      "open": "Search",
+      "placeholder": "Jump to a section…",
+      "empty": "Nothing matches.",
+      "title": "Command palette",
+      "description": "Search the admin panel and jump to a section."
+    },
     "backToSite": "Back to site",
     "groups": {
       "overview": "Overview",

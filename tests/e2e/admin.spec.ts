@@ -45,6 +45,21 @@ test.describe("the admin gate", () => {
     await expect(page).toHaveURL(/\/ar\/sign-in\?next=%2Far%2Fadmin/);
   });
 
+  test("returns an anonymous visitor to the exact page they asked for", async ({
+    page,
+  }) => {
+    // A deep link, not just `/admin`: returning someone to the section root
+    // after they asked for a record is a small betrayal that is easy to ship.
+    //
+    // Note this does NOT exercise the `x-pathname` forwarding — an anonymous
+    // request is redirected by the proxy before the header is ever attached,
+    // and the `next` value comes straight off the request URL. The breadcrumb
+    // test below is the one that covers forwarding; I checked by reverting the
+    // fix and watching which test went red.
+    await page.goto("/admin/elements/26");
+    await expect(page).toHaveURL(/\/sign-in\?next=%2Fadmin%2Felements%2F26/);
+  });
+
   test("gives a signed-in user without admin:access a 404 with no admin markup", async ({
     page,
   }) => {
@@ -128,5 +143,68 @@ test.describe("the admin gate", () => {
     await page.keyboard.press("Enter");
     // Collapsing and expanding must both work from the keyboard.
     await expect(toggle).toBeFocused();
+  });
+  test("shows a record's title in the breadcrumb, not its id", async ({
+    page,
+  }) => {
+    await signInAs(page, db, "editor");
+    await page.goto("/admin/elements/26");
+
+    const breadcrumb = page.getByRole("navigation", { name: /breadcrumb/i });
+    // "26" tells a reader nothing about which element they are editing.
+    //
+    // This is also the regression test for the proxy's request-header
+    // forwarding. The title is resolved in the admin LAYOUT from the
+    // `x-pathname` header, so if that header stops arriving the layout falls
+    // back to "/admin", resolves nothing, and the id comes back. That is
+    // exactly what happened between #56 and #65: the proxy copied next-intl's
+    // response headers wholesale, including the machinery Next uses to carry
+    // request-header overrides, so ours were replaced by theirs. Nothing
+    // failed — every reader quietly took its fallback.
+    await expect(breadcrumb).toContainText("Iron");
+    await expect(breadcrumb).not.toContainText("26");
+  });
+
+  test("opens the command palette with the keyboard and navigates", async ({
+    page,
+  }) => {
+    await signInAs(page, db, "editor");
+    await page.goto("/admin");
+
+    await page.keyboard.press("ControlOrMeta+k");
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+
+    await dialog.getByPlaceholder(/jump to a section/i).fill("less");
+    await dialog
+      .getByRole("option", { name: /lessons/i })
+      .first()
+      .click();
+
+    await expect(page).toHaveURL(/\/admin\/lessons$/);
+  });
+
+  test("offers the palette only the sections the viewer may open", async ({
+    page,
+  }) => {
+    // `editor` holds no user, role, audit or settings permission. Offering a
+    // jump the guard would then refuse is an invitation followed by a 404.
+    await signInAs(page, db, "editor");
+    await page.goto("/admin");
+
+    await page.keyboard.press("ControlOrMeta+k");
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+
+    await expect(
+      dialog.getByRole("option", { name: /lessons/i }),
+    ).toBeVisible();
+    for (const hidden of [
+      /^users$/i,
+      /roles and permissions/i,
+      /^settings$/i,
+    ]) {
+      await expect(dialog.getByRole("option", { name: hidden })).toHaveCount(0);
+    }
   });
 });
