@@ -9,6 +9,7 @@ export * from "./_shared";
 export * from "./meta";
 export * from "./content";
 export * from "./attempts";
+export * from "./engagement";
 export * from "./auth";
 export * from "./rbac";
 export * from "./activity";

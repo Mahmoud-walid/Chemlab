@@ -8,6 +8,7 @@ import {
 } from "@/db/queries/lessons";
 import { hasDatabase } from "@/db/queries/availability";
 import { BlockRenderer } from "@/components/lessons/block-renderer";
+import { EngagementBar } from "@/components/lessons/engagement-bar";
 import { ReadingProgress } from "@/components/lessons/reading-progress";
 import { TableOfContents } from "@/components/lessons/table-of-contents";
 import { ViewBeacon } from "@/components/lessons/view-beacon";
@@ -112,6 +113,29 @@ export default async function LessonPage({
             {t(`difficulty.${lesson.difficulty}` as never)}
           </p>
         </header>
+
+        {/* Counts are NOT read here. This page is prerendered, so a count
+            rendered on the server would be the count at BUILD time — wrong by
+            the first like, and wrong in a way that looks authoritative. The
+            bar fetches its own state on mount, which also gets the viewer
+            their own liked/saved state without making the page dynamic. */}
+        <div className="mt-6">
+          <EngagementBar
+            slug={lesson.slug}
+            title={lesson.title}
+            labels={{
+              like: t("like"),
+              liked: t("liked"),
+              save: t("save"),
+              saved: t("saved"),
+              share: t("share"),
+              shareCopied: t("shareCopied"),
+              shareFailed: t("shareFailed"),
+              signInToLike: t("signInToLike"),
+              failed: t("engagementFailed"),
+            }}
+          />
+        </div>
 
         {!bodyIsTranslated && (
           <div

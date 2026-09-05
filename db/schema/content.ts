@@ -152,6 +152,34 @@ export const lessons = pgTable(
      */
     position: integer("position").notNull().default(0),
     publishedAt: timestamp("published_at", { withTimezone: true }),
+
+    /**
+     * Denormalised engagement counts, maintained by database TRIGGERS over
+     * `lesson_likes`, `lesson_saves` and `share_events` — never by application
+     * code.
+     *
+     * Denormalised because the catalogue renders every lesson as a card and
+     * each card needs these: aggregate subqueries per card, on every visit, on
+     * a serverless connection budget. Counts are read constantly and written
+     * rarely, which is the case denormalisation is for.
+     *
+     * Triggers because `count = count + 1` in application code drifts the
+     * moment a request dies between the two writes, and because deleting a
+     * user cascades to their likes and saves without any application code
+     * running at all — a trigger still fires, a service layer does not.
+     * `scripts/reconcile-counters.ts` recomputes them and reports drift.
+     *
+     * `share_count` counts VERIFIED shares only. An outbound click is stored
+     * and shown to admins as intent; counting it would make the number a lie.
+     */
+    likeCount: integer("like_count").notNull().default(0),
+    /** Stored for the admin view. Never displayed publicly: a reading list is
+     * private, and a public total would leak how many people saved a lesson
+     * they have not endorsed. */
+    saveCount: integer("save_count").notNull().default(0),
+    shareCount: integer("share_count").notNull().default(0),
+    commentCount: integer("comment_count").notNull().default(0),
+
     // Lessons are soft-deletable: they carry comments, likes and saves that a
     // hard delete would take with them.
     deletedAt: timestamp("deleted_at", { withTimezone: true }),

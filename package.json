@@ -19,6 +19,7 @@
     "db:seed": "tsx scripts/seed.ts",
     "rollup": "tsx scripts/rollup.ts",
     "retention": "tsx scripts/retention.ts",
+    "reconcile": "tsx scripts/reconcile-counters.ts",
     "db:verify": "tsx scripts/db-verify.ts",
     "pages:check": "tsx scripts/pages-check.ts",
     "db:bootstrap-admin": "tsx scripts/bootstrap-admin.ts",
