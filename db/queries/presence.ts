@@ -16,7 +16,8 @@ import type { PresenceState } from "@/lib/presence/state";
 export interface PresenceRow {
   userId: string;
   state: PresenceState;
-  lastSeenAt: Date | null;
+  /** ISO 8601 in UTC, formatted in SQL — see the query for why not a Date. */
+  lastSeenAt: string | null;
   /** Admin-only. A coarse route pattern, never a URL with a query string. */
   lastPath: string | null;
 }
@@ -71,10 +72,22 @@ export async function presenceFor(
   const rows = await db.execute<{
     user_id: string;
     state: PresenceState;
-    last_seen_at: Date | null;
+    last_seen_at: string | null;
     last_path: string | null;
   }>(sql`
-    select user_id, state, last_seen_at, last_path
+    select user_id,
+           state,
+           -- Formatted in SQL, explicitly.
+           --
+           -- A raw \`timestamptz\` comes back from this driver as Postgres's
+           -- own text — \`2026-09-05 20:49:41.719+00\` — which V8 happens to
+           -- parse and the ECMAScript grammar does not require any engine to.
+           -- Worse, the obvious "fix" of swapping the space for a T produces
+           -- \`+00\`, which is NOT a valid ISO offset and fails outright. So
+           -- the format is stated here rather than left to whoever parses it.
+           to_char(last_seen_at at time zone 'UTC',
+                   'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as last_seen_at,
+           last_path
     from presence_state
     where user_id in (${sql.join(
       userIds.map((id) => sql`${id}`),
@@ -89,7 +102,7 @@ export async function presenceFor(
   return (list as unknown as Record<string, unknown>[]).map((row) => ({
     userId: String(row.user_id ?? row.userId),
     state: (row.state ?? "offline") as PresenceState,
-    lastSeenAt: (row.last_seen_at ?? row.lastSeenAt ?? null) as Date | null,
+    lastSeenAt: (row.last_seen_at ?? row.lastSeenAt ?? null) as string | null,
     // Withheld unless the caller is entitled to it. Done here rather than in
     // the route so a second caller cannot forget.
     lastPath: options.includePath

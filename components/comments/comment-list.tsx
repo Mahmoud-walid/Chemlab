@@ -311,9 +311,7 @@ export function CommentList({
             comment={reply}
             signedIn={signedIn}
             isReply
-            presence={
-              reply.authorId ? presence.get(reply.authorId) : undefined
-            }
+            presence={reply.authorId ? presence.get(reply.authorId) : undefined}
             onReply={signedIn ? () => setReplyTo(root) : undefined}
             onDeleted={
               viewerId && reply.authorId === viewerId ? onDeleted : undefined
@@ -487,9 +485,7 @@ function ShowReplies({
             comment={reply}
             signedIn={signedIn}
             isReply
-            presence={
-              reply.authorId ? presence.get(reply.authorId) : undefined
-            }
+            presence={reply.authorId ? presence.get(reply.authorId) : undefined}
             onDeleted={
               viewerId && reply.authorId === viewerId ? onDeleted : undefined
             }

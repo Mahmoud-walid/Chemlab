@@ -72,7 +72,7 @@ describe("the view", () => {
     // apart. Two hand-written copies of "150 seconds" is one of them going
     // stale, silently, in a direction nobody notices.
     const migration = readFileSync(
-      path.join(process.cwd(), "db/migrations/0020_presence.sql"),
+      path.join(process.cwd(), "db/migrations/0021_presence.sql"),
       "utf8",
     );
 
