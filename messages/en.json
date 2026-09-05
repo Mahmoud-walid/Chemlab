@@ -1160,5 +1160,17 @@
     "sortNew": "Newest",
     "sortTop": "Top",
     "feedLabel": "Comments on this lesson"
+  },
+  "presence": {
+    "online": "Online",
+    "away": "Away",
+    "offline": "Offline",
+    "lastSeen": "Last seen {when}",
+    "visibilityTitle": "Who can see when you are online",
+    "visibilityDescription": "Turning this off means everyone sees you as offline, always. It does not hide anything you have written.",
+    "visibilityEveryone": "Everyone",
+    "visibilityNobody": "Nobody",
+    "visibilitySaved": "Saved.",
+    "visibilityFailed": "That did not save. Nothing was changed."
   }
 }

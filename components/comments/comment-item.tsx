@@ -14,6 +14,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
 import { initialsOf } from "@/lib/initials";
+import { PresenceDot } from "@/components/presence/presence-dot";
+import type { PresenceEntry } from "@/hooks/use-presence";
 import { cn } from "@/lib/utils";
 import {
   COLLAPSE_MS,
@@ -41,6 +43,7 @@ export function CommentItem({
   signedIn,
   isReply = false,
   posInSet,
+  presence,
   onReply,
   onDeleted,
 }: {
@@ -50,6 +53,9 @@ export function CommentItem({
   /** 1-based position within the feed. Only roots carry one — a reply is part
    * of its root's article, not a separate item in the stream. */
   posInSet?: number;
+  /** Absent when presence could not be read — the dot then renders nothing
+   * rather than claiming the author is offline. */
+  presence?: PresenceEntry;
   onReply?: (comment: CommentView) => void;
   onDeleted?: (id: string) => void;
 }) {
@@ -198,14 +204,23 @@ export function CommentItem({
         isReply && "ms-6 border-s ps-4 sm:ms-10",
       )}
     >
-      <Avatar className="size-8 shrink-0">
-        {comment.authorImage && (
-          <AvatarImage src={comment.authorImage} alt="" />
+      {/* `relative`, so the dot can sit on the avatar's inline end. */}
+      <div className="relative shrink-0">
+        <Avatar className="size-8">
+          {comment.authorImage && (
+            <AvatarImage src={comment.authorImage} alt="" />
+          )}
+          <AvatarFallback className="text-xs">
+            {initialsOf(comment.authorName ?? "?")}
+          </AvatarFallback>
+        </Avatar>
+        {presence && !deleted && (
+          <PresenceDot
+            state={presence.state}
+            lastSeenAt={presence.lastSeenAt}
+          />
         )}
-        <AvatarFallback className="text-xs">
-          {initialsOf(comment.authorName ?? "?")}
-        </AvatarFallback>
-      </Avatar>
+      </div>
 
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex flex-wrap items-baseline gap-2">

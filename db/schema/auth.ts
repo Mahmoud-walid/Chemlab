@@ -26,12 +26,38 @@ import { id, timestamps } from "./_shared";
  * `users.id` as text.
  */
 
+/**
+ * Who may see somebody's presence.
+ *
+ * Declared here rather than in `presence.ts` because the column is here, and
+ * `presence.ts` already imports `users` — the other direction would be a
+ * cycle.
+ */
+export const presenceVisibilityEnum = pgEnum("presence_visibility", [
+  "everyone",
+  "nobody",
+]);
+
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
+  /**
+   * Who may see this person's presence.
+   *
+   * Defaulted to `everyone` because that is what was asked for, and kept as a
+   * ONE-LINE change because it is the kind of default worth revisiting: an
+   * always-public presence signal on a learning site tells anyone watching
+   * when a particular student is at their desk and when they stop. Recorded as
+   * Q39 in docs/DEFERRED_QUESTIONS.md.
+   *
+   * `nobody` is enforced in SQL, not in the client — see the presence view.
+   */
+  presenceVisibility: presenceVisibilityEnum("presence_visibility")
+    .notNull()
+    .default("everyone"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

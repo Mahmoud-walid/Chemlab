@@ -18,6 +18,7 @@ import "../globals.css";
 import { Providers } from "@/providers/providers";
 import { Toaster } from "@/components/ui/sonner";
 import { PushRegistrar } from "@/components/customs/push-registrar";
+import { PresenceHeartbeat } from "@/components/presence/presence-heartbeat";
 import { absoluteUrl, env } from "@/lib/env";
 import { direction, locales, routing, type Locale } from "@/i18n/routing";
 import { getSettings } from "@/lib/settings/get";
@@ -193,6 +194,10 @@ export default async function LocaleLayout({
                 requests no permission — a prompt on first paint is the most
                 reliable way to be refused for ever. */}
             <PushRegistrar />
+            {/* One fetch a minute from one tab, and only while it is visible.
+                See lib/presence/constants.ts for why the numbers are what
+                they are. */}
+            <PresenceHeartbeat />
           </Providers>
         </NextIntlClientProvider>
       </body>
