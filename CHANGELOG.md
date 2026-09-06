@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.23.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.22.0...v0.23.0) (2026-09-06)
+
+
+### Features
+
+* **admin:** bulk actions and hard delete for quizzes, the second resource ([#118](https://github.com/Mahmoud-walid/Chemlab/issues/118)) ([8892ef6](https://github.com/Mahmoud-walid/Chemlab/commit/8892ef611f96bc03e2646380cd52207835d22b6f)), closes [#116](https://github.com/Mahmoud-walid/Chemlab/issues/116)
+* **admin:** translate a quiz, answer options included ([#119](https://github.com/Mahmoud-walid/Chemlab/issues/119)) ([787f5c0](https://github.com/Mahmoud-walid/Chemlab/commit/787f5c023bf883fa26bc766726a71825c1761056))
+
+
+### Bug Fixes
+
+* **env:** report Web Push status under the name the app reads, and diagnose Neon ([#114](https://github.com/Mahmoud-walid/Chemlab/issues/114)) ([99820da](https://github.com/Mahmoud-walid/Chemlab/commit/99820daf6eef188928535398856395ecfc7a297d))
+
 ## [0.22.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.21.0...v0.22.0) (2026-09-06)
 
 
