@@ -18,6 +18,14 @@ import {
   lessonsForBulk,
   type BulkLessonAction,
 } from "@/db/queries/admin/bulk-lessons";
+import {
+  hardDeleteLesson,
+  lessonHardDeleteState,
+} from "@/db/queries/admin/hard-delete";
+import {
+  hardDeleteRefusals,
+  type HardDeleteReason,
+} from "@/lib/admin/hard-delete";
 import { currentSourceHash } from "@/db/queries/translations";
 import { localizedPaths } from "@/i18n/paths";
 import {
@@ -561,4 +569,63 @@ export async function bulkLessonAction(
     unchanged: plan.unchanged.length,
     refused: [],
   };
+}
+
+/* --------------------------------------------------------- hard delete --- */
+
+export interface HardDeleteResult {
+  ok: boolean;
+  problem?: string;
+  /** Reason KEYS, translated by the caller — never prose from a server action. */
+  refusals?: HardDeleteReason[];
+}
+
+/**
+ * Erases a lesson, rather than withdrawing it.
+ *
+ * Behind its own permission, which no role holds by default. Soft delete is
+ * the default and stays the default; this is the escape hatch for a row
+ * created by mistake, and the refusals in `lib/admin/hard-delete.ts` are what
+ * distinguish a mistake from history.
+ *
+ * The refusals are checked here AND again inside the delete's own WHERE
+ * clause. The state was read before an operator typed a confirmation, and a
+ * comment can arrive in between — so the check that actually decides is the
+ * one the transaction makes.
+ */
+export async function hardDeleteLessonAction(
+  id: string,
+): Promise<HardDeleteResult> {
+  const actor = await requirePermission("lesson:delete_hard");
+
+  const row = await lessonHardDeleteState(id);
+  if (!row) return { ok: false, problem: "That lesson does not exist." };
+
+  const refusals = hardDeleteRefusals(row);
+  if (refusals.length > 0) return { ok: false, refusals };
+
+  try {
+    await hardDeleteLesson(actor.userId, row);
+  } catch {
+    // The row changed between the check and the delete. Reported rather than
+    // retried: whatever arrived is exactly the thing the operator should look
+    // at before asking again.
+    return {
+      ok: false,
+      problem: "The lesson changed before it could be deleted. Try again.",
+    };
+  }
+
+  // No `recordActivity`: the activity stream is keyed on the object, and
+  // writing an event about a lesson that no longer exists would put a row in
+  // the stream that resolves to nothing. The audit entry is the record, and
+  // it carries the slug and title precisely because the row is gone.
+
+  revalidatePath("/admin/lessons");
+  for (const path of localizedPaths("/lessons")) revalidatePath(path);
+  for (const path of localizedPaths(`/lessons/${row.slug}`)) {
+    revalidatePath(path);
+  }
+
+  return { ok: true };
 }

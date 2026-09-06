@@ -20,7 +20,17 @@ unique key, so the admin UI can group by resource without parsing strings.
 
 **Actions:** `read`, `create`, `update`, `delete`, `publish`, `moderate`,
 `assign`, `impersonate`, `export`, `toggle`, `bypass`, `access`, `read_pii`,
-`update_security`, `void`, `write`, `review`.
+`update_security`, `void`, `write`, `review`, `delete_hard`.
+
+`lesson:delete_hard` is separate from `lesson:delete` for the same reason
+`setting:update_security` is separate from `setting:update`: soft delete keeps
+the row and can be undone, and erasing one cannot. **No role holds it by
+default, including Admin.** It exists for a row created by mistake — a lesson
+somebody made while learning the editor — and the refusals are its definition
+rather than a safety net: a lesson that is published, was ever published, or
+that any comment, save, like or activity event refers to is history, and
+history gets withdrawn instead. A Super Admin can grant it at runtime when
+somebody genuinely needs it.
 
 `translation` is a resource of its own rather than actions on `lesson` and
 `quiz`, because a translator works across every content type and must not

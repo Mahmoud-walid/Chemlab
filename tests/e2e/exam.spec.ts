@@ -111,9 +111,18 @@ test.describe("taking a quiz", () => {
       .first()
       .textContent();
     const options = await page.getByTestId("quiz-option").allTextContents();
+    // The save is a server action, and the radio being checked is OPTIMISTIC
+    // client state — it says the click was received, not that the answer was
+    // stored. Reloading on that signal races the round trip, and under the
+    // load of the full suite the reload won: the paper came back with nothing
+    // selected. Waiting for the response is waiting for the actual save.
+    const saved = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" && response.status() < 400,
+    );
     await page.getByTestId("quiz-option").first().click();
-    // The save is a server action; wait for it to land before reloading.
     await expect(page.locator("input[type=radio]").first()).toBeChecked();
+    await saved;
 
     await page.reload();
 

@@ -88,6 +88,22 @@ async function lessonToTranslate(): Promise<string> {
   return slug;
 }
 
+/**
+ * Publishes the translation and waits for the STATE, not the toast.
+ *
+ * Saving and publishing raise the same "Saved" toast, so an assertion on it
+ * after publishing can be satisfied by the toast the save left on screen —
+ * and under the load of the full suite it was: the test read the reader page
+ * before the publish had landed, and saw English. The badge is a fact about
+ * the row rather than a transient.
+ */
+async function publish(page: import("@playwright/test").Page) {
+  await page.getByRole("button", { name: /publish translation/i }).click();
+  await expect(page.getByText("Translated", { exact: true })).toBeVisible({
+    timeout: 15_000,
+  });
+}
+
 test.describe("translating a lesson", () => {
   test("lets an editor write and submit, but not publish", async ({ page }) => {
     await signInAs(page, db, "editor");
@@ -146,10 +162,7 @@ test.describe("translating a lesson", () => {
     await expect(page.getByText("الأحماض والقواعد")).toHaveCount(0);
 
     await page.goto(`/en/admin/lessons/${slug}/translate`);
-    await page.getByRole("button", { name: /publish translation/i }).click();
-    await expect(page.getByText(/^Saved$/).first()).toBeVisible({
-      timeout: 15_000,
-    });
+    await publish(page);
 
     await page.goto(`/ar/lessons/${slug}`);
     await expect(
@@ -177,10 +190,7 @@ test.describe("translating a lesson", () => {
     await expect(page.getByText(/^Saved$/).first()).toBeVisible({
       timeout: 15_000,
     });
-    await page.getByRole("button", { name: /publish translation/i }).click();
-    await expect(page.getByText(/^Saved$/).first()).toBeVisible({
-      timeout: 15_000,
-    });
+    await publish(page);
 
     // The English changes underneath it. No marking step runs: the source's
     // hash is a generated column, so Postgres recomputes it inside this

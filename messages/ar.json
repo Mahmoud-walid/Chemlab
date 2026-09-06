@@ -583,7 +583,21 @@
         "confirmPublishTitle": "نشر هذا الدرس؟",
         "confirmPublishBody": "سيصبح مرئيًا للجميع على ‎/lessons/{slug}‎.",
         "confirmPublishAction": "نشر",
-        "cancel": "إلغاء"
+        "cancel": "إلغاء",
+        "hardDelete": "حذف نهائي",
+        "hardDeleteHint": "لمسوّدة أُنشئت بالخطأ. لا تراجع عن هذا، ولا تبقى نسخة مسحوبة.",
+        "hardDeleteConfirmTitle": "حذف هذا الدرس نهائيًا؟",
+        "hardDeleteConfirmBody": "لا يمكن التراجع عن هذا. اكتب المعرّف {slug} للتأكيد.",
+        "hardDeleteDone": "تم الحذف.",
+        "hardDeleteRefusedTitle": "لا يمكن حذف هذا الدرس",
+        "hardDeleteReasons": {
+          "published": "الدرس منشور. اسحبه أولًا.",
+          "wasPublished": "سبق نشره. قد يكون القراء قد ربطوا إليه، لذلك يُسحب بدل أن يُحذف.",
+          "hasComments": "علّق عليه أحدهم.",
+          "hasEngagement": "حفظه أحدهم أو أعجب به.",
+          "hasActivity": "يظهر في سجل النشاط.",
+          "hasAttempts": "أدّاه أحدهم."
+        }
       },
       "blockers": {
         "missingTitle": "ليس له عنوان.",
