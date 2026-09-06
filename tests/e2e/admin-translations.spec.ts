@@ -3,6 +3,7 @@ import { like } from "drizzle-orm";
 
 import { connect, seedUrl, type SeedDatabase } from "@/db/seed/connect";
 import * as schema from "@/db/schema";
+import { createLesson, createSection, paragraphBody } from "../factories";
 import { signInAs } from "./support/accounts";
 
 /**
@@ -51,41 +52,31 @@ test.afterAll(async () => {
 });
 
 async function lessonToTranslate(): Promise<string> {
-  const slug = `${PREFIX}${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-  const [lesson] = await db
-    .insert(schema.lessons)
-    .values({
-      slug,
-      title: "Acids and bases",
-      description: "A first look at acids.",
-      difficulty: "easy",
-      category: "Testing",
-      status: "published",
-    })
-    .returning({
-      id: schema.lessons.id,
-      sourceHash: schema.lessons.sourceHash,
-    });
+  const lesson = await createLesson(db, {
+    slug: `${PREFIX}${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    title: "Acids and bases",
+    description: "A first look at acids.",
+    status: "published",
+  });
 
+  // The default-locale mirror row, which the app's own create action writes
+  // and which every reader query joins against. The hash comes from the
+  // generated column via the factory, never recomputed here.
   await db.insert(schema.lessonTranslations).values({
-    lessonId: lesson!.id,
+    lessonId: lesson.id,
     locale: "en",
     title: "Acids and bases",
     description: "A first look at acids.",
     status: "published",
-    sourceHash: lesson!.sourceHash,
+    sourceHash: lesson.sourceHash,
   });
 
-  await db.insert(schema.lessonSections).values({
-    lessonId: lesson!.id,
-    position: 1,
+  await createSection(db, lesson.id, {
     heading: "What is an acid?",
-    body: [
-      { id: "p1", type: "paragraph", text: [{ text: "A proton donor." }] },
-    ],
+    body: paragraphBody("A proton donor."),
   });
 
-  return slug;
+  return lesson.slug;
 }
 
 /**

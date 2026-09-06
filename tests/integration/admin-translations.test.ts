@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
 
 import { connect, seedUrl, type SeedDatabase } from "@/db/seed/connect";
@@ -14,6 +14,16 @@ import {
 } from "@/db/queries/admin/quizzes";
 import { parseListParams } from "@/db/queries/admin/list-params";
 import type { TranslationState } from "@/lib/translations/state";
+import {
+  createLesson,
+  createQuestion,
+  createQuiz,
+  createSection,
+  translateLesson,
+  translateQuestion,
+  translateQuiz,
+  translateSection,
+} from "../factories";
 
 /**
  * The admin list's translation column, against real Postgres.
@@ -33,63 +43,19 @@ const ids: string[] = [];
 
 /** A lesson with a slug this suite can find and clean up. */
 async function lesson(name: string): Promise<string> {
-  const id = uuidv7();
-  ids.push(id);
-  await db.insert(schema.lessons).values({
-    id,
+  const { id } = await createLesson(db, {
     slug: `${PREFIX}-${name}`,
     title: `Lesson ${name}`,
     description: "For the translation column.",
-    difficulty: "easy",
     category: PREFIX,
     status: "published",
   });
+  ids.push(id);
   return id;
 }
 
 async function section(lessonId: string, position = 1): Promise<string> {
-  const id = uuidv7();
-  await db.insert(schema.lessonSections).values({
-    id,
-    lessonId,
-    position,
-    heading: `Heading ${position}`,
-    body: [{ id: "b1", type: "paragraph", text: [{ text: "Words." }] }],
-  });
-  return id;
-}
-
-const currentHash = (table: "lessons" | "lesson_sections", id: string) =>
-  table === "lessons"
-    ? sql`(select source_hash from lessons where id = ${id})`
-    : sql`(select source_hash from lesson_sections where id = ${id})`;
-
-async function translateLesson(
-  lessonId: string,
-  status: "draft" | "in_review" | "published",
-) {
-  await db.insert(schema.lessonTranslations).values({
-    lessonId,
-    locale: "ar",
-    title: "عنوان",
-    description: "وصف",
-    status,
-    sourceHash: currentHash("lessons", lessonId),
-  });
-}
-
-async function translateSection(
-  sectionId: string,
-  status: "draft" | "in_review" | "published",
-) {
-  await db.insert(schema.lessonSectionTranslations).values({
-    sectionId,
-    locale: "ar",
-    heading: "عنوان فرعي",
-    body: [{ id: "b1", type: "paragraph", text: [{ text: "كلمات." }] }],
-    status,
-    sourceHash: currentHash("lesson_sections", sectionId),
-  });
+  return (await createSection(db, lessonId, { position })).id;
 }
 
 /** Only this suite's lessons, so the seeded catalogue does not drown them. */
@@ -116,30 +82,32 @@ beforeAll(async () => {
   // summary-only: no sections, and a current translation. The case that
   // would read as "missing" forever if an empty aggregate were treated as
   // one untranslated part.
-  await translateLesson(await lesson("summary-only"), "published");
+  await translateLesson(db, await lesson("summary-only"), {
+    status: "published",
+  });
 
   // complete: lesson and section both published and current.
   const complete = await lesson("complete");
-  await translateLesson(complete, "published");
-  await translateSection(await section(complete), "published");
+  await translateLesson(db, complete, { status: "published" });
+  await translateSection(db, await section(complete), { status: "published" });
 
   // half-done: the summary is translated, one section is not. The failure
   // this column exists to make visible.
   const half = await lesson("half-done");
-  await translateLesson(half, "published");
+  await translateLesson(db, half, { status: "published" });
   await section(half, 1);
-  await translateSection(await section(half, 2), "published");
+  await translateSection(db, await section(half, 2), { status: "published" });
 
   // drafted: a section translation nobody has published.
   const drafted = await lesson("drafted");
-  await translateLesson(drafted, "published");
-  await translateSection(await section(drafted), "draft");
+  await translateLesson(db, drafted, { status: "published" });
+  await translateSection(db, await section(drafted), { status: "draft" });
 
   // gone-stale: everything published, then the English section is edited.
   const staleOne = await lesson("gone-stale");
-  await translateLesson(staleOne, "published");
+  await translateLesson(db, staleOne, { status: "published" });
   const staleSection = await section(staleOne);
-  await translateSection(staleSection, "published");
+  await translateSection(db, staleSection, { status: "published" });
   await db
     .update(schema.lessonSections)
     .set({ heading: "Heading 1, revised" })
@@ -217,75 +185,41 @@ describe("the quiz translation column", () => {
   const quizIds: string[] = [];
 
   async function quiz(name: string): Promise<string> {
-    const id = uuidv7();
-    quizIds.push(id);
-    await db.insert(schema.quizzes).values({
-      id,
+    const { id } = await createQuiz(db, {
       slug: `${PREFIX}-q-${name}`,
       title: `Quiz ${name}`,
       description: "For the translation column.",
-      difficulty: "easy",
       category: PREFIX,
       status: "published",
     });
+    quizIds.push(id);
     return id;
   }
 
   async function question(quizId: string, position = 1): Promise<string> {
-    const id = uuidv7();
-    await db.insert(schema.quizQuestions).values({
-      id,
-      quizId,
-      position,
-      prompt: `Prompt ${position}`,
-      explanation: "Because.",
-    });
-    return id;
-  }
-
-  async function translateQuiz(quizId: string, status: "draft" | "published") {
-    await db.insert(schema.quizTranslations).values({
-      quizId,
-      locale: "ar",
-      title: "اختبار",
-      description: "وصف",
-      status,
-      sourceHash: sql`(select source_hash from quizzes where id = ${quizId})`,
-    });
-  }
-
-  async function translateQuestion(
-    questionId: string,
-    status: "draft" | "published",
-  ) {
-    await db.insert(schema.quizQuestionTranslations).values({
-      questionId,
-      locale: "ar",
-      prompt: "سؤال",
-      explanation: "لأن.",
-      status,
-      sourceHash: sql`(select source_hash from quiz_questions where id = ${questionId})`,
-    });
+    return (await createQuestion(db, quizId, { position })).id;
   }
 
   beforeAll(async () => {
     await quiz("untranslated");
 
     const done = await quiz("complete");
-    await translateQuiz(done, "published");
-    await translateQuestion(await question(done), "published");
+    await translateQuiz(db, done, { status: "published" });
+    await translateQuestion(db, await question(done), { status: "published" });
 
     // The case that matters most for a quiz: the title is Arabic, one
     // question is not. A reader would sit a paper in two languages.
     const partial = await quiz("half-done");
-    await translateQuiz(partial, "published");
+    await translateQuiz(db, partial, { status: "published" });
     await question(partial, 1);
-    await translateQuestion(await question(partial, 2), "published");
+    await translateQuestion(db, await question(partial, 2), {
+      status: "published",
+    });
 
     const drifted = await quiz("gone-stale");
-    await translateQuiz(drifted, "published");
+    await translateQuiz(db, drifted, { status: "published" });
     const drifting = await question(drifted);
-    await translateQuestion(drifting, "published");
+    await translateQuestion(db, drifting, { status: "published" });
     await db
       .update(schema.quizQuestions)
       .set({ explanation: "Because, revised." })

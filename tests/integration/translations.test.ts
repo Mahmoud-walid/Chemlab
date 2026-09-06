@@ -7,6 +7,13 @@ import * as schema from "@/db/schema";
 import { isStale } from "@/db/queries/translations";
 import { getLessonBySlug, listLessons } from "@/db/queries/lessons";
 import { listQuizzes } from "@/db/queries/quizzes";
+import {
+  createLesson,
+  createQuiz,
+  createSection,
+  createUser,
+  paragraphBody,
+} from "../factories";
 import { allPermissionNames } from "@/db/seed/rbac";
 
 /**
@@ -34,15 +41,8 @@ beforeAll(async () => {
   if (!url) throw new Error("no database URL");
   ({ db, close } = connect(url));
 
-  for (const [id, name] of [
-    [TRANSLATOR, "Translator"],
-    [REVIEWER, "Reviewer"],
-  ]) {
-    await db
-      .insert(schema.users)
-      .values({ id, name, email: `${id}@example.test` })
-      .onConflictDoNothing();
-  }
+  await createUser(db, { id: TRANSLATOR, name: "Translator" });
+  await createUser(db, { id: REVIEWER, name: "Reviewer" });
 
   lessonId = uuidv7();
   await db.insert(schema.lessons).values({
@@ -305,27 +305,20 @@ describe("what the reader is served", () => {
   let readableId: string;
 
   beforeAll(async () => {
-    readableId = uuidv7();
-    readableSlug = `reader-${readableId}`;
-    await db.insert(schema.lessons).values({
-      id: readableId,
-      slug: readableSlug,
+    // Published, or the public query will not return it at all and every
+    // assertion below would pass for the wrong reason.
+    const lesson = await createLesson(db, {
+      slug: `reader-${uuidv7()}`,
       title: "Bonding",
       description: "How atoms hold on.",
-      difficulty: "easy",
-      category: "Testing",
-      // Published, or the public query will not return it at all and every
-      // assertion below would pass for the wrong reason.
       status: "published",
     });
-    await db.insert(schema.lessonSections).values({
-      id: uuidv7(),
-      lessonId: readableId,
-      position: 1,
+    readableId = lesson.id;
+    readableSlug = lesson.slug;
+
+    await createSection(db, readableId, {
       heading: "Ionic bonds",
-      body: [
-        { id: "s1", type: "paragraph", text: [{ text: "Give and take." }] },
-      ],
+      body: paragraphBody("Give and take."),
     });
   });
 
@@ -423,17 +416,14 @@ describe("assessed content is treated differently", () => {
   let quizSlug: string;
 
   beforeAll(async () => {
-    quizId = uuidv7();
-    quizSlug = `reader-quiz-${quizId}`;
-    await db.insert(schema.quizzes).values({
-      id: quizId,
-      slug: quizSlug,
+    const quiz = await createQuiz(db, {
+      slug: `reader-quiz-${uuidv7()}`,
       title: "Bonding quiz",
       description: "Six questions.",
-      difficulty: "easy",
-      category: "Testing",
       status: "published",
     });
+    quizId = quiz.id;
+    quizSlug = quiz.slug;
     await db.insert(schema.quizTranslations).values({
       quizId,
       locale: "ar",

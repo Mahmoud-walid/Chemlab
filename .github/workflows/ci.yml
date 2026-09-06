@@ -31,7 +31,12 @@ jobs:
       # Fails when a route ships with no kill switch and no documented reason
       # to be always-open. Filesystem only — no database needed.
       - run: pnpm run pages:check
-      - run: pnpm run test:coverage
+      # `--sequence.shuffle`, matching the integration job. The unit tests
+      # share no external state, so the risk is much smaller — but "much
+      # smaller" is not "none": a module-level cache or a mutated import
+      # leaks between files in whatever order they happen to run, and the
+      # only way to find that is to keep changing the order.
+      - run: pnpm run test:coverage -- --sequence.shuffle
 
   build:
     name: build

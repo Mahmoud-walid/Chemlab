@@ -8,8 +8,14 @@ import {
   hardDeleteLesson,
   lessonHardDeleteState,
 } from "@/db/queries/admin/hard-delete";
-import { createComment } from "@/db/queries/comments";
 import { hardDeleteRefusals } from "@/lib/admin/hard-delete";
+import {
+  createComment,
+  createLesson,
+  createSection,
+  createUser,
+  saveLesson,
+} from "../factories";
 import { allPermissionNames } from "@/db/seed/rbac";
 
 /**
@@ -35,15 +41,8 @@ beforeAll(async () => {
   if (!url) throw new Error("no database URL");
   ({ db, close } = connect(url));
 
-  for (const [id, name] of [
-    [ACTOR, "Eraser"],
-    [READER, "Reader"],
-  ]) {
-    await db
-      .insert(schema.users)
-      .values({ id, name, email: `${id}@example.test` })
-      .onConflictDoNothing();
-  }
+  await createUser(db, { id: ACTOR, name: "Eraser" });
+  await createUser(db, { id: READER, name: "Reader" });
 });
 
 afterAll(async () => {
@@ -56,17 +55,13 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  lessonId = uuidv7();
-  slug = `harddel-${lessonId}`;
-  await db.insert(schema.lessons).values({
-    id: lessonId,
-    slug,
+  const lesson = await createLesson(db, {
+    slug: `harddel-${uuidv7()}`,
     title: "A mistake",
     description: "Made while learning the editor.",
-    difficulty: "easy",
-    category: "Testing",
-    status: "draft",
   });
+  lessonId = lesson.id;
+  slug = lesson.slug;
 });
 
 const auditEntries = async () =>
@@ -127,14 +122,7 @@ describe("what may be erased", () => {
   });
 
   it("counts a comment on the lesson", async () => {
-    // Through the real writer, so the row has the threading columns the
-    // schema requires rather than a shape only this test would produce.
-    await createComment(db, {
-      subjectType: "lesson",
-      subjectId: lessonId,
-      authorId: READER,
-      body: "A question.",
-    });
+    await createComment(db, { subjectId: lessonId, authorId: READER });
 
     expect(
       hardDeleteRefusals((await lessonHardDeleteState(lessonId))!),
@@ -142,7 +130,7 @@ describe("what may be erased", () => {
   });
 
   it("counts a save and a like as the same question", async () => {
-    await db.insert(schema.lessonSaves).values({ lessonId, userId: READER });
+    await saveLesson(db, lessonId, READER);
 
     expect(
       hardDeleteRefusals((await lessonHardDeleteState(lessonId))!),
@@ -186,14 +174,7 @@ describe("erasing", () => {
   });
 
   it("takes the lesson's own sections and translations with it", async () => {
-    const sectionId = uuidv7();
-    await db.insert(schema.lessonSections).values({
-      id: sectionId,
-      lessonId,
-      position: 1,
-      heading: "A heading",
-      body: [{ id: "p1", type: "paragraph", text: [{ text: "Words." }] }],
-    });
+    const { id: sectionId } = await createSection(db, lessonId);
 
     await hardDeleteLesson(ACTOR, (await lessonHardDeleteState(lessonId))!);
 
