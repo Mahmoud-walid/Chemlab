@@ -17,6 +17,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { useColumnVisibility } from "@/hooks/use-column-visibility";
 import type { ColumnSpec } from "@/lib/admin/column-visibility";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useRowSelection } from "@/hooks/use-row-selection";
+import { viewKey } from "@/lib/admin/selection";
 import { ColumnMenu } from "./column-menu";
 import {
   Table,
@@ -86,6 +89,9 @@ export interface DataTableLabels {
   columns: string;
   columnsHint: string;
   loading: string;
+  /** Only needed when the table offers selection. */
+  selectRow?: string;
+  selectAllOnPage?: string;
 }
 
 export function DataTable<TRow>({
@@ -96,6 +102,8 @@ export function DataTable<TRow>({
   rowKey,
   rowHref,
   tableId,
+  selectable = false,
+  onSelectionChange,
   labels,
 }: {
   rows: TRow[];
@@ -111,6 +119,21 @@ export function DataTable<TRow>({
    * table on the site.
    */
   tableId?: string;
+  /**
+   * Turns on row selection: a leading checkbox column, and the ids handed
+   * back to the caller. The table knows how to select rows; it does not know
+   * what may be done with them, which is the caller's business.
+   */
+  selectable?: boolean;
+  /**
+   * Called on every change, with the ids AND the way to clear them.
+   *
+   * The clear function comes from here rather than being reimplemented by the
+   * caller, because the selection lives in storage under a key only this
+   * component knows. The first version of the bulk bar cleared it by calling
+   * `sessionStorage.clear()`, which wiped every selection for every table.
+   */
+  onSelectionChange?: (selection: { ids: string[]; clear: () => void }) => void;
   labels: DataTableLabels;
 }) {
   const router = useRouter();
@@ -169,6 +192,37 @@ export function DataTable<TRow>({
     specs,
   );
 
+  /* --------------------------------------------------- row selection --- */
+
+  // Scoped to the VIEW, not the page: page one select three, page two select
+  // two more, the bar says five. Changing the filter starts a new selection,
+  // which is correct — carrying one across would let somebody act on rows
+  // they were not looking at when they ticked them.
+  const selectionKey =
+    selectable && tableId
+      ? viewKey(tableId, searchParams.entries())
+      : undefined;
+  const selection = useRowSelection(selectionKey);
+
+  const pageIds = useMemo(() => rows.map(rowKey), [rows, rowKey]);
+  const held = useMemo(() => new Set(selection.ids), [selection.ids]);
+  const onPageSelected = pageIds.filter((id) => held.has(id)).length;
+  // `indeterminate` rather than unchecked for a partly ticked page: an
+  // unchecked box over three ticked rows says the wrong thing, and clicking
+  // it would then look like it had done nothing.
+  const pageState =
+    pageIds.length === 0 || onPageSelected === 0
+      ? false
+      : onPageSelected === pageIds.length
+        ? true
+        : "indeterminate";
+
+  const notifySelection = onSelectionChange;
+  const clearSelection = selection.clear;
+  useEffect(() => {
+    notifySelection?.({ ids: selection.ids, clear: clearSelection });
+  }, [notifySelection, selection.ids, clearSelection]);
+
   const shown = useMemo(
     () => columns.filter((column) => !column.id || !hidden.has(column.id)),
     [columns, hidden],
@@ -223,6 +277,19 @@ export function DataTable<TRow>({
         <Table>
           <TableHeader>
             <TableRow>
+              {selectable && (
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={pageState}
+                    aria-label={labels.selectAllOnPage ?? ""}
+                    onCheckedChange={(checked) =>
+                      // This page only. An operator who selected two rows on
+                      // page one must not lose them by tidying up page two.
+                      selection.setPage(pageIds, checked === true)
+                    }
+                  />
+                </TableHead>
+              )}
               {shown.map((column) => (
                 <TableHead
                   key={column.header}
@@ -272,14 +339,14 @@ export function DataTable<TRow>({
               // then jump back. Dimming the old rows instead showed stale data
               // that still looked clickable.
               <TableSkeleton
-                columns={shown.length}
+                columns={shown.length + (selectable ? 1 : 0)}
                 rows={Math.max(rows.length, 3)}
                 label={labels.loading}
               />
             ) : rows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={shown.length}
+                  colSpan={shown.length + (selectable ? 1 : 0)}
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
                   {labels.empty}
@@ -297,8 +364,18 @@ export function DataTable<TRow>({
                   0,
                   shown.findIndex((column) => column.link),
                 );
+                const id = rowKey(row);
                 return (
-                  <TableRow key={rowKey(row)}>
+                  <TableRow key={id}>
+                    {selectable && (
+                      <TableCell className="w-10">
+                        <Checkbox
+                          checked={held.has(id)}
+                          aria-label={labels.selectRow ?? ""}
+                          onCheckedChange={() => selection.toggle(id)}
+                        />
+                      </TableCell>
+                    )}
                     {shown.map((column, index) => (
                       <TableCell
                         key={column.header}

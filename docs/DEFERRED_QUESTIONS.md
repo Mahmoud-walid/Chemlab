@@ -578,6 +578,40 @@ cheap to change:
 
 ---
 
+### Q40 — an account cannot be deleted once it has audited anything
+
+**Found by**, not designed for: a bulk-action integration test tried to delete
+its own test actor and Postgres refused.
+
+`audit_log.actor_id` references `users.id` `ON DELETE SET NULL`, and
+`audit_log` carries a `BEFORE DELETE OR UPDATE` trigger that raises on both.
+So deleting a user whose actions were audited attempts an UPDATE the trigger
+forbids, and the delete fails — with a message about the audit log, from a
+screen about a user.
+
+Nothing reaches this today: `user:delete` exists in the permission catalogue
+and no code path uses it, so there is no user-deletion screen to break. But
+the two rules genuinely conflict, and the resolution is a product decision
+rather than a technical one:
+
+1. **Soft-delete accounts.** The row stays, the byline stays, the person is
+   gone from every screen. Simplest, and consistent with how lessons,
+   quizzes and comments already work here — but "delete my account" then does
+   not delete a row, which is a claim worth being careful about.
+2. **Anonymise the actor in place**, by widening the trigger to allow exactly
+   `actor_id → NULL` and nothing else. Keeps the log complete and the delete
+   real; the cost is a trigger with an exception in it, and an exception is
+   the thing a future reader has to trust.
+3. **Copy the actor's name into the audit row** at write time and drop the
+   foreign key. The log stops depending on the users table at all, which is
+   what an audit log arguably wants — at the cost of a name that no longer
+   updates when somebody changes theirs.
+
+My recommendation is **(2)**, narrowly: the trigger exists to stop the log
+being rewritten, and nulling the author of an entry is not rewriting what the
+entry says. But it is the owner's call, and it should be made before a
+user-deletion screen is built rather than discovered by it.
+
 ## Per-issue open questions
 
 Each planning issue carries its own `## Open questions` section for decisions
