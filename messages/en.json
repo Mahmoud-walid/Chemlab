@@ -716,7 +716,21 @@
         "confirmPublishTitle": "Publish this quiz?",
         "confirmPublishBody": "It becomes visible to everyone at /quiz/{slug}.",
         "confirmPublishAction": "Publish",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "hardDelete": "Erase permanently",
+        "hardDeleteHint": "For a draft created by mistake. There is no undo, and its questions and options go with it.",
+        "hardDeleteConfirmTitle": "Erase this quiz permanently?",
+        "hardDeleteConfirmBody": "This cannot be undone. Type the slug {slug} to confirm.",
+        "hardDeleteDone": "Erased.",
+        "hardDeleteRefusedTitle": "This quiz cannot be erased",
+        "hardDeleteReasons": {
+          "published": "It is published. Withdraw it first.",
+          "wasPublished": "It was published once. Someone may have sat it, so it is withdrawn rather than erased.",
+          "hasComments": "Somebody has commented on it.",
+          "hasEngagement": "Somebody has saved or liked it.",
+          "hasActivity": "It appears in the activity stream.",
+          "hasAttempts": "Somebody has sat it. Results are history, not a mistake."
+        }
       },
       "blockers": {
         "missingTitle": "It has no title.",

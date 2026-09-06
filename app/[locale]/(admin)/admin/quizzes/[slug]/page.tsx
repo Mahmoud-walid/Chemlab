@@ -70,6 +70,9 @@ export default async function AdminQuizPage({
         can={{
           publish: hasPermission(actor, "quiz:publish"),
           delete: hasPermission(actor, "quiz:delete"),
+          // No role holds this by default, so for almost everybody the
+          // button is simply not there.
+          deleteHard: hasPermission(actor, "quiz:delete_hard"),
         }}
       />
 

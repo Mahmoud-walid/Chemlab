@@ -22,15 +22,24 @@ unique key, so the admin UI can group by resource without parsing strings.
 `assign`, `impersonate`, `export`, `toggle`, `bypass`, `access`, `read_pii`,
 `update_security`, `void`, `write`, `review`, `delete_hard`.
 
-`lesson:delete_hard` is separate from `lesson:delete` for the same reason
-`setting:update_security` is separate from `setting:update`: soft delete keeps
-the row and can be undone, and erasing one cannot. **No role holds it by
-default, including Admin.** It exists for a row created by mistake — a lesson
-somebody made while learning the editor — and the refusals are its definition
-rather than a safety net: a lesson that is published, was ever published, or
-that any comment, save, like or activity event refers to is history, and
-history gets withdrawn instead. A Super Admin can grant it at runtime when
+`lesson:delete_hard` and `quiz:delete_hard` are separate from their `delete`
+counterparts for the same reason `setting:update_security` is separate from
+`setting:update`: soft delete keeps the row and can be undone, and erasing one
+cannot. **No role holds either by default, including Admin.** They exist for a
+row created by mistake — something somebody made while learning the editor —
+and the refusals are their definition rather than a safety net: a row that is
+published, was ever published, or that anything else refers to is history, and
+history gets withdrawn instead. A Super Admin can grant them at runtime when
 somebody genuinely needs it.
+
+What counts as a reference differs by resource, and the difference is
+structural rather than a choice. A lesson is blocked by a comment, a save, a
+like or an activity event; a quiz is blocked by an ATTEMPT or an activity
+event, and cannot be blocked by a comment or a save at all — `comment_subject`
+is an enum whose only value is `lesson`, and every engagement table holds a
+`lesson_id`. Erasing a quiz removes a subtree: its questions, its options and
+its translations all cascade, which is why the audit entry records how many
+questions went with it.
 
 `translation` is a resource of its own rather than actions on `lesson` and
 `quiz`, because a translator works across every content type and must not
