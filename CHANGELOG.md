@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.20.0...v0.21.0) (2026-09-06)
+
+
+### Features
+
+* **admin:** debounced search, column visibility and a loading skeleton ([#108](https://github.com/Mahmoud-walid/Chemlab/issues/108)) ([fc0c2d7](https://github.com/Mahmoud-walid/Chemlab/commit/fc0c2d7aa2b6c11b5241dc946a969ae2f96a58ba))
+
 ## [0.20.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.19.0...v0.20.0) (2026-09-05)
 
 
