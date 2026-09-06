@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.1](https://github.com/Mahmoud-walid/Chemlab/compare/v0.23.0...v0.23.1) (2026-09-06)
+
+
+### Performance
+
+* **tests:** six times faster unit suite, and stop the one silence in coverage ([#122](https://github.com/Mahmoud-walid/Chemlab/issues/122)) ([aa4f648](https://github.com/Mahmoud-walid/Chemlab/commit/aa4f6484f8c316bd55cf694a1813edd54a15dbbd))
+
 ## [0.23.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.22.0...v0.23.0) (2026-09-06)
 
 
