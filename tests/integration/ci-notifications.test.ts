@@ -14,6 +14,8 @@ import {
 } from "@/db/queries/ci";
 import { decideNotify, DEFAULT_CI_PREFERENCES } from "@/lib/ci/policy";
 import { ciNotifyPayloadSchema, type CiNotifyPayload } from "@/lib/ci/payload";
+import { allPermissionNames } from "@/db/seed/rbac";
+import { sql } from "drizzle-orm";
 
 /**
  * CI alerts, against real Postgres.
@@ -258,5 +260,32 @@ describe("back to green, end to end", () => {
       preferences,
     );
     expect(recovery).toEqual({ notify: true, reason: null, recovery: true });
+  });
+});
+
+describe("the permission that reveals the settings section", () => {
+  it("exists in the catalogue", async () => {
+    expect(allPermissionNames()).toContain("notification:subscribe_ci");
+
+    const [row] = await db
+      .select({ id: schema.permissions.id })
+      .from(schema.permissions)
+      .where(eq(schema.permissions.name, "notification:subscribe_ci"));
+    expect(row).toBeDefined();
+  });
+
+  it("is held by no role, not even Admin", async () => {
+    // The whole reason it is a permission rather than a role check: holding
+    // admin is not a request to be woken by a build. A Super Admin grants it
+    // to whoever works on this project; nobody has it by default.
+    const rows = await db.execute<{ key: string }>(sql`
+      select r.key
+      from roles r
+      join role_permissions rp on rp.role_id = r.id
+      join permissions p on p.id = rp.permission_id
+      where p.name = 'notification:subscribe_ci'
+    `);
+
+    expect(rows.rows).toEqual([]);
   });
 });

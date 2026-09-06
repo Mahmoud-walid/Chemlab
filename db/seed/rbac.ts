@@ -71,6 +71,19 @@ export const ACTIONS = [
   // be undone, and erasing one cannot. They are different decisions to trust
   // somebody with, which is exactly when a separate permission is right.
   "delete_hard",
+  // `notification:subscribe_ci`. Who may ask to be told about a build.
+  //
+  // A permission rather than a role check, because the alternatives are both
+  // wrong: deriving it from `admin:access` contradicts what
+  // `ci_notification_preferences` says out loud — holding admin is not a
+  // request to be woken by a build, and somebody who wants build alerts
+  // should not have to be granted admin to get them — while leaving it
+  // ungated puts branch names, commit messages and failure detail on the
+  // settings page of a site aimed at children.
+  //
+  // So: a grant that says exactly "works on this project", carrying nothing
+  // else with it. Held by no role by default; a Super Admin grants it.
+  "subscribe_ci",
   // `translation:review`. Checking a chemistry translation is a language
   // competence, not a publishing right, so it is separate from `write` and
   // from `lesson:publish`. A mistranslated definition is a factual error, and
@@ -270,6 +283,11 @@ export const PERMISSIONS: PermissionSpec[] = [
     resource: "notification",
     action: "create",
     description: "Send notifications",
+  },
+  {
+    resource: "notification",
+    action: "subscribe_ci",
+    description: "Subscribe to CI build alerts for this repository",
   },
 
   { resource: "audit", action: "read", description: "Read the audit log" },

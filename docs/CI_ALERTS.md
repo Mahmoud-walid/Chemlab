@@ -79,6 +79,24 @@ alerts should not have to be granted admin to get them.
 The default branch list is `main` alone, because a red `main` is the emergency.
 `["*"]` is everything, and `feat/*` matches a prefix.
 
+The switches live in the **Development** section of `/profile/settings`, behind
+`notification:subscribe_ci` — a permission that grants no power over anything
+and says only "works on this project". No role holds it by default; a Super
+Admin grants it, and `docs/PERMISSIONS.md` says why it is a permission rather
+than a role check. `GET`/`PATCH /api/ci/preferences` is the same gate, and
+answers 404 without it: somebody who does not work on this repository has no
+business learning that it notifies anybody about its builds.
+
+The branch list is written as free text — `main, feat/*` — and validated on
+both sides against the patterns `watchesBranch` actually implements. `feat*`
+(no slash) and a stray leading space both parse as branch names, match nothing,
+and would leave somebody believing they are watching a branch they are not.
+An empty list is refused for the same reason: it reads as opted in and behaves
+as opted out. Somebody who wants no alerts turns the section off.
+
+Queued pushes are sent by `.github/workflows/push-drain.yml` every ten minutes
+(see `docs/NOTIFICATIONS.md`), so a CI alert is at worst that late.
+
 ## Configuration
 
 | Variable            | Where it lives                        | Why                                                                                                    |
