@@ -63,6 +63,12 @@ export default async function AdminQuizzesPage({
   // refactor away from being unprotected.
   const actor = await requireAdminPermission("quiz:read");
   const canCreate = hasPermission(actor, "quiz:create");
+  // Which bulk actions to offer. Checked again in the action — this only
+  // decides whether to draw a button somebody cannot use.
+  const canBulk = {
+    publish: hasPermission(actor, "quiz:publish"),
+    withdraw: hasPermission(actor, "quiz:delete"),
+  };
 
   const raw = await searchParams;
   const list = parseListParams<QuizSort>(raw, QUIZ_LIST_SPEC);
@@ -88,6 +94,7 @@ export default async function AdminQuizzesPage({
   } as const;
 
   const tXlate = await getTranslations("admin.translations");
+  const tBulk = await getTranslations("admin.bulk");
   const translationNames = Object.fromEntries(
     TRANSLATION_STATES.map((state) => [state, tXlate(state)]),
   ) as Record<TranslationState, string>;
@@ -148,6 +155,7 @@ export default async function AdminQuizzesPage({
       )}
 
       <QuizzesTable
+        can={canBulk}
         rows={rows.map((row) => ({
           ...row,
           difficulty: difficultyNames[row.difficulty],
@@ -171,6 +179,36 @@ export default async function AdminQuizzesPage({
           questions: t("columns.questions"),
           updated: t("columns.updated"),
           statusNames,
+          bulk: {
+            selected: tBulk.raw("selected") as string,
+            offPage: tBulk.raw("offPage") as string,
+            clear: tBulk("clear"),
+            confirmTitle: tBulk.raw("confirmTitle") as string,
+            confirmBody: tBulk.raw("confirmBody") as string,
+            confirmCountLabel: tBulk("confirmCountLabel"),
+            apply: tBulk("apply"),
+            cancel: tBulk("cancel"),
+            refusedTitle: tBulk("refusedTitle"),
+            refusedBody: tBulk("refusedBody"),
+            refusedMissing: tBulk("refusedMissing"),
+            // The server sends `QuizPublishBlocker` KEYS, so a bulk refusal
+            // and a single refusal read identically and neither hard-codes
+            // English. `noQuestions` and `unanswerableQuestion` are the two
+            // the lesson table has no equivalent of.
+            blockerNames: {
+              deleted: t("blockers.deleted"),
+              missingTitle: t("blockers.missingTitle"),
+              missingDescription: t("blockers.missingDescription"),
+              missingCategory: t("blockers.missingCategory"),
+              noQuestions: t("blockers.noQuestions"),
+              unanswerableQuestion: t("blockers.unanswerableQuestion"),
+            },
+            publish: tBulk("publish"),
+            archive: tBulk("archive"),
+            withdraw: tBulk("withdraw"),
+            applied: tBulk.raw("applied") as string,
+            unchanged: tBulk.raw("unchanged") as string,
+          },
           translation: translationLocale ? tXlate("label") : undefined,
           translationNames: translationLocale ? translationNames : undefined,
           table: {
@@ -181,6 +219,8 @@ export default async function AdminQuizzesPage({
             next: tTable("next"),
             pageStatus: tTable("pageStatus", { page: list.page, pages }),
             sortBy: tTable("sortBy"),
+            selectRow: tBulk("selectRow"),
+            selectAllOnPage: tBulk("selectAllOnPage"),
             columns: tTable("columns"),
             columnsHint: tTable("columnsHint"),
             loading: tTable("loading"),

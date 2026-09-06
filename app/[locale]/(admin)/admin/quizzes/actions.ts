@@ -9,6 +9,15 @@ import { quizQuestions, quizTranslations, quizzes } from "@/db/schema/content";
 import type { ContentStatus } from "@/db/schema/content";
 import { auditLog } from "@/db/schema/rbac";
 import { quizPublishCounts, isQuizSlugTaken } from "@/db/queries/admin/quizzes";
+import {
+  applyBulkQuizzes,
+  quizzesForBulk,
+  type BulkQuizAction,
+} from "@/db/queries/admin/bulk-quizzes";
+import {
+  hardDeleteQuiz,
+  quizHardDeleteState,
+} from "@/db/queries/admin/hard-delete";
 import { currentSourceHash } from "@/db/queries/translations";
 import { replaceQuizQuestions } from "@/db/queries/admin/save-questions";
 import {
@@ -19,6 +28,18 @@ import {
   type QuizPublishBlocker,
   type QuestionInput,
 } from "@/lib/admin/quiz-schema";
+import {
+  isWritable,
+  MAX_BULK_ROWS,
+  planBulk,
+  refusedResult,
+  withinLimit,
+  type BulkResult,
+} from "@/lib/admin/bulk";
+import {
+  hardDeleteRefusals,
+  type HardDeleteReason,
+} from "@/lib/admin/hard-delete";
 import { recordActivity } from "@/lib/activity/record";
 import { requirePermission } from "@/lib/authz";
 
@@ -456,4 +477,158 @@ export async function restoreQuiz(id: string): Promise<QuizSaveResult> {
 
   revalidateQuiz(before.slug);
   return { ok: true, slug: before.slug };
+}
+
+/* ------------------------------------------------------------- in bulk --- */
+
+/**
+ * One action, several quizzes, one transaction.
+ *
+ * The all-or-nothing rule is #64's, and the lesson twin of this function
+ * argues it: a row that cannot take part **stops the whole batch** rather than
+ * being skipped, because an operator who asks for forty rows and gets
+ * thirty-seven has to work out which three from a list they can no longer see.
+ *
+ * What differs from lessons is the publish decision, and it is not cosmetic. A
+ * quiz needs questions AND questions somebody can answer, so the blockers come
+ * from `quizPublishBlockers` — the same function and therefore the same
+ * message keys the single-row path uses. A batch refusal and a single refusal
+ * read identically because they are literally the same keys.
+ *
+ * **Withdrawal does not refuse a quiz with a live sitting**, and that is a
+ * decision rather than an omission. `getPaper` joins `exam_attempts` to
+ * `quizzes` without filtering on status or `deleted_at` — only `startAttempt`
+ * and the public quiz page require `published` — so a candidate part-way
+ * through a paper can still finish it, submit it and be scored after the quiz
+ * is withdrawn. Refusing the withdrawal would mean an operator cannot take a
+ * broken quiz out of circulation until the last sitting drains, which is the
+ * opposite of what withdrawing it is for. New sittings stop immediately, which
+ * is the part that matters.
+ */
+export async function bulkQuizAction(
+  ids: string[],
+  action: BulkQuizAction,
+): Promise<BulkResult> {
+  // Once for the action, not once per row: these are not per-row rights.
+  const actor = await requirePermission(
+    action === "withdraw" ? "quiz:delete" : "quiz:publish",
+  );
+
+  if (ids.length === 0) {
+    return {
+      ok: false,
+      applied: 0,
+      unchanged: 0,
+      refused: [],
+      problem: "Nothing was selected.",
+    };
+  }
+
+  // Checked on the SERVER because the browser can send whatever it likes, and
+  // one transaction over ten thousand rows holds locks for as long as it takes.
+  if (!withinLimit(ids)) {
+    return {
+      ok: false,
+      applied: 0,
+      unchanged: 0,
+      refused: [],
+      problem: `That is more than ${MAX_BULK_ROWS} quizzes at once.`,
+    };
+  }
+
+  const found = await quizzesForBulk(ids);
+
+  const plan = planBulk(ids, found, (row) => {
+    if (action === "publish") {
+      const blockers = quizPublishBlockers(row);
+      if (blockers.length > 0) return { refuse: blockers };
+      return { skip: row.status === "published" };
+    }
+
+    if (action === "archive") {
+      // A withdrawn quiz is already out of sight; archiving it would change a
+      // status nobody reads and hide that it is deleted.
+      if (row.deletedAt !== null) return { refuse: ["deleted"] };
+      return { skip: row.status === "archived" };
+    }
+
+    return { skip: row.deletedAt !== null };
+  });
+
+  if (!isWritable(plan)) return refusedResult(plan);
+
+  const writing = found.filter((row) => plan.apply.includes(row.id));
+  await applyBulkQuizzes(actor.userId, writing, action);
+
+  for (const row of writing) {
+    await recordActivity({
+      verb: action === "withdraw" ? "admin.deleted" : "admin.published",
+      objectType: "quiz",
+      objectId: row.id,
+      metadata: { slug: row.slug, bulk: true },
+    });
+    revalidateQuiz(row.slug);
+  }
+
+  return {
+    ok: true,
+    applied: plan.apply.length,
+    unchanged: plan.unchanged.length,
+    refused: [],
+  };
+}
+
+/* --------------------------------------------------------- hard delete --- */
+
+export interface QuizHardDeleteResult {
+  ok: boolean;
+  problem?: string;
+  /** Reason KEYS, translated by the caller — never prose from a server action. */
+  refusals?: HardDeleteReason[];
+}
+
+/**
+ * Erases a quiz, rather than withdrawing it.
+ *
+ * Behind its own permission, which no role holds by default. Soft delete is
+ * the default and stays the default — `deleteQuiz` above says why: attempts
+ * and results reference these rows. This is the escape hatch for a quiz
+ * created by mistake, and `hardDeleteRefusals` is what distinguishes a mistake
+ * from a result.
+ *
+ * The refusals are checked here AND again inside the delete's own WHERE
+ * clause. The state was read before an operator typed a confirmation, and
+ * somebody else can publish the quiz in between — so the check that actually
+ * decides is the one the transaction makes.
+ */
+export async function hardDeleteQuizAction(
+  id: string,
+): Promise<QuizHardDeleteResult> {
+  const actor = await requirePermission("quiz:delete_hard");
+
+  const row = await quizHardDeleteState(id);
+  if (!row) return { ok: false, problem: "That quiz does not exist." };
+
+  const refusals = hardDeleteRefusals(row);
+  if (refusals.length > 0) return { ok: false, refusals };
+
+  try {
+    await hardDeleteQuiz(actor.userId, row);
+  } catch {
+    // The row changed between the check and the delete. Reported rather than
+    // retried: whatever arrived is exactly the thing the operator should look
+    // at before asking again.
+    return {
+      ok: false,
+      problem: "The quiz changed before it could be deleted. Try again.",
+    };
+  }
+
+  // No `recordActivity`: the activity stream is keyed on the object, and
+  // writing an event about a quiz that no longer exists would put a row in the
+  // stream that resolves to nothing. The audit entry is the record, and it
+  // carries the slug and title precisely because the row is gone.
+
+  revalidateQuiz(row.slug);
+  return { ok: true };
 }

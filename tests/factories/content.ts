@@ -1,3 +1,5 @@
+import { eq } from "drizzle-orm";
+
 import type { LessonBlock } from "@/lib/lessons/blocks";
 import * as schema from "@/db/schema";
 import type { SeedDatabase } from "@/db/seed/connect";
@@ -137,6 +139,15 @@ export interface QuizOverrides {
   status?: "draft" | "published" | "archived";
   /** How many questions to create. A quiz with none cannot be published. */
   questions?: number;
+  /**
+   * Whether those questions get options with one marked correct.
+   *
+   * Default false, which is what every caller before the bulk tests relied
+   * on. It matters for publishing: `quizPublishBlockers` refuses a quiz whose
+   * question has no correct answer, so a factory quiz with questions is still
+   * unpublishable unless this is set.
+   */
+  answerable?: boolean;
 }
 
 export interface CreatedQuiz {
@@ -172,7 +183,12 @@ export async function createQuiz(
   const questionIds: string[] = [];
   for (let index = 0; index < (overrides.questions ?? 0); index++) {
     questionIds.push(
-      (await createQuestion(db, quiz!.id, { position: index + 1 })).id,
+      (
+        await createQuestion(db, quiz!.id, {
+          position: index + 1,
+          answerable: overrides.answerable,
+        })
+      ).id,
     );
   }
 
@@ -194,7 +210,13 @@ export interface CreatedQuestion {
 export async function createQuestion(
   db: SeedDatabase,
   quizId: string,
-  overrides: { position?: number; prompt?: string; explanation?: string } = {},
+  overrides: {
+    position?: number;
+    prompt?: string;
+    explanation?: string;
+    /** Give it two options and mark the first correct. See `QuizOverrides`. */
+    answerable?: boolean;
+  } = {},
 ): Promise<CreatedQuestion> {
   const [question] = await db
     .insert(schema.quizQuestions)
@@ -209,6 +231,34 @@ export async function createQuestion(
       prompt: schema.quizQuestions.prompt,
       sourceHash: schema.quizQuestions.sourceHash,
     });
+
+  if (overrides.answerable) {
+    const options = await db
+      .insert(schema.quizOptions)
+      .values([
+        {
+          questionId: question!.id,
+          position: 0,
+          label: "Right",
+          isCorrect: true,
+        },
+        {
+          questionId: question!.id,
+          position: 1,
+          label: "Wrong",
+          isCorrect: false,
+        },
+      ])
+      .returning({ id: schema.quizOptions.id });
+
+    // Both halves, because the schema keeps them in step: single-choice
+    // questions answer through `correct_option_id` and scoring reads
+    // `is_correct`, and a check constraint refuses the two disagreeing.
+    await db
+      .update(schema.quizQuestions)
+      .set({ correctOptionId: options[0]!.id })
+      .where(eq(schema.quizQuestions.id, question!.id));
+  }
 
   return question!;
 }

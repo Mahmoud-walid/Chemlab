@@ -4,7 +4,13 @@ import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 
 import { useRouter } from "@/i18n/navigation";
-import { deleteQuiz, restoreQuiz, setQuizStatus } from "../actions";
+import {
+  deleteQuiz,
+  hardDeleteQuizAction,
+  restoreQuiz,
+  setQuizStatus,
+} from "../actions";
+import type { HardDeleteReason } from "@/lib/admin/hard-delete";
 import type { ContentStatus } from "@/db/schema/content";
 import type { QuizPublishBlocker } from "@/lib/admin/quiz-schema";
 import {
@@ -30,7 +36,7 @@ export interface QuizLifecycleProps {
   publishedOnLabel: string | null;
   /** Computed on the server from the stored row, not from the form. */
   blockers: QuizPublishBlocker[];
-  can: { publish: boolean; delete: boolean };
+  can: { publish: boolean; delete: boolean; deleteHard: boolean };
 }
 
 /**
@@ -58,12 +64,15 @@ export function QuizLifecycle({
   const t = useTranslations("admin.quizzes.lifecycle");
   const tStatus = useTranslations("admin.quizzes.status");
   const tBlockers = useTranslations("admin.quizzes.blockers");
+  const tErase = useTranslations("admin.quizzes.lifecycle.hardDeleteReasons");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [confirmingPublish, setConfirmingPublish] = useState(false);
   const [typedSlug, setTypedSlug] = useState("");
   const [refusals, setRefusals] = useState<QuizPublishBlocker[]>([]);
+  const [confirmingErase, setConfirmingErase] = useState(false);
+  const [eraseRefusals, setEraseRefusals] = useState<HardDeleteReason[]>([]);
 
   const run = (
     action: () => Promise<{ ok: boolean; blockers?: QuizPublishBlocker[] }>,
@@ -78,6 +87,25 @@ export function QuizLifecycle({
       }
       setRefusals(result.blockers ?? []);
       toast.error({ title: t("failed"), description: "" });
+    });
+  };
+
+  const erase = () => {
+    setEraseRefusals([]);
+    startTransition(async () => {
+      const result = await hardDeleteQuizAction(id);
+      if (result.ok) {
+        toast.success({ title: t("hardDeleteDone"), description: "" });
+        // Back to the list: staying on the editor for a quiz that no longer
+        // exists shows a form whose every save would 404.
+        router.push("/admin/quizzes");
+        return;
+      }
+      setEraseRefusals(result.refusals ?? []);
+      toast.error({
+        title: result.problem ?? t("hardDeleteRefusedTitle"),
+        description: "",
+      });
     });
   };
 
@@ -107,6 +135,20 @@ export function QuizLifecycle({
           <ul className="list-inside list-disc">
             {shown.map((blocker) => (
               <li key={blocker}>{tBlockers(blocker)}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {eraseRefusals.length > 0 && (
+        <div
+          role="alert"
+          className="space-y-1 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm"
+        >
+          <p className="font-medium">{t("hardDeleteRefusedTitle")}</p>
+          <ul className="list-inside list-disc">
+            {eraseRefusals.map((reason) => (
+              <li key={reason}>{tErase(reason)}</li>
             ))}
           </ul>
         </div>
@@ -142,6 +184,25 @@ export function QuizLifecycle({
                 {t("unpublish")}
               </Button>
             )}
+            {/* Offered only for a draft that was never published — the two
+                conditions the server also enforces. A button that is always
+                visible and always refused teaches an operator to ignore it;
+                the server still re-checks, because this copy is a courtesy
+                and not the decision. */}
+            {can.deleteHard &&
+              status === "draft" &&
+              publishedOnLabel === null && (
+                <Button
+                  variant="destructive"
+                  disabled={pending}
+                  onClick={() => {
+                    setTypedSlug("");
+                    setConfirmingErase(true);
+                  }}
+                >
+                  {t("hardDelete")}
+                </Button>
+              )}
             {status !== "archived" && can.publish && (
               <Button
                 variant="outline"
@@ -181,6 +242,44 @@ export function QuizLifecycle({
               onClick={() => run(() => setQuizStatus(id, "published"))}
             >
               {t("confirmPublishAction")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmingErase} onOpenChange={setConfirmingErase}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("hardDeleteConfirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("hardDeleteConfirmBody", { slug })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {/* The slug, typed — the same interruption withdrawing uses, for a
+              change that is strictly worse: a withdrawn quiz comes back, and
+              this takes its questions and options with it. */}
+          <div className="space-y-1.5">
+            <Label htmlFor="confirm-erase-slug">{t("hardDelete")}</Label>
+            <Input
+              id="confirm-erase-slug"
+              value={typedSlug}
+              autoComplete="off"
+              onChange={(event) => setTypedSlug(event.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              {t("hardDeleteHint")}
+            </p>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={typedSlug !== slug}
+              onClick={() => {
+                setConfirmingErase(false);
+                erase();
+              }}
+            >
+              {t("hardDelete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
