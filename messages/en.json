@@ -1122,6 +1122,26 @@
         "attribution": "Attribution",
         "item": "List item"
       }
+    },
+    "bulk": {
+      "selected": "{count} selected",
+      "offPage": "{count} not on this page",
+      "clear": "Clear",
+      "selectAllOnPage": "Select every row on this page",
+      "selectRow": "Select this row",
+      "publish": "Publish",
+      "archive": "Archive",
+      "withdraw": "Withdraw",
+      "applied": "{count} changed",
+      "unchanged": "{count} already were",
+      "refusedTitle": "Nothing was changed",
+      "refusedBody": "These rows cannot take this action. Deselect them and try again.",
+      "refusedMissing": "no longer exists",
+      "confirmTitle": "Apply to {count} rows?",
+      "confirmBody": "Type the number {count} to confirm.",
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "confirmCountLabel": "Number of rows"
     }
   },
   "pages": {

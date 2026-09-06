@@ -1122,6 +1122,26 @@
         "attribution": "المصدر",
         "item": "عنصر قائمة"
       }
+    },
+    "bulk": {
+      "selected": "{count} محدد",
+      "offPage": "{count} خارج هذه الصفحة",
+      "clear": "إلغاء التحديد",
+      "selectAllOnPage": "تحديد كل صفوف هذه الصفحة",
+      "selectRow": "تحديد هذا الصف",
+      "publish": "نشر",
+      "archive": "أرشفة",
+      "withdraw": "سحب",
+      "applied": "تغيّر {count}",
+      "unchanged": "{count} كانت كذلك بالفعل",
+      "refusedTitle": "لم يتغيّر شيء",
+      "refusedBody": "هذه الصفوف لا يمكن تطبيق الإجراء عليها. ألغِ تحديدها ثم أعد المحاولة.",
+      "refusedMissing": "لم يعد موجودًا",
+      "confirmTitle": "تطبيق على {count} صفًا؟",
+      "confirmBody": "اكتب الرقم {count} للتأكيد.",
+      "apply": "تطبيق",
+      "cancel": "إلغاء",
+      "confirmCountLabel": "عدد الصفوف"
     }
   },
   "pages": {

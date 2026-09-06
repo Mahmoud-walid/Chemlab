@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
 
 import { getDb } from "@/db/client";
@@ -13,8 +13,21 @@ import {
 import type { ContentStatus } from "@/db/schema/content";
 import { auditLog } from "@/db/schema/rbac";
 import { isSlugTaken } from "@/db/queries/admin/lessons";
+import {
+  applyBulkLessons,
+  lessonsForBulk,
+  type BulkLessonAction,
+} from "@/db/queries/admin/bulk-lessons";
 import { currentSourceHash } from "@/db/queries/translations";
 import { localizedPaths } from "@/i18n/paths";
+import {
+  MAX_BULK_ROWS,
+  isWritable,
+  planBulk,
+  refusedResult,
+  withinLimit,
+  type BulkResult,
+} from "@/lib/admin/bulk";
 import {
   lessonEditSchema,
   publishBlockers,
@@ -455,4 +468,97 @@ export async function restoreLesson(id: string): Promise<LessonSaveResult> {
 
   revalidateLesson(before.slug);
   return { ok: true, slug: before.slug };
+}
+
+/* ------------------------------------------------------------- in bulk --- */
+
+/**
+ * One action, several lessons, one transaction.
+ *
+ * The all-or-nothing rule is #64's, and it is stricter than it first looks:
+ * a row that cannot take part **stops the whole batch** rather than being
+ * skipped. An operator who asks for forty rows and gets thirty-seven with a
+ * toast has to work out which three, from a list they can no longer see.
+ * Refusing and naming them lets them deselect and try again.
+ *
+ * A row already in the target state is not a refusal — see `lib/admin/bulk.ts`.
+ *
+ * Permissions are checked once for the action, not once per row: they are not
+ * per-row rights. The cap is checked on the server because the browser can
+ * send whatever it likes, and one transaction over ten thousand rows holds
+ * locks for as long as it takes.
+ */
+export async function bulkLessonAction(
+  ids: string[],
+  action: BulkLessonAction,
+): Promise<BulkResult> {
+  // Once for the action, not once per row: these are not per-row rights.
+  const actor = await requirePermission(
+    action === "withdraw" ? "lesson:delete" : "lesson:publish",
+  );
+
+  if (ids.length === 0) {
+    return {
+      ok: false,
+      applied: 0,
+      unchanged: 0,
+      refused: [],
+      problem: "Nothing was selected.",
+    };
+  }
+
+  // Checked on the SERVER because the browser can send whatever it likes, and
+  // one transaction over ten thousand rows holds locks for as long as it takes.
+  if (!withinLimit(ids)) {
+    return {
+      ok: false,
+      applied: 0,
+      unchanged: 0,
+      refused: [],
+      problem: `That is more than ${MAX_BULK_ROWS} lessons at once.`,
+    };
+  }
+
+  const found = await lessonsForBulk(ids);
+
+  const plan = planBulk(ids, found, (row) => {
+    if (action === "publish") {
+      // The same blockers the single-row path applies, returned as the same
+      // keys, so a bulk refusal and a single refusal read identically.
+      const blockers = publishBlockers(row);
+      if (blockers.length > 0) return { refuse: blockers };
+      return { skip: row.status === "published" };
+    }
+
+    if (action === "archive") {
+      // A withdrawn lesson is already out of sight; archiving it would change
+      // a status nobody reads and hide that it is deleted.
+      if (row.deletedAt !== null) return { refuse: ["deleted"] };
+      return { skip: row.status === "archived" };
+    }
+
+    return { skip: row.deletedAt !== null };
+  });
+
+  if (!isWritable(plan)) return refusedResult(plan);
+
+  const writing = found.filter((row) => plan.apply.includes(row.id));
+  await applyBulkLessons(actor.userId, writing, action);
+
+  for (const row of writing) {
+    await recordActivity({
+      verb: action === "withdraw" ? "admin.deleted" : "admin.published",
+      objectType: "lesson",
+      objectId: row.id,
+      metadata: { slug: row.slug, bulk: true },
+    });
+    revalidateLesson(row.slug);
+  }
+
+  return {
+    ok: true,
+    applied: plan.apply.length,
+    unchanged: plan.unchanged.length,
+    refused: [],
+  };
 }
