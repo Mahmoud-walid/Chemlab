@@ -288,8 +288,12 @@ describe("saving and signing off", () => {
 
     const after = await getQuizTranslation(slug, "ar");
     // A translator who has just re-read the English against their words has
-    // done the work the flag was asking for.
-    expect(after!.questions[0]!.options[0]!.state).toBe("draft");
+    // done the work the flag was asking for, so "out of date" goes away.
+    //
+    // The STATUS is untouched — this row stays published. Saving text and
+    // deciding it is ready are different acts with different permissions, and
+    // that is the same rule the lesson editor follows.
+    expect(after!.questions[0]!.options[0]!.state).toBe("published");
   });
 
   it("moves the options along with the quiz when the status changes", async () => {
