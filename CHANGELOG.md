@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.24.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.23.1...v0.24.0) (2026-09-06)
+
+
+### Features
+
+* **privacy:** presence is opt-in, and an audited actor can be deleted ([#125](https://github.com/Mahmoud-walid/Chemlab/issues/125)) ([8e9ee9c](https://github.com/Mahmoud-walid/Chemlab/commit/8e9ee9cf27653d806eaf71d05053c4cc7b9bc412))
+
 ## [0.23.1](https://github.com/Mahmoud-walid/Chemlab/compare/v0.23.0...v0.23.1) (2026-09-06)
 
 
