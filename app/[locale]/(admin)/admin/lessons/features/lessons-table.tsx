@@ -67,6 +67,7 @@ export function LessonsTable({
 }) {
   return (
     <DataTable
+      tableId="lessons"
       rows={rows}
       page={page}
       pages={pages}
@@ -76,12 +77,14 @@ export function LessonsTable({
       columns={[
         {
           key: "position",
+          id: "position",
           header: labels.position,
           numeric: true,
           cell: (row) => row.position,
         },
         {
           key: "title",
+          id: "title",
           header: labels.title,
           // The link lives here: the title identifies the lesson, its
           // ordinal position does not.
@@ -90,16 +93,19 @@ export function LessonsTable({
         },
         {
           key: "category",
+          id: "category",
           header: labels.category,
           cell: (row) => row.category,
         },
         {
           key: "difficulty",
+          id: "difficulty",
           header: labels.difficulty,
           cell: (row) => row.difficulty,
         },
         {
           key: "status",
+          id: "status",
           header: labels.status,
           cell: (row) => (
             <Badge variant={STATUS_VARIANT[row.status]}>
@@ -108,6 +114,7 @@ export function LessonsTable({
           ),
         },
         {
+          id: "content",
           header: labels.content,
           // Shown in the list rather than only on the editor: a lesson with no
           // sections cannot be published, and finding that out by clicking
@@ -126,6 +133,7 @@ export function LessonsTable({
           ? [
               {
                 key: "translation",
+                id: "translation",
                 header: labels.translation,
                 cell: (row: LessonTableRow) =>
                   row.translation ? (
@@ -137,7 +145,11 @@ export function LessonsTable({
               },
             ]
           : []),
-        { header: labels.updated, cell: (row) => row.updatedLabel },
+        {
+          id: "updated",
+          header: labels.updated,
+          cell: (row) => row.updatedLabel,
+        },
       ]}
     />
   );

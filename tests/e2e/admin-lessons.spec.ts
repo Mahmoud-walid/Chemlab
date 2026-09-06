@@ -133,6 +133,78 @@ test.describe("the lesson admin", () => {
     await expect(table.getByText("Not translated")).toHaveCount(0);
   });
 
+  test("remembers which columns to hide, and refuses to hide the link", async ({
+    page,
+  }) => {
+    await signInAs(page, db, "editor");
+    await page.goto("/en/admin/lessons");
+
+    const table = page.getByRole("table");
+    await expect(
+      table.getByRole("columnheader", { name: /category/i }),
+    ).toBeVisible();
+
+    await page.getByRole("button", { name: "Columns" }).click();
+
+    // The link column is listed and disabled rather than absent: omitting it
+    // leaves somebody hunting for "Title" in a menu that never had it.
+    const title = page.getByRole("menuitemcheckbox", { name: "Title" });
+    await expect(title).toBeVisible();
+    await expect(title).toBeDisabled();
+
+    await page.getByRole("menuitemcheckbox", { name: "Category" }).click();
+    await page.keyboard.press("Escape");
+    await expect(
+      table.getByRole("columnheader", { name: /category/i }),
+    ).toHaveCount(0);
+    // The link column is still there, which is what makes the row reachable.
+    await expect(
+      table.getByRole("columnheader", { name: /title/i }),
+    ).toBeVisible();
+
+    // Persisted, not just held in memory for this render.
+    await page.reload();
+    await expect(
+      page.getByRole("table").getByRole("columnheader", { name: /category/i }),
+    ).toHaveCount(0);
+  });
+
+  test("searches once the typing stops, not once per keystroke", async ({
+    page,
+  }) => {
+    await signInAs(page, db, "editor");
+    await page.goto("/en/admin/lessons");
+
+    // DISTINCT search terms the browser asked the server for. Counting raw
+    // requests would count Next's own RSC fetch and its link prefetches
+    // alongside the navigation, which says nothing about the debounce; the
+    // terms do. Undebounced, typing eight characters searches for eight
+    // prefixes.
+    const terms = new Set<string>();
+    page.on("request", (request) => {
+      const url = new URL(request.url());
+      if (
+        url.pathname.includes("/admin/lessons") &&
+        url.searchParams.has("q")
+      ) {
+        terms.add(url.searchParams.get("q")!);
+      }
+    });
+
+    await page
+      .getByRole("searchbox")
+      .pressSequentially("thermody", { delay: 30 });
+
+    await expect(page).toHaveURL(/q=thermody/, { timeout: 10_000 });
+    // The complete word is what was searched for. "thermod" must never land
+    // after "thermody" — the timer is reset, not queued.
+    expect([...terms]).toContain("thermody");
+    // Two rather than one: a slow runner can stretch eight keystrokes past
+    // the 300ms window and produce a legitimate second search. Eight is the
+    // number this is guarding against.
+    expect(terms.size).toBeLessThanOrEqual(2);
+  });
+
   test("creates a draft that the public catalogue does not show", async ({
     page,
   }) => {

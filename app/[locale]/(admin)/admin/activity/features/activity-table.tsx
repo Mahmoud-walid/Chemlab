@@ -45,19 +45,21 @@ export function ActivityTable({
 }) {
   return (
     <DataTable
+      tableId="activity"
       rows={rows}
       page={page}
       pages={pages}
       rowKey={(row) => row.id}
       labels={labels.table}
       columns={[
-        { header: labels.when, cell: (row) => row.whenLabel },
-        { header: labels.actor, cell: (row) => row.actorLabel },
+        { id: "when", header: labels.when, cell: (row) => row.whenLabel },
+        { id: "actor", header: labels.actor, cell: (row) => row.actorLabel },
         {
+          id: "verb",
           header: labels.verb,
           cell: (row) => <Badge variant="secondary">{row.verbLabel}</Badge>,
         },
-        { header: labels.object, cell: (row) => row.objectLabel },
+        { id: "object", header: labels.object, cell: (row) => row.objectLabel },
         // The personal-data columns render only for a reader who may see them.
         // They are already null in the query for everyone else — this keeps the
         // table from showing two empty columns to every other reader, which
@@ -65,10 +67,12 @@ export function ActivityTable({
         ...(canSeePii
           ? [
               {
+                id: "ip",
                 header: labels.ip,
                 cell: (row: ActivityTableRow) => row.ipAddress ?? "—",
               },
               {
+                id: "agent",
                 header: labels.agent,
                 cell: (row: ActivityTableRow) => (
                   <span

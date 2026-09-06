@@ -42,6 +42,7 @@ export function ElementsTable({
 }) {
   return (
     <DataTable
+      tableId="elements"
       rows={rows}
       page={page}
       pages={pages}
@@ -51,13 +52,20 @@ export function ElementsTable({
       columns={[
         {
           key: "number",
+          id: "number",
           header: labels.number,
           numeric: true,
           cell: (row) => row.number,
         },
-        { key: "symbol", header: labels.symbol, cell: (row) => row.symbol },
+        {
+          key: "symbol",
+          id: "symbol",
+          header: labels.symbol,
+          cell: (row) => row.symbol,
+        },
         {
           key: "name",
+          id: "name",
           header: labels.name,
           // The link lives here: "Iron" identifies the row, "26" does not.
           link: true,
@@ -65,16 +73,22 @@ export function ElementsTable({
         },
         {
           key: "category",
+          id: "category",
           header: labels.category,
           cell: (row) => row.category,
         },
         {
           key: "atomicMass",
+          id: "atomicMass",
           header: labels.atomicMass,
           numeric: true,
           cell: (row) => row.atomicMassLabel,
         },
-        { header: labels.updated, cell: (row) => row.updatedLabel },
+        {
+          id: "updated",
+          header: labels.updated,
+          cell: (row) => row.updatedLabel,
+        },
       ]}
     />
   );

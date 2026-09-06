@@ -181,6 +181,9 @@ export default async function AdminQuizzesPage({
             next: tTable("next"),
             pageStatus: tTable("pageStatus", { page: list.page, pages }),
             sortBy: tTable("sortBy"),
+            columns: tTable("columns"),
+            columnsHint: tTable("columnsHint"),
+            loading: tTable("loading"),
           },
         }}
       />

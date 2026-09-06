@@ -418,7 +418,10 @@
       "previous": "السابق",
       "next": "التالي",
       "pageStatus": "صفحة {page} من {pages}",
-      "sortBy": "ترتيب حسب"
+      "sortBy": "ترتيب حسب",
+      "columns": "الأعمدة",
+      "columnsHint": "تُحفظ الأعمدة المخفية على هذا الجهاز فقط.",
+      "loading": "جارٍ التحميل"
     },
     "elements": {
       "title": "العناصر",
