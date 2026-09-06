@@ -716,7 +716,21 @@
         "confirmPublishTitle": "نشر هذا الاختبار؟",
         "confirmPublishBody": "سيصبح مرئيًا للجميع على ‎/quiz/{slug}‎.",
         "confirmPublishAction": "نشر",
-        "cancel": "إلغاء"
+        "cancel": "إلغاء",
+        "hardDelete": "حذف نهائي",
+        "hardDeleteHint": "لمسوّدة أُنشئت بالخطأ. لا تراجع عن هذا، وتُحذف معه أسئلته وخياراته.",
+        "hardDeleteConfirmTitle": "حذف هذا الاختبار نهائيًا؟",
+        "hardDeleteConfirmBody": "لا يمكن التراجع عن هذا. اكتب المعرّف {slug} للتأكيد.",
+        "hardDeleteDone": "تم الحذف.",
+        "hardDeleteRefusedTitle": "لا يمكن حذف هذا الاختبار",
+        "hardDeleteReasons": {
+          "published": "الاختبار منشور. اسحبه أولًا.",
+          "wasPublished": "سبق نشره. قد يكون أحدهم قد أدّاه، لذلك يُسحب بدل أن يُحذف.",
+          "hasComments": "علّق عليه أحدهم.",
+          "hasEngagement": "حفظه أحدهم أو أعجب به.",
+          "hasActivity": "يظهر في سجل النشاط.",
+          "hasAttempts": "أدّاه أحدهم. النتائج تاريخ، لا خطأ."
+        }
       },
       "blockers": {
         "missingTitle": "ليس له عنوان.",

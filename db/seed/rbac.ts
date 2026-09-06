@@ -144,6 +144,12 @@ export const PERMISSIONS: PermissionSpec[] = [
   { resource: "quiz", action: "delete", description: "Delete quizzes" },
   {
     resource: "quiz",
+    action: "delete_hard",
+    description:
+      "Erase a draft quiz that was never published and has never been sat",
+  },
+  {
+    resource: "quiz",
     action: "publish",
     description: "Publish and unpublish quizzes",
   },
