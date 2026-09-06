@@ -19,8 +19,11 @@ function readEnv() {
   return {
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
-    VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
+    // A LITERAL access, because Next.js only inlines literal
+    // `process.env.NEXT_PUBLIC_*` reads — a computed key would be undefined.
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
     VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
+    VAPID_SUBJECT: process.env.VAPID_SUBJECT,
     SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL,
     CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
     CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,

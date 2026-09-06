@@ -11,10 +11,19 @@ import "../lib/load-env";
 import { parseEnv } from "../lib/env";
 import {
   authConfigured,
+  ciNotifyConfigured,
   googleConfigured,
   parseServerEnv,
+  pushConfigured,
+  slackConfigured,
 } from "../lib/env.server.schema";
 import { driverFor } from "../db/driver";
+import {
+  databaseDiagnostics,
+  resolvedEndpoints,
+  type Diagnostic,
+} from "../lib/env-diagnostics";
+import { configStatusFrom } from "../lib/settings/config-status-core";
 
 /** `postgresql://user:pw@host:5432/db` -> `postgresql://user:***@host:5432/db` */
 function redact(url: string): string {
@@ -33,6 +42,19 @@ function heading(text: string) {
 }
 
 let failed = false;
+
+/** Prints diagnostics and fails the run on any error-level one. */
+function report(found: Diagnostic[]) {
+  for (const entry of found) {
+    if (entry.level === "error") failed = true;
+    console.log(
+      `\n  ${entry.level === "error" ? "ERROR" : "warning"}: ${entry.summary}\n` +
+        `    ${entry.detail.replace(/\n/g, "\n    ")}`,
+    );
+  }
+}
+
+const state = (set: boolean) => (set ? "set" : "(unset)");
 
 heading("Public configuration");
 try {
@@ -86,6 +108,19 @@ if (!process.env.DATABASE_URL) {
       }`,
     );
     console.log(`  driver                        ${driverFor(databaseUrl)}`);
+
+    // Which URL each client actually ends up on. Both the migration path and
+    // the analytics client prefer the direct endpoint and fall back silently
+    // to DATABASE_URL, which is the fallback the diagnostics below are about.
+    const endpoints = resolvedEndpoints(env);
+    console.log(
+      `  migrations use                ${redact(endpoints.migrations!)}`,
+    );
+    console.log(
+      `  admin analytics use           ${redact(endpoints.analytics!)}`,
+    );
+
+    report(databaseDiagnostics(env));
   } catch (error) {
     failed = true;
     console.error(error instanceof Error ? error.message : String(error));
@@ -150,6 +185,94 @@ try {
           "        the Google callback rather than here.",
       );
     }
+  }
+} catch (error) {
+  failed = true;
+  console.error(error instanceof Error ? error.message : String(error));
+}
+
+heading("Integrations");
+try {
+  const env = parseServerEnv({
+    VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
+    VAPID_SUBJECT: process.env.VAPID_SUBJECT,
+    CI_NOTIFY_SECRET: process.env.CI_NOTIFY_SECRET,
+    SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL,
+  });
+
+  // A literal access: Next.js inlines only literal `process.env.NEXT_PUBLIC_*`
+  // reads, and this script shares the name with the app deliberately.
+  const vapidPublic = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+
+  console.log(`  NEXT_PUBLIC_VAPID_PUBLIC_KEY  ${state(Boolean(vapidPublic))}`);
+  console.log(
+    `  VAPID_PRIVATE_KEY             ${state(Boolean(env.VAPID_PRIVATE_KEY))}`,
+  );
+  console.log(
+    `  VAPID_SUBJECT                 ${env.VAPID_SUBJECT ?? "(unset)"}`,
+  );
+  console.log(
+    `  CI_NOTIFY_SECRET              ${state(Boolean(env.CI_NOTIFY_SECRET))}`,
+  );
+  console.log(
+    `  SLACK_WEBHOOK_URL             ${state(Boolean(env.SLACK_WEBHOOK_URL))}`,
+  );
+
+  // The allow-list deciding which hosts a lesson image may be served from.
+  // Read by `lib/lessons/blocks.ts`; unset means the built-in default.
+  console.log(
+    `  NEXT_PUBLIC_MEDIA_HOSTS       ${
+      process.env.NEXT_PUBLIC_MEDIA_HOSTS ?? "(unset — res.cloudinary.com)"
+    }`,
+  );
+
+  console.log(
+    `\n  web push                      ${
+      pushConfigured(env, vapidPublic)
+        ? "configured"
+        : "not configured (needs all three of the above)"
+    }`,
+  );
+  console.log(
+    `  CI alerts                     ${
+      ciNotifyConfigured(env)
+        ? slackConfigured(env)
+          ? "push and Slack"
+          : "push only (no Slack webhook)"
+        : "disabled (no CI_NOTIFY_SECRET — the endpoint refuses everything)"
+    }`,
+  );
+
+  // The same computation the admin settings screen shows, so the two cannot
+  // disagree about what "configured" means.
+  const status = configStatusFrom({
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY: vapidPublic,
+    VAPID_PRIVATE_KEY: env.VAPID_PRIVATE_KEY,
+    VAPID_SUBJECT: env.VAPID_SUBJECT,
+    SLACK_WEBHOOK_URL: env.SLACK_WEBHOOK_URL,
+    CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
+    CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
+    CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+  });
+  console.log(
+    `  media uploads (#27)           ${status.cloudinary ? "configured" : "not configured"}`,
+  );
+  console.log(
+    `  outgoing email                ${status.email ? "configured" : "not configured"}`,
+  );
+
+  if (Boolean(vapidPublic) !== Boolean(env.VAPID_PRIVATE_KEY)) {
+    report([
+      {
+        level: "warning",
+        summary: "Half a VAPID key pair",
+        detail:
+          "A private key with no public counterpart signs nothing a browser " +
+          "will accept, and a public key with no private one cannot send. " +
+          "Generate a matched pair with `pnpm vapid:keys`.",
+      },
+    ]);
   }
 } catch (error) {
   failed = true;
