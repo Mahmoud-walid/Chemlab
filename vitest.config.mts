@@ -36,6 +36,19 @@ export default defineConfig({
         test: {
           name: "unit",
           environment: "jsdom",
+          // One jsdom per WORKER instead of one per file, keeping per-file
+          // isolation. Vitest builds the environment 75 times otherwise —
+          // once per test file — and that construction, not the assertions,
+          // was 77% of the run. The inner loop has a stated budget in
+          // tests/README.md and it had drifted past it.
+          //
+          // `vmThreads` rather than `isolate: false`, which would also work
+          // and is faster still: sharing one environment across files means a
+          // module-level cache or a mutated global leaks between them, and
+          // this suite deliberately shuffles file order to catch exactly that.
+          // Buying seconds by removing the isolation those runs depend on
+          // would be trading a real guarantee for a smaller number.
+          pool: "vmThreads",
           globals: true,
           setupFiles: ["./tests/setup.ts"],
           include: [
@@ -84,6 +97,30 @@ export default defineConfig({
         "**/*.d.ts",
         "db/migrations/**",
         "db/schema/**",
+        // Server actions, named by #13's coverage criterion, and until now the
+        // one SILENCE in this config: not included, not excluded, so a reader
+        // could not tell whether they had been considered. They had not been.
+        //
+        // The criterion asks for them in `include`. That is not achievable
+        // honestly: `"use server"` reads the actor from `next/headers`, so the
+        // unit project cannot invoke one, and they would sit at a permanent 0%
+        // — thirteen rows of it, dragging the headline from 53% to 43% while
+        // nothing whatsoever changed about what is tested. A number that moves
+        // when the testing does not is worse than no number, and this config
+        // already argues that case against a global gate.
+        //
+        // So they are excluded, deliberately, and what guards them instead is
+        // stricter than any percentage would have been:
+        //   - `tests/lib/authz-enforcement.test.ts` fails the build when an
+        //     action mutates without `requirePermission()` — a coverage
+        //     percentage cannot express that, and 100% would not imply it.
+        //   - `tests/lib/authz-cache.test.ts` fails it when rendering code
+        //     reaches past the per-request permission cache.
+        //   - the e2e suite calls the admin routes DIRECTLY as a signed-in
+        //     non-admin (see tests/e2e/admin-export.spec.ts) and asserts the
+        //     server refuses — the test #13 wanted, which catches a UI-only
+        //     guard exactly as a coverage number never could.
+        "app/**/actions.ts",
         // Framework glue with no logic of ours: navigation.ts re-exports
         // next-intl's createNavigation, and request.ts is a config factory
         // that only resolves the locale — logic which lives in routing.ts

@@ -50,6 +50,22 @@ pnpm test:e2e:ui       # Playwright in UI mode
 pnpm test:e2e:report   # open the last HTML report
 ```
 
+### Why the unit project uses `pool: "vmThreads"`
+
+The inner loop is meant to be fast enough that nobody is tempted to skip it,
+and it had quietly stopped being: 1108 tests in about 30 seconds, of which
+**77% was building a jsdom environment 75 times — once per test file**, not
+running assertions.
+
+`vmThreads` builds one per worker instead, keeping per-file isolation. The
+run went to about 5 seconds, and to about 10 with coverage and shuffling.
+
+`isolate: false` would be faster still and is deliberately not used. It shares
+one environment across files, so a module-level cache or a mutated global
+leaks between them — and the shuffled runs in CI exist precisely to catch that
+class of bug. Buying a few seconds by removing the isolation those runs depend
+on would trade a real guarantee for a smaller number.
+
 `pnpm check` runs `format:check → typecheck → lint → test` (unit). It is the
 gate before pushing; CI additionally runs integration, E2E and `build`.
 
