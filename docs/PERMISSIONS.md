@@ -20,7 +20,7 @@ unique key, so the admin UI can group by resource without parsing strings.
 
 **Actions:** `read`, `create`, `update`, `delete`, `publish`, `moderate`,
 `assign`, `impersonate`, `export`, `toggle`, `bypass`, `access`, `read_pii`,
-`update_security`, `void`, `write`, `review`, `delete_hard`.
+`update_security`, `void`, `write`, `review`, `delete_hard`, `subscribe_ci`.
 
 `lesson:delete_hard` and `quiz:delete_hard` are separate from their `delete`
 counterparts for the same reason `setting:update_security` is separate from
@@ -60,6 +60,20 @@ provider list decide who gets in; renaming the site does not). Both are
 separate permissions because the narrower half is a different decision to
 trust somebody with — and both are two-part names, so the vocabulary stays
 `resource:action` instead of growing a third segment.
+
+`notification:subscribe_ci` gates the **Development** section of
+`/profile/settings` — build alerts for this repository — and is the one
+permission here that grants no power over anything. It says "works on this
+project", and nothing else. It exists rather than a role check because both
+alternatives are wrong. Deriving it from `admin:access` contradicts what
+`ci_notification_preferences` says out loud: holding admin is not a request to
+be woken by a build, and somebody who wants build alerts should not have to be
+granted admin to get them. Leaving it ungated puts branch names, commit
+messages and failure detail on the settings page of a site aimed at children.
+**No role holds it by default**, like the two `delete_hard` permissions; a
+Super Admin grants it. The API answers **404** without it rather than 403 —
+somebody who does not work on this repository has no business learning that it
+notifies anybody about its builds.
 
 `exam:void` is a third of the same shape. Reading the scores and striking one
 out are different levels of trust: a void changes somebody's record, is

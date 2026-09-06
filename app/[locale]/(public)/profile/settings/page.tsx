@@ -1,10 +1,12 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { requireUser } from "@/lib/session";
+import { can } from "@/lib/authz";
 import { env } from "@/lib/env";
 import { PushToggle } from "./features/push-toggle";
 import { NotificationPreferences } from "./features/notification-preferences";
 import { PresenceVisibility } from "./features/presence-visibility";
+import { CiNotifications } from "./features/ci-notifications";
 import {
   NOTIFICATION_SPECS,
   NOTIFICATION_TYPES,
@@ -39,6 +41,13 @@ export default async function ProfileSettingsPage({
   const t = await getTranslations("auth");
   const tPreferences = await getTranslations("notifications.preferences");
   const tPresence = await getTranslations("presence");
+  const tCi = await getTranslations("notifications.ci");
+
+  // Absent for everybody who does not work on this repository, which is
+  // almost everybody: branch names, commit messages and failure detail have
+  // no business on a reader's settings page. The API answers 404 without the
+  // permission too — this is the convenience, not the gate.
+  const developer = await can("notification:subscribe_ci");
 
   const defaults = Object.fromEntries(
     NOTIFICATION_TYPES.map((type) => [
@@ -117,6 +126,19 @@ export default async function ProfileSettingsPage({
           <PresenceVisibility />
         </CardContent>
       </Card>
+
+      {developer && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              <h2>{tCi("title")}</h2>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CiNotifications />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

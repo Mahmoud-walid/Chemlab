@@ -10,8 +10,10 @@ import { pruneFinished } from "@/lib/push/queue";
  *   pnpm push:drain              # one batch
  *   pnpm push:drain --limit 500  # a bigger batch, for clearing a backlog
  *
- * Where and how often this runs is the owner's call, documented in
- * docs/NOTIFICATIONS.md — a host cron, a scheduled GitHub Action, or by hand.
+ * Runs every ten minutes from `.github/workflows/push-drain.yml`, which skips
+ * itself when the repository has no database or no VAPID pair. A host cron is
+ * the better home once there is a host; see docs/NOTIFICATIONS.md.
+ *
  * The honest cost of a queue is latency: a notification is as late as the gap
  * between drains. For a like or a reply that is fine.
  *

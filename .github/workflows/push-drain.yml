@@ -1,0 +1,117 @@
+name: Push drain
+
+# The queue is written by the app and sent by this job. A request that
+# triggers five hundred notifications writes five hundred rows and returns —
+# see docs/NOTIFICATIONS.md — so without something running `pnpm push:drain`
+# on a schedule, every notification this platform has ever queued is still
+# waiting in the table.
+#
+# Every ten minutes, which is the honest cost of a queue: a notification is as
+# late as the gap between drains. A shorter gap is a GitHub Actions run every
+# few minutes for a table that is usually empty; a longer one makes a reply
+# notification arrive after the conversation.
+#
+# GitHub schedules are best-effort and can be delayed under load, and it
+# disables a schedule after 60 days without repository activity. Neither is
+# silent data loss — a delayed drain sends late, and rows keep their place —
+# but it is why this is not the mechanism for anything that must be instant.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  # So a backlog can be cleared, and so the job can be proved to work without
+  # waiting for the next tick.
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "How many deliveries to claim in one batch"
+        required: false
+        default: "100"
+
+# One drain at a time. Two are safe by construction — the claim uses
+# `for update skip locked` — but a queue that never empties because runs are
+# piling up is worth seeing as a skipped run rather than as a crowd.
+concurrency:
+  group: push-drain
+  cancel-in-progress: false
+
+jobs:
+  drain:
+    name: drain
+    runs-on: ubuntu-latest
+    # Best-effort, like the notify job: a failed drain must not sit red on the
+    # repository's Actions tab pretending the build broke. A genuine failure
+    # shows in this job's log, and the rows it did not send are still there
+    # for the next tick.
+    continue-on-error: true
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED }}
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+      VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+      VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
+    steps:
+      # Checked BEFORE checkout and install, so a fork or an unconfigured
+      # repository spends seconds rather than two minutes to conclude there is
+      # nothing to do. A missing secret is not a failure here: it is what a
+      # repository that has not set up Web Push looks like.
+      - name: Is there anything to drain?
+        id: configured
+        shell: bash
+        run: |
+          set -u
+          if [ -z "${DATABASE_URL_UNPOOLED:-}" ] && [ -z "${DATABASE_URL:-}" ]; then
+            echo "No database configured for this repository; skipping."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "${VAPID_PRIVATE_KEY:-}" ] || [ -z "${VAPID_SUBJECT:-}" ] \
+             || [ -z "${NEXT_PUBLIC_VAPID_PUBLIC_KEY:-}" ]; then
+            # Draining without VAPID would claim every row and fail each one,
+            # burning attempts against a delivery cap that exists to stop a
+            # dead subscription being retried for ever. Better to send nothing.
+            echo "Web Push is not configured for this repository; skipping."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - if: steps.configured.outputs.ready == 'true'
+        uses: actions/checkout@v5
+      - if: steps.configured.outputs.ready == 'true'
+        uses: pnpm/action-setup@v4
+      - if: steps.configured.outputs.ready == 'true'
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - if: steps.configured.outputs.ready == 'true'
+        run: pnpm install --frozen-lockfile
+
+      # No `--limit` on a schedule: the script's own default batch is sized for
+      # a ten-minute tick, and a bigger one is what the manual run is for.
+      #
+      # The input reaches the shell through the environment, never through
+      # `${{ }}` interpolation into the script — an expression is pasted in as
+      # TEXT before bash sees it, so a value containing a quote and a
+      # semicolon would run as a command on this runner. And it is checked
+      # here rather than trusted, because `push-drain.ts` would reject a
+      # malformed one anyway and this says so in the job's own log.
+      - if: steps.configured.outputs.ready == 'true'
+        name: Send the queued pushes
+        env:
+          EVENT: ${{ github.event_name }}
+          LIMIT: ${{ inputs.limit }}
+        shell: bash
+        run: |
+          set -eu
+          if [ "$EVENT" = "workflow_dispatch" ] && [ -n "${LIMIT:-}" ]; then
+            case "$LIMIT" in
+              ''|*[!0-9]*)
+                echo "--limit must be a positive whole number; got: $LIMIT" >&2
+                exit 1
+                ;;
+            esac
+            pnpm run push:drain --limit "$LIMIT"
+          else
+            pnpm run push:drain
+          fi

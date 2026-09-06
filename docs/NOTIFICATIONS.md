@@ -44,11 +44,28 @@ pnpm push:drain              # send one batch
 pnpm push:drain --limit 500  # clear a backlog
 ```
 
-Where and how often this runs is **the owner's call** — a host cron, a
-scheduled GitHub Action, or by hand — the same arrangement as `pnpm rollup` and
-`pnpm retention` (see `docs/ACTIVITY.md`). Two drains running at once are safe:
-the claim uses `for update skip locked`, so the second skips the rows the first
-is holding rather than blocking on them or sending them twice.
+It runs **every ten minutes**, from `.github/workflows/push-drain.yml`. That
+was the owner's call to make and it is now made: leaving it as "a host cron, or
+by hand" meant that in practice nothing ran it, and a queue nothing drains is a
+notification system that writes rows and sends nothing. A host cron is still
+the better home once there is a host; this needs no infrastructure to exist.
+
+The job **skips itself** when the repository has no `DATABASE_URL` or no VAPID
+pair, before it checks anything out. A missing secret there is not a failure —
+it is what a fork, or a repository that has not set up Web Push, looks like.
+Draining without VAPID would be worse than not running: it would claim every
+row and fail each one, burning attempts against a delivery cap that exists to
+stop a dead subscription being retried for ever.
+
+Two drains running at once are safe — the claim uses `for update skip locked`,
+so the second skips the rows the first is holding rather than blocking on them
+or sending them twice — but the workflow takes a `concurrency` lock anyway, so
+a queue that never empties shows up as a skipped run rather than as a crowd.
+`workflow_dispatch` takes a `limit`, for clearing a backlog without waiting for
+the next tick.
+
+The same arrangement as `pnpm rollup` and `pnpm retention` (see
+`docs/ACTIVITY.md`), which are still by hand.
 
 **The honest cost is latency.** A notification is as late as the gap between
 drains. For a like or a reply that is fine; anything that genuinely must be

@@ -94,7 +94,12 @@ describe("message catalogues", () => {
     // button the visitor is about to press, and Google's own Arabic sign-in
     // flow spells it in Latin script too — transliterating it here would make
     // the two disagree.
-    key.startsWith("admin.settings.options.security.allowedOAuthProviders.");
+    key.startsWith("admin.settings.options.security.allowedOAuthProviders.") ||
+    // Git branch names, in a field that takes git branch names. `main` is the
+    // branch this repository actually has; an Arabic-script example would
+    // name a branch that does not exist, in a field where a pattern matching
+    // nothing is the exact failure the validation exists to prevent.
+    key === "notifications.ci.branchesPlaceholder";
 
   it("actually translates — Arabic values are not copies of the English", () => {
     const allowedIdentical = new Set(["locale.en", "locale.ar"]);

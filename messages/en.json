@@ -1254,6 +1254,27 @@
           "published": "A new exam is added"
         }
       }
+    },
+    "ci": {
+      "title": "Development",
+      "description": "Build alerts for this repository. Only people who work on Chemlab can turn these on, and nothing is sent until you do.",
+      "enabled": "Tell me about builds",
+      "branches": "Branches to watch",
+      "branchesDescription": "Separated by commas. A trailing /* watches everything under a prefix, and * alone watches every branch.",
+      "branchesPlaceholder": "main, feat/*",
+      "branchesSave": "Save",
+      "branchesInvalid": "Watch at least one branch, written as a branch name, a prefix like feat/*, or * for all of them.",
+      "onFailure": "When a build fails",
+      "successPolicy": "When a build passes",
+      "successPolicyDescription": "A message for every green build is a channel you learn to ignore — and then you ignore the failures too.",
+      "successPolicyOptions": {
+        "never": "Never",
+        "recovery": "Only the first green after a failure",
+        "always": "Every time"
+      },
+      "onCancelled": "When a build is cancelled",
+      "saved": "Saved.",
+      "failed": "That did not save. Nothing was changed."
     }
   },
   "comments": {
