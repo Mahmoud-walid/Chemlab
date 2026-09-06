@@ -321,7 +321,11 @@ test("switches to a windowed list once enough is loaded, showing the same commen
       .poll(
         async () =>
           (await feed.locator("div.overflow-y-auto").count()) > 0 ||
-          (await feed.locator("article").count()) !== rowsBefore,
+          // Strictly MORE rows, not merely different. Before the threshold a
+          // page can only add rows; once windowing takes over the count can
+          // drop, and `!==` would read that drop as "a page arrived" and let
+          // the loop exit having loaded nothing.
+          (await feed.locator("article").count()) > rowsBefore,
         { timeout: 15_000 },
       )
       .toBe(true);

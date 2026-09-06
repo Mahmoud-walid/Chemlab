@@ -63,6 +63,14 @@ export const ACTIONS = [
   // translator who could open a draft but not edit it back would be a
   // permission set nobody wants.
   "write",
+  // `lesson:delete_hard`. The catalogue is `resource:action`, two parts, so
+  // #64's `<resource>:delete:hard` becomes an action of its own — the same
+  // rule that turned `activity:read:pii` into `activity:read_pii`.
+  //
+  // Deliberately NOT a narrower `delete`: soft delete keeps the row and can
+  // be undone, and erasing one cannot. They are different decisions to trust
+  // somebody with, which is exactly when a separate permission is right.
+  "delete_hard",
   // `translation:review`. Checking a chemistry translation is a language
   // competence, not a publishing right, so it is separate from `write` and
   // from `lesson:publish`. A mistranslated definition is a factual error, and
@@ -103,6 +111,12 @@ export const PERMISSIONS: PermissionSpec[] = [
   { resource: "lesson", action: "create", description: "Create lessons" },
   { resource: "lesson", action: "update", description: "Edit lessons" },
   { resource: "lesson", action: "delete", description: "Delete lessons" },
+  {
+    resource: "lesson",
+    action: "delete_hard",
+    description:
+      "Erase a draft lesson that was never published and has no references",
+  },
   {
     resource: "lesson",
     action: "publish",

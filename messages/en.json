@@ -583,7 +583,21 @@
         "confirmPublishTitle": "Publish this lesson?",
         "confirmPublishBody": "It becomes visible to everyone at /lessons/{slug}.",
         "confirmPublishAction": "Publish",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "hardDelete": "Erase permanently",
+        "hardDeleteHint": "For a draft created by mistake. There is no undo, and no withdrawn copy left behind.",
+        "hardDeleteConfirmTitle": "Erase this lesson permanently?",
+        "hardDeleteConfirmBody": "This cannot be undone. Type the slug {slug} to confirm.",
+        "hardDeleteDone": "Erased.",
+        "hardDeleteRefusedTitle": "This lesson cannot be erased",
+        "hardDeleteReasons": {
+          "published": "It is published. Withdraw it first.",
+          "wasPublished": "It was published once. Readers may have linked to it, so it is withdrawn rather than erased.",
+          "hasComments": "Somebody has commented on it.",
+          "hasEngagement": "Somebody has saved or liked it.",
+          "hasActivity": "It appears in the activity stream.",
+          "hasAttempts": "Somebody has sat it."
+        }
       },
       "blockers": {
         "missingTitle": "It has no title.",

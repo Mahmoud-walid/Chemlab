@@ -73,6 +73,9 @@ export default async function AdminLessonPage({
         can={{
           publish: hasPermission(actor, "lesson:publish"),
           delete: hasPermission(actor, "lesson:delete"),
+          // No role holds this by default, so for almost everybody the
+          // button is simply not there.
+          deleteHard: hasPermission(actor, "lesson:delete_hard"),
         }}
       />
 
