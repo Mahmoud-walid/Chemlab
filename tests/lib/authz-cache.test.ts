@@ -14,11 +14,20 @@ import { describe, expect, it } from "vitest";
  * such component then issues its own query, the page still renders correctly,
  * and nothing anywhere says so.
  *
- * So this asserts the precondition mechanically: the uncached form is used by
- * `lib/authz.ts` itself and by scripts, and by nothing that renders.
+ * So this asserts the preconditions mechanically. There are two, and together
+ * they are the whole of what is ours to guarantee:
  *
- * It does NOT count queries, and the first test below records why that cannot
- * be done from here — see the comment on it, and the note on #22.
+ *   1. Every consumer goes through the cached accessors, never around them.
+ *   2. Those accessors are actually wrapped in `cache()`.
+ *
+ * Given both, "one query however many components ask" is React's own contract,
+ * not a behaviour of this codebase to re-test — and testing it here would be
+ * testing React. The two ways it silently stops holding are a caller reaching
+ * for the uncached form and somebody unwrapping a `cache()`; both are build
+ * failures below.
+ *
+ * It does NOT count queries, and the first test records why that cannot be
+ * done from here — see the comment on it, and the note on #22.
  */
 
 const ROOT = process.cwd();
@@ -136,5 +145,44 @@ describe("the per-request permission cache", () => {
       "loadPermissionContext should be called only by the cached wrapper, " +
         "never by a helper that callers reach through",
     ).toBe(1);
+  });
+});
+
+describe("the accessors a request funnels through", () => {
+  /**
+   * The three that stand between a rendering component and a query: the
+   * session read, the user-with-profile read, and the permission context.
+   * Each is `cache()`-wrapped today, and each stops being per-request the
+   * moment somebody unwraps one — silently, because the page still renders
+   * correctly either way.
+   */
+  const WRAPPED = [
+    { file: "lib/session.ts", name: "getSession" },
+    { file: "lib/session.ts", name: "getCurrentUser" },
+    { file: "lib/authz.ts", name: "getPermissionContext" },
+  ];
+
+  it.each(WRAPPED)("wraps $name in cache()", async ({ file, name }) => {
+    const source = await readFile(path.join(ROOT, file), "utf8");
+
+    // The DECLARATION, not a mention. Anything else — a plain async function,
+    // a wrapper of our own, a memoise() from elsewhere — means every caller
+    // pays for its own query and nothing reports it.
+    const declared = new RegExp(String.raw`export const ${name}\s*=\s*cache\(`);
+
+    expect(
+      declared.test(source),
+      `${name} must stay cache()-wrapped: without it every component that ` +
+        `asks issues its own query, and the page renders correctly anyway`,
+    ).toBe(true);
+  });
+
+  it("takes cache from react, not from somewhere that merely exports the name", async () => {
+    // A `cache` imported from anywhere else is not the per-request one, and
+    // the assertion above would happily accept it.
+    for (const file of ["lib/session.ts", "lib/authz.ts"]) {
+      const source = await readFile(path.join(ROOT, file), "utf8");
+      expect(source, file).toMatch(/import \{ cache \} from "react"/);
+    }
   });
 });
