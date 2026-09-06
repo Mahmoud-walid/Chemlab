@@ -542,27 +542,31 @@ lever.
 
 ---
 
-### Q39 — should presence default to `everyone`, on a site described as for kids?
+### Q39 — should presence default to `everyone`? — **RESOLVED: no, opt-in**
 
-**Implemented as `everyone`, because that is what you asked for.** This is not
-a blocker and nothing waits on it — but it is the one decision in #28 I would
-push back on, and changing it later is a one-line default plus a migration.
+**Decided 2026-09-06: the default is `nobody`, and presence is opt-in.**
 
 The site's own metadata says _Interactive Chemistry Learning for Kids_. An
-always-public presence signal on a learning platform tells anyone who cares to
-watch when a particular student is at their desk, how long they stay, and when
-they stop. That is a behavioural trace about a child, readable by any other
-account, and it is generated continuously whether or not anybody uses it.
+always-public presence signal tells anyone who cares to watch when a particular
+student is at their desk, how long they stay and when they stop — a behavioural
+trace about a child, generated continuously whether or not anybody uses it. The
+cost of being wrong this way is a missing green dot; the other way it is a log
+of a child's daily routine.
 
-**Recommendation: flip the default to `nobody` and make it opt-in.** The
-feature still works — anybody who wants a green dot beside their name turns it
-on — and the people who never think about the setting are not broadcasting
-their study hours by accident. The cost of being wrong in that direction is a
-missing dot; in the other direction it is a log of a child's daily routine.
+The feature is unchanged. Anybody who wants to be seen turns it on.
 
-A middle option, if you want presence to be useful without being public:
-restrict it to the admin panel, where it answers "is this account active?"
-without showing students each other's schedules.
+**Existing rows were moved too**, and that is the part worth stating plainly:
+the column does not record whether a value was _chosen_ or merely defaulted, so
+the backfill cannot spare somebody who deliberately selected `everyone`. It was
+done anyway because presence had shipped days earlier and nobody had been
+offered the choice yet — every existing row held a default nobody selected, and
+making the default opt-in while leaving every current account broadcasting
+would have been the decision in name only.
+
+Shipped in migration `0024_presence_optin_and_audit_anonymise`. The API's
+fallback for a missing row moved to `nobody` in the same change: a fallback
+disagreeing with the column default would have shown the switch as "on" for
+somebody who never turned it on.
 
 Three smaller ones from the same issue, all implemented as recommended and all
 cheap to change:
@@ -573,44 +577,48 @@ cheap to change:
 - **Should the windows be tunable from settings?** No — fixed in code. An
   admin setting a five-second heartbeat multiplies the write load twelvefold,
   and there is no question anybody is trying to answer by tuning it.
-- **Presence for everyone, or only within a shared cohort?** Everyone, since
-  no cohort concept exists yet. If Q39 goes the other way this becomes moot.
+- **Presence for everyone, or only within a shared cohort?** Moot now that
+  presence is opt-in: somebody who turns it on has chosen to be seen.
 
 ---
 
-### Q40 — an account cannot be deleted once it has audited anything
+### Q40 — deleting an account that has audited something — **RESOLVED**
 
-**Found by**, not designed for: a bulk-action integration test tried to delete
-its own test actor and Postgres refused.
+**Decided 2026-09-06: keep the audit log immutable AND keep
+`ON DELETE SET NULL`.** Option (2) below — anonymise the actor in place.
 
-`audit_log.actor_id` references `users.id` `ON DELETE SET NULL`, and
-`audit_log` carries a `BEFORE DELETE OR UPDATE` trigger that raises on both.
-So deleting a user whose actions were audited attempts an UPDATE the trigger
-forbids, and the delete fails — with a message about the audit log, from a
-screen about a user.
+Those two rules were in direct contradiction. `audit_log.actor_id` references
+`users.id` `ON DELETE SET NULL`, and `audit_log` carried a
+`BEFORE DELETE OR UPDATE` trigger raising on both — so deleting a user whose
+actions were audited attempted an UPDATE the trigger forbade, and the delete
+failed with a message about the audit log from a screen about a user.
 
-Nothing reaches this today: `user:delete` exists in the permission catalogue
-and no code path uses it, so there is no user-deletion screen to break. But
-the two rules genuinely conflict, and the resolution is a product decision
-rather than a technical one:
+The trigger is now widened by exactly one case: `actor_id` may go from a value
+to NULL, **provided every other column is untouched**. The log exists so it
+cannot be rewritten, and nulling the author of an entry does not rewrite what
+the entry says.
 
-1. **Soft-delete accounts.** The row stays, the byline stays, the person is
-   gone from every screen. Simplest, and consistent with how lessons,
-   quizzes and comments already work here — but "delete my account" then does
-   not delete a row, which is a claim worth being careful about.
-2. **Anonymise the actor in place**, by widening the trigger to allow exactly
-   `actor_id → NULL` and nothing else. Keeps the log complete and the delete
-   real; the cost is a trigger with an exception in it, and an exception is
-   the thing a future reader has to trust.
-3. **Copy the actor's name into the audit row** at write time and drop the
-   foreign key. The log stops depending on the users table at all, which is
-   what an audit log arguably wants — at the cost of a name that no longer
-   updates when somebody changes theirs.
+The narrowness is enforced by comparison rather than by trust — `OLD` is
+copied, its `actor_id` nulled, and the result must be indistinguishable from
+`NEW`. Verified against real Postgres, and each of these has a test:
 
-My recommendation is **(2)**, narrowly: the trigger exists to stop the log
-being rewritten, and nulling the author of an entry is not rewriting what the
-entry says. But it is the owner's call, and it should be made before a
-user-deletion screen is built rather than discovered by it.
+| attempt                                                        | result      |
+| -------------------------------------------------------------- | ----------- |
+| `actor_id` → NULL, nothing else                                | **allowed** |
+| `actor_id` → a different user                                  | refused     |
+| `actor_id` → NULL _and_ `action` changed in the same statement | refused     |
+| `action` changed alone                                         | refused     |
+| DELETE an entry                                                | refused     |
+| NULL → NULL again, once already anonymised                     | refused     |
+
+Shipped in migration `0024_presence_optin_and_audit_anonymise`. Three
+integration suites that had been leaving their test actors behind — because
+deleting them failed — now clean up properly again.
+
+The alternatives, for the record: soft-deleting accounts was rejected because
+"delete my account" would then not delete a row; copying the actor's name into
+the entry and dropping the foreign key was rejected because the name would stop
+updating when somebody changes theirs.
 
 ## Per-issue open questions
 
@@ -722,3 +730,6 @@ Worth reading before the relevant phase starts: #10 and #14 (data modelling),
 | 2026-09-05 | Permission prompts                 | **Never on page load; only on a button, on a settings page the reader chose to open.** A dialog on first paint is the most reliable way to be refused for ever, since a refused browser will not show its dialog again. `denied` and iOS-in-a-tab get instructions and no button at all — a control that cannot work is worse than none                                                                                                                                             |
 | 2026-09-05 | iOS detection order                | **Checked BEFORE the support check.** An iOS tab reports no `PushManager`, so a naive support check tells somebody whose browser supports notifications perfectly well once installed that their browser cannot — wrong, and unhelpful                                                                                                                                                                                                                                              |
 | 2026-09-05 | E2E account addresses              | **Deterministic per (role, worker).** No timestamp, so accounts are reused across runs and the sign-up limiter is never approached on a persistent database. Per worker, because the limiter is per identifier: one shared account per role looked tidier and concentrated every worker's traffic on one address, which is the fastest way to be refused. Sign-in retries a 429 too — treating "slow down" as "wrong password" is what made a shared account look like a broken one |
+| 2026-09-06 | Presence default (Q39)             | **`nobody` — presence is opt-in.** On a site whose own metadata says it is for kids, an always-public presence signal is a behavioural trace about a child. Existing rows were backfilled: the column cannot tell a chosen value from a defaulted one, and every row held a default nobody had been offered                                                                                                                                                                         |
+| 2026-09-06 | Deleting an audited actor (Q40)    | **Immutable log AND `ON DELETE SET NULL`** — the trigger widened by exactly one case, `actor_id` → NULL with every other column identical. Nulling the author of an entry does not rewrite what the entry says; re-pointing it at somebody else, or smuggling a change alongside the null, is still refused                                                                                                                                                                         |
+| 2026-09-06 | Server actions in coverage (#13)   | **Excluded, with the reasoning in `vitest.config.mts`.** `"use server"` reads the actor from `next/headers`, so the unit project cannot invoke one; including them meant thirteen files at a permanent 0% and a headline moving 53% → 43% with nothing tested differently. What guards them is stricter than a percentage — the enforcement, cache and direct-call tests                                                                                                            |

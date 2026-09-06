@@ -70,15 +70,15 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // The actor is deliberately NOT deleted. `audit_log.actor_id` is
-  // `on delete set null`, and the audit log carries a BEFORE DELETE OR UPDATE
-  // trigger that refuses both — so deleting an actor who has audited anything
-  // fails. That is a real conflict between two rules, recorded as Q40 in
-  // docs/DEFERRED_QUESTIONS.md; it is not this suite's to resolve, and
-  // leaving one test user behind costs nothing.
   await db
     .delete(schema.lessons)
     .where(sql`${schema.lessons.slug} like 'bulk-%'`);
+  // The actor CAN be deleted now. It could not be until Q40 was resolved: the
+  // audit log's trigger refused the `on delete set null` its own foreign key
+  // asked for, so this suite left its actor behind. The trigger now permits
+  // exactly that null, so the cleanup is real again — and deleting an actor
+  // who has audited a batch exercises the anonymisation on the way out.
+  await db.delete(schema.users).where(eq(schema.users.id, ACTOR));
   await close?.();
 });
 

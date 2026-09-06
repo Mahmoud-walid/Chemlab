@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
 
 import { connect, seedUrl, type SeedDatabase } from "@/db/seed/connect";
@@ -46,6 +46,16 @@ beforeAll(async () => {
       })
       .onConflictDoNothing();
   }
+
+  // Every fixture states its own visibility, in BOTH directions. This used to
+  // set only HIDDEN and lean on the column default for the other two — which
+  // meant the suite silently depended on that default being `everyone`, and
+  // broke the moment Q39 flipped it to opt-in. A fixture that leans on a
+  // default is a fixture testing the default.
+  await db
+    .update(schema.users)
+    .set({ presenceVisibility: "everyone" })
+    .where(inArray(schema.users.id, [SEEN, NEVER]));
 
   await db
     .update(schema.users)

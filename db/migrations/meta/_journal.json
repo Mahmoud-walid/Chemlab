@@ -169,6 +169,13 @@
       "when": 1788694264199,
       "tag": "0023_quiz_option_translations",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1788713507104,
+      "tag": "0024_presence_optin_and_audit_anonymise",
+      "breakpoints": true
     }
   ]
 }
