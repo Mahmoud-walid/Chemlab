@@ -55,6 +55,25 @@ jobs:
       NEXT_PUBLIC_VAPID_PUBLIC_KEY: BG8yTZes4g1RimvHLRYVAJwFQ3MfzAZmwDdRuMLcHwobhHQSOVHum2QAZQlLwGL00j4DkMPVtd-iMhMTZdxUVIU
       VAPID_PRIVATE_KEY: x3PPHgvu6UeIR3aXt0vqpbw6txVkNcfWxesGePG1TCo
       VAPID_SUBJECT: mailto:ci@chemlab.invalid
+      # And the rest of the list `scripts/bundle-check.ts` guards, for exactly
+      # the same reason. It skips any name whose value is unset — so with only
+      # the VAPID pair set, four of its seven greps did nothing on every run,
+      # which is the failure the comment above describes rather than one it
+      # prevented.
+      #
+      # The grep can only find a value this build actually had. The leak it
+      # catches is the value reaching a client chunk by any route — a
+      # `NEXT_PUBLIC_` prefix typed onto the wrong variable, a server value
+      # handed to a client component as a prop, a hardcoded copy — and with
+      # the variable unset there is no string to search for, so the check
+      # passes without having looked at anything.
+      #
+      # Throwaway values, none of them real, none of them authenticating
+      # anything: they exist to be searched for in a file.
+      BETTER_AUTH_SECRET: ci-only-secret-at-least-32-characters-long
+      GOOGLE_CLIENT_SECRET: ci-only-google-client-secret
+      CI_NOTIFY_SECRET: ci-only-notify-secret-at-least-32-characters
+      SLACK_WEBHOOK_URL: https://hooks.slack.invalid/services/ci/only/placeholder
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -149,6 +168,20 @@ jobs:
       NEXT_PUBLIC_VAPID_PUBLIC_KEY: BG8yTZes4g1RimvHLRYVAJwFQ3MfzAZmwDdRuMLcHwobhHQSOVHum2QAZQlLwGL00j4DkMPVtd-iMhMTZdxUVIU
       VAPID_PRIVATE_KEY: x3PPHgvu6UeIR3aXt0vqpbw6txVkNcfWxesGePG1TCo
       VAPID_SUBJECT: mailto:ci@chemlab.invalid
+      # Throwaway Google credentials, so the Google sign-in path EXISTS to be
+      # tested. `googleConfigured()` hides the button when either is unset, so
+      # without these the journey #13 asks for would silently not run and its
+      # "no test calls Google" criterion would pass for no reason.
+      #
+      # Not secrets, and deliberately not real: `tests/e2e/auth-google.spec.ts`
+      # intercepts every request to accounts.google.com, so nothing is ever
+      # sent to Google and no value here is ever presented to anybody. What
+      # the test checks is the SHAPE of the authorize URL the app builds — the
+      # callback origin, the flow, the scopes — which is what actually breaks,
+      # and which real credentials would not test any better. Verified by
+      # pointing BETTER_AUTH_URL at another origin and watching it fail.
+      GOOGLE_CLIENT_ID: ci-only.apps.googleusercontent.invalid
+      GOOGLE_CLIENT_SECRET: ci-only-google-client-secret
       # A throwaway HMAC key so the CI-notify tests exercise the SIGNED path.
       # Not the real secret: this one authenticates nothing beyond this
       # runner's own requests to its own localhost, and the deployment's key

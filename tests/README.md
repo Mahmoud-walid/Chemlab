@@ -139,16 +139,46 @@ app. Do not conflate the two.
 Currently implemented:
 
 1. **Take a quiz** — start, answer every question, see the score.
-2. **Locale and RTL** — `dir`/`lang` per locale, `Accept-Language` honoured, an
+2. **Accounts** — sign up, survive a reload, edit the profile, sign out; an
+   anonymous visitor bounced to sign-in and returned afterwards; a hostile
+   `next` parameter refused.
+3. **Sign in with Google, with Google intercepted** — the button is clicked for
+   real and Better Auth builds the authorize URL for real, but every request to
+   `accounts.google.com` is answered by the test. What is asserted is the shape
+   of that URL: an authorization-code flow, a client id present, a callback on
+   this app's own origin, and identity scopes only. See below on why this is
+   worth more than a mock of the whole flow.
+4. **Admin CRUD round-trips** — lessons, quizzes, elements and pages created,
+   edited, published and withdrawn through the real screens.
+5. **Permission gating** — every admin section has a test that a role without
+   its permission sees none of it, plus a signed-in non-admin getting a 404
+   with no admin markup at all.
+6. **Comments** — posting into a virtualized list and seeing it appear.
+7. **Translation** — writing a lesson or quiz translation, the write/review
+   split, and the published translation reaching an Arabic reader.
+8. **Locale and RTL** — `dir`/`lang` per locale, `Accept-Language` honoured, an
    unsupported locale 404s, hreflang present, Arabic navigation rendered, and
    the periodic table held in canonical group order on an RTL page.
-3. **Accessibility** — axe (WCAG 2.0/2.1 A and AA) on the quiz list and the
-   Arabic home page.
+9. **Accessibility** — axe (WCAG 2.0/2.1 A and AA) across the quiz list, the
+   sitting, and the Arabic home page.
 
-Planned as their features land: sign-in with Google (mocked, never hitting real
-Google), an admin CRUD round-trip, posting a comment in a virtualized list, and
-the **RBAC denial path** — a non-admin blocked by the server action itself, not
-only by the UI.
+### Why the Google journey stops at the redirect
+
+The rest of the flow — Google's consent screen, the code exchange, the session
+Better Auth then creates — is Google's code and Better Auth's code. Driving it
+would either need a real account (a test that fails when Google is slow) or a
+mock deep enough that it tests the mock.
+
+What is ours, and what actually breaks, is the handoff: which client id we
+send, which callback we ask Google to return to, and which scopes we request. A
+wrong callback origin fails on Google's own error page, which is the worst
+place to discover it. So that is what is asserted, and CI sets deliberately
+fake Google credentials so the path exists to be tested at all — without them
+the button does not render and the journey would silently not run.
+
+**The rule that matters: no test may make a network call to Google.** One of
+the two tests exists only to assert that loading the sign-in page contacts
+Google zero times.
 
 ### Known violations are pinned, not disabled
 
