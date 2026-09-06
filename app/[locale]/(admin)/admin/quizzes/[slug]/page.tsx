@@ -12,6 +12,7 @@ import {
   quizPublishBlockers,
 } from "@/lib/admin/quiz-schema";
 import { hasPermission } from "@/lib/authz";
+import { translationTargetLocale } from "@/lib/translations/target-locale";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
@@ -39,7 +40,14 @@ export default async function AdminQuizPage({
   const counts = await quizPublishCounts(quiz.id);
 
   const t = await getTranslations("admin.quizzes");
+  const tTranslations = await getTranslations("admin.translations");
   const format = await getFormatter();
+
+  // Only when a second locale exists AND this actor may work on it. A link to
+  // a page that would 404 is worse than no link.
+  const canTranslate =
+    translationTargetLocale() !== null &&
+    hasPermission(actor, "translation:read");
 
   return (
     <div className="space-y-6">
@@ -51,6 +59,16 @@ export default async function AdminQuizPage({
           {t("editTitle", { title: quiz.title })}
         </h1>
         <p className="text-sm text-muted-foreground">{t("editSubtitle")}</p>
+        {/* Beside the quiz's own heading rather than on the settings form: a
+            translator's job starts from the words, and the words are the
+            questions below. */}
+        {canTranslate && (
+          <Button variant="outline" size="sm" asChild className="mt-2">
+            <Link href={`/admin/quizzes/${quiz.slug}/translate`}>
+              {tTranslations("open")}
+            </Link>
+          </Button>
+        )}
       </div>
 
       <QuizLifecycle

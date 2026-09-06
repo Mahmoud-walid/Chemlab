@@ -1149,6 +1149,23 @@
         "caption": "Caption",
         "attribution": "Attribution",
         "item": "List item"
+      },
+      "quiz": {
+        "back": "Back to the quiz",
+        "subtitle": "Every box sits beside the English it answers. A question and its answer options are translated together — a question translated in part is served to readers in English, so nobody is asked a question they can only half read.",
+        "questionHeading": "Question {number}",
+        "prompt": "Question",
+        "explanation": "Explanation",
+        "option": "Answer option",
+        "incompleteTitle": "Some questions are not finished",
+        "incompleteBody": "A question is translated as a whole or not at all. Until every part below is written, readers are shown that question in English.",
+        "incompleteQuestion": "Question {number} — {parts}",
+        "partSeparator": ", ",
+        "parts": {
+          "prompt": "the question",
+          "explanation": "the explanation",
+          "options": "one or more answer options"
+        }
       }
     },
     "bulk": {

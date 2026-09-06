@@ -415,10 +415,16 @@ export const quizQuestions = pgTable(
     /**
      * The fields a quiz_question_translations row is a translation OF.
      *
-     * The options are not in it. They live in `quiz_options` and have no
-     * translation table yet, so including them would mark every translation
-     * stale for a change no translator can act on. When options become
-     * translatable this hash grows to cover them.
+     * The options are deliberately NOT in it, and they never will be. Each
+     * translatable row hashes exactly its own fields and each translation row
+     * compares against its own parent — a lesson does not hash its sections,
+     * and a question does not hash its options. `quiz_options` carries its own
+     * `source_hash` for exactly this reason, so retyping one option's label
+     * marks that option's translation stale and leaves the other three, and
+     * the question's, alone.
+     *
+     * A generated column could not reference `quiz_options` in any case: the
+     * expression must be IMMUTABLE, and a subquery is not.
      */
     sourceHash: sourceHash(sql`md5(prompt || E'\\x1f' || explanation)`),
     /**
@@ -463,6 +469,14 @@ export const quizOptions = pgTable(
       .references(() => quizQuestions.id, { onDelete: "cascade" }),
     position: integer("position").notNull(),
     label: text("label").notNull(),
+    /**
+     * The label is the whole of what a translator sees, so the hash is over
+     * it alone. NOT over `is_correct`: which option is right is not a property
+     * of the language it is written in, and folding it in would mark a
+     * translation stale for an edit that changes nothing a translator can act
+     * on — the exact mistake this column exists to avoid elsewhere.
+     */
+    sourceHash: sourceHash(sql`md5(label)`),
     /**
      * The answer, for both question types.
      *
@@ -584,6 +598,37 @@ export const quizQuestionTranslations = pgTable(
       t.questionId,
       t.locale,
     ),
+  ],
+);
+
+/**
+ * The answers, per locale.
+ *
+ * Without this table a translated quiz renders an Arabic question above
+ * English options — which is worse than serving the whole thing in English,
+ * because the reader can no longer tell whether they got it wrong or merely
+ * could not read the choices.
+ *
+ * `is_correct` is absent, and that is the point rather than an omission.
+ * Which option is right is not a property of the language it is written in,
+ * and a per-locale answer key is how a quiz comes to grade differently in
+ * Arabic than in English. The correct answer is joined from `quiz_options`
+ * for every locale.
+ */
+export const quizOptionTranslations = pgTable(
+  "quiz_option_translations",
+  {
+    id: id(),
+    optionId: uuid("option_id")
+      .notNull()
+      .references(() => quizOptions.id, { onDelete: "cascade" }),
+    locale: text("locale").notNull(),
+    label: text("label").notNull(),
+    ...translationWorkflow,
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("quiz_option_translations_locale_idx").on(t.optionId, t.locale),
   ],
 );
 

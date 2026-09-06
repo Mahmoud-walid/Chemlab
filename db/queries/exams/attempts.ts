@@ -6,13 +6,14 @@ import { uuidv7 } from "uuidv7";
 import { getDb } from "@/db/client";
 import { attemptAnswers, examAttempts } from "@/db/schema/attempts";
 import {
+  quizOptionTranslations,
   quizOptions,
   quizQuestionTranslations,
   quizQuestions,
   quizTranslations,
   quizzes,
 } from "@/db/schema/content";
-import { pick } from "../_locale";
+import { chooseForGroup, pick, preferred, usesTranslation } from "../_locale";
 import { translationState } from "../translations";
 import { newSeed, optionSeed, shuffleWithSeed } from "@/lib/exams/shuffle";
 import {
@@ -154,9 +155,21 @@ export async function getPaper(
           questionId: quizOptions.questionId,
           position: quizOptions.position,
           label: quizOptions.label,
-          // NOT `isCorrect`.
+          translatedLabel: quizOptionTranslations.label,
+          ...translationState(quizOptionTranslations, quizOptions),
+          // NOT `isCorrect`. The translation join takes only `label` for the
+          // same reason — and `quiz_option_translations` has no `is_correct`
+          // to take: which option is right is not a property of the language
+          // it is written in.
         })
         .from(quizOptions)
+        .leftJoin(
+          quizOptionTranslations,
+          and(
+            eq(quizOptionTranslations.optionId, quizOptions.id),
+            eq(quizOptionTranslations.locale, locale),
+          ),
+        )
         .where(
           inArray(
             quizOptions.questionId,
@@ -185,22 +198,41 @@ export async function getPaper(
     const options = optionRows.filter(
       (option) => option.questionId === question.id,
     );
+
+    // The prompt and its options, decided TOGETHER. Deciding them one at a
+    // time renders an Arabic question above two Arabic options and two
+    // English ones, which is a question nobody can answer — see
+    // `chooseForGroup`. `assessed`, so anything short of a current published
+    // translation puts the whole question back into the source language.
+    const translated = usesTranslation(
+      chooseForGroup(
+        [
+          {
+            present:
+              question.translatedPrompt !== null &&
+              question.translatedPrompt !== undefined,
+            status: question.translationStatus,
+            stale: question.translationStale,
+          },
+          ...options.map((option) => ({
+            present:
+              option.translatedLabel !== null &&
+              option.translatedLabel !== undefined,
+            status: option.translationStatus,
+            stale: option.translationStale,
+          })),
+        ],
+        "assessed",
+      ),
+    );
+
     return {
       id: question.id,
       position: index,
       type: question.type,
-      prompt: pick(
-        question.prompt,
-        question.translatedPrompt,
-        {
-          status: question.translationStatus,
-          stale: question.translationStale,
-        },
-        // `assessed`: a prompt the source has moved on from may no longer
-        // match the options it is scored against, and a paper has nowhere
-        // to put a caveat. English is the honest answer.
-        "assessed",
-      ),
+      prompt: translated
+        ? preferred(question.translatedPrompt, question.prompt)
+        : question.prompt,
       points: question.points,
       options: (attempt.shuffleOptions
         ? // Seeded from the question's position in THIS paper, so two
@@ -208,7 +240,12 @@ export async function getPaper(
           // noticing where one answer moved would reveal where the rest did.
           shuffleWithSeed(options, optionSeed(attempt.seed, index))
         : options
-      ).map((option) => ({ id: option.id, label: option.label })),
+      ).map((option) => ({
+        id: option.id,
+        label: translated
+          ? preferred(option.translatedLabel, option.label)
+          : option.label,
+      })),
       selectedOptionIds: savedByQuestion.get(question.id) ?? [],
     };
   });
@@ -863,9 +900,20 @@ export async function getReview(
           questionId: quizOptions.questionId,
           position: quizOptions.position,
           label: quizOptions.label,
+          translatedLabel: quizOptionTranslations.label,
+          ...translationState(quizOptionTranslations, quizOptions),
+          // `isCorrect` IS selected here, unlike in `getPaper`: this is the
+          // review of a finished sitting, which exists to show the answers.
           isCorrect: quizOptions.isCorrect,
         })
         .from(quizOptions)
+        .leftJoin(
+          quizOptionTranslations,
+          and(
+            eq(quizOptionTranslations.optionId, quizOptions.id),
+            eq(quizOptionTranslations.locale, locale),
+          ),
+        )
         .where(
           inArray(
             quizOptions.questionId,
@@ -899,30 +947,44 @@ export async function getReview(
       (option) => option.questionId === question.id,
     );
 
+    // The prompt, the explanation and the options as ONE unit, exactly as in
+    // `getPaper` — see `chooseForGroup`. A review that explains an Arabic
+    // question by reference to English options is the same failure as a
+    // sitting that asks one.
+    const translated = usesTranslation(
+      chooseForGroup(
+        [
+          {
+            present:
+              question.translatedPrompt !== null &&
+              question.translatedPrompt !== undefined,
+            status: question.translationStatus,
+            stale: question.translationStale,
+          },
+          ...options.map((option) => ({
+            present:
+              option.translatedLabel !== null &&
+              option.translatedLabel !== undefined,
+            status: option.translationStatus,
+            stale: option.translationStale,
+          })),
+        ],
+        "assessed",
+      ),
+    );
+
     return {
       id: question.id,
       position: index,
-      prompt: pick(
-        question.prompt,
-        question.translatedPrompt,
-        {
-          status: question.translationStatus,
-          stale: question.translationStale,
-        },
-        // `assessed`: a prompt the source has moved on from may no longer
-        // match the options it is scored against, and a paper has nowhere
-        // to put a caveat. English is the honest answer.
-        "assessed",
-      ),
-      explanation: pick(
-        question.explanation,
-        question.translatedExplanation,
-        {
-          status: question.translationStatus,
-          stale: question.translationStale,
-        },
-        "assessed",
-      ),
+      prompt: translated
+        ? preferred(question.translatedPrompt, question.prompt)
+        : question.prompt,
+      // The explanation follows the prompt rather than being decided on its
+      // own: it is prose ABOUT this question, and an Arabic explanation of an
+      // English question explains nothing.
+      explanation: translated
+        ? preferred(question.translatedExplanation, question.explanation)
+        : question.explanation,
       points: question.points,
       pointsAwarded: answer?.pointsAwarded ?? 0,
       isCorrect: answer?.isCorrect ?? false,
@@ -934,7 +996,9 @@ export async function getReview(
         : options
       ).map((option) => ({
         id: option.id,
-        label: option.label,
+        label: translated
+          ? preferred(option.translatedLabel, option.label)
+          : option.label,
         isCorrect: option.isCorrect,
         chosen: chosen.has(option.id),
       })),

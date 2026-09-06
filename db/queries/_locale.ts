@@ -108,3 +108,44 @@ export function pick<T>(
   );
   return usesTranslation(choice) ? preferred(translated, base) : base;
 }
+
+/**
+ * A question and its options, decided together.
+ *
+ * The rule that makes a partly translated quiz READABLE rather than merely
+ * partly translated. Each row is independently translatable — a prompt and
+ * four option labels are five translation rows with five statuses and five
+ * staleness flags — so deciding them one at a time produces an Arabic question
+ * above two Arabic options and two English ones. That is not a partial win; it
+ * is a question nobody can answer, and it is strictly worse than serving the
+ * whole thing in the source language.
+ *
+ * So the group is atomic: every member shows its translation, or none does.
+ * `assessed` already refuses a stale question because the prompt may no longer
+ * match the options it is scored against; this extends the same reasoning to
+ * the options themselves, where the mismatch is not hypothetical.
+ *
+ * Returns the choice to apply to EVERY member. The order of `parts` does not
+ * matter — the most cautious answer wins whatever the order.
+ */
+export function chooseForGroup(
+  parts: TranslationState[],
+  policy: TranslationPolicy,
+): TranslationChoice {
+  // An empty group is a question with no options. There is nothing to keep
+  // coherent, and "fallback" would un-translate a prompt that is perfectly
+  // fine.
+  if (parts.length === 0) return "translation";
+
+  const choices = parts.map((part) => chooseTranslation(part, policy));
+
+  // Any member falling back takes the group with it.
+  if (choices.some((choice) => choice === "fallback")) return "fallback";
+
+  // Otherwise the most cautious surviving answer: if one member is stale
+  // under `prose`, the whole group carries the notice, because the notice is
+  // about the group the reader is looking at.
+  return choices.some((choice) => choice === "translation-with-notice")
+    ? "translation-with-notice"
+    : "translation";
+}
