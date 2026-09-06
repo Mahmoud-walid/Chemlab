@@ -9,8 +9,9 @@ import {
 const full = {
   GOOGLE_CLIENT_ID: "id",
   GOOGLE_CLIENT_SECRET: "secret",
-  VAPID_PUBLIC_KEY: "pub",
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY: "pub",
   VAPID_PRIVATE_KEY: "priv",
+  VAPID_SUBJECT: "mailto:owner@example.test",
   SLACK_WEBHOOK_URL: "https://hooks.example/x",
   CLOUDINARY_CLOUD_NAME: "cloud",
   CLOUDINARY_API_KEY: "key",
@@ -19,6 +20,21 @@ const full = {
 };
 
 describe("configuration status", () => {
+  it("reads the PUBLIC VAPID key under the name the app actually uses", () => {
+    // This screen used to read an unprefixed `VAPID_PUBLIC_KEY`, which no code
+    // path sets: `lib/push/send.ts` and the settings page both read
+    // `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, because every subscribing browser needs
+    // it. The screen was therefore wrong in BOTH directions — "not
+    // configured" where push worked, and "configured" where it could not.
+    expect(
+      configStatusFrom({
+        NEXT_PUBLIC_VAPID_PUBLIC_KEY: "pub",
+        VAPID_PRIVATE_KEY: "priv",
+        VAPID_SUBJECT: "mailto:owner@example.test",
+      }).webPush,
+    ).toBe(true);
+  });
+
   it("reports nothing configured for an empty environment", () => {
     const status = configStatusFrom({});
     for (const target of CONFIG_TARGETS) {
@@ -40,7 +56,16 @@ describe("configuration status", () => {
     expect(configStatusFrom({ GOOGLE_CLIENT_ID: "id" }).googleOAuth).toBe(
       false,
     );
-    expect(configStatusFrom({ VAPID_PUBLIC_KEY: "pub" }).webPush).toBe(false);
+    expect(
+      configStatusFrom({ NEXT_PUBLIC_VAPID_PUBLIC_KEY: "pub" }).webPush,
+    ).toBe(false);
+    // A key pair with no subject is a 400 at send time, not a partial win.
+    expect(
+      configStatusFrom({
+        NEXT_PUBLIC_VAPID_PUBLIC_KEY: "pub",
+        VAPID_PRIVATE_KEY: "priv",
+      }).webPush,
+    ).toBe(false);
     expect(
       configStatusFrom({
         CLOUDINARY_CLOUD_NAME: "cloud",

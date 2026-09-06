@@ -20,8 +20,22 @@ import { OAUTH_PROVIDERS } from "./registry";
 export interface ConfigStatusInput {
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
-  VAPID_PUBLIC_KEY?: string;
+  /**
+   * The PUBLIC half carries the `NEXT_PUBLIC_` prefix, because every
+   * subscribing browser needs it — see `lib/env.ts`. Reading an unprefixed
+   * `VAPID_PUBLIC_KEY` here made this screen wrong in both directions: it
+   * reported "not configured" for a deployment where push worked, and
+   * "configured" for one following the old `.env.example`, where it did not.
+   */
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY?: string;
   VAPID_PRIVATE_KEY?: string;
+  /**
+   * Required by the VAPID spec. A key pair with no subject is a 400 at send
+   * time, which is not "partly working" — `pushConfigured()` in
+   * `lib/env.server.schema.ts` takes the same view, and this screen must
+   * agree with it or one of them is lying.
+   */
+  VAPID_SUBJECT?: string;
   SLACK_WEBHOOK_URL?: string;
   CLOUDINARY_CLOUD_NAME?: string;
   CLOUDINARY_API_KEY?: string;
@@ -56,7 +70,10 @@ export function configStatusFrom(env: ConfigStatusInput): ConfigStatus {
   return {
     googleOAuth:
       present(env.GOOGLE_CLIENT_ID) && present(env.GOOGLE_CLIENT_SECRET),
-    webPush: present(env.VAPID_PUBLIC_KEY) && present(env.VAPID_PRIVATE_KEY),
+    webPush:
+      present(env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) &&
+      present(env.VAPID_PRIVATE_KEY) &&
+      present(env.VAPID_SUBJECT),
     slack: present(env.SLACK_WEBHOOK_URL),
     cloudinary:
       present(env.CLOUDINARY_CLOUD_NAME) &&
