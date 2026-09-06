@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq, sql } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
 
@@ -95,23 +95,58 @@ async function lessonIsStale(locale: string): Promise<boolean> {
   return row?.stale ?? false;
 }
 
+/**
+ * A published Arabic translation, current against the source as it stands.
+ *
+ * An upsert rather than an insert: it runs before every staleness test, and
+ * the row may already exist from the one before. Resetting `source_hash` here
+ * is what makes each test start from "translated and up to date" regardless
+ * of what its predecessor did to the source.
+ */
 async function translateInto(locale: string): Promise<void> {
-  await db.insert(schema.lessonTranslations).values({
-    lessonId,
-    locale,
-    title: "الأحماض والقواعد",
-    description: "نظرة أولى.",
-    status: "published",
-    translatedBy: TRANSLATOR,
-    // Read from the generated column, never recomputed here — the same rule
-    // the application writers follow.
-    sourceHash: sql`(select source_hash from lessons where id = ${lessonId})`,
-  });
+  const currentHash = sql`(select source_hash from lessons where id = ${lessonId})`;
+
+  await db
+    .insert(schema.lessonTranslations)
+    .values({
+      lessonId,
+      locale,
+      title: "الأحماض والقواعد",
+      description: "نظرة أولى.",
+      status: "published",
+      translatedBy: TRANSLATOR,
+      // Read from the generated column, never recomputed here — the same rule
+      // the application writers follow.
+      sourceHash: currentHash,
+    })
+    .onConflictDoUpdate({
+      target: [
+        schema.lessonTranslations.lessonId,
+        schema.lessonTranslations.locale,
+      ],
+      set: {
+        title: "الأحماض والقواعد",
+        description: "نظرة أولى.",
+        status: "published",
+        sourceHash: currentHash,
+      },
+    });
 }
 
 describe("staleness", () => {
-  it("is false for a translation made from the source as it stands", async () => {
+  /**
+   * Every test here starts from the same place: an Arabic translation made
+   * from the source as it stands.
+   *
+   * It used to be a narrative — one test translated, the next edited the
+   * source, the third redid the translation — which reads well and fails the
+   * moment the order changes. `--sequence.shuffle` found it.
+   */
+  beforeEach(async () => {
     await translateInto("ar");
+  });
+
+  it("is false for a translation made from the source as it stands", async () => {
     expect(await lessonIsStale("ar")).toBe(false);
   });
 
@@ -129,6 +164,16 @@ describe("staleness", () => {
   });
 
   it("clears when the translation is redone from the new source", async () => {
+    // Make it stale first, rather than inheriting staleness from whichever
+    // test happened to run before this one. The new text is unique per run:
+    // writing the SAME description a previous test already wrote changes no
+    // bytes, so the generated hash is unchanged and nothing goes stale.
+    await db
+      .update(schema.lessons)
+      .set({ description: `A first look, revised ${uuidv7()}.` })
+      .where(eq(schema.lessons.id, lessonId));
+    expect(await lessonIsStale("ar")).toBe(true);
+
     await db
       .update(schema.lessonTranslations)
       .set({
@@ -204,6 +249,9 @@ describe("the source fingerprint", () => {
 
 describe("ownership", () => {
   it("survives the translator's account being deleted", async () => {
+    // Its own translation, rather than one left behind by the staleness
+    // tests. This test deletes an account, so it must own what it deletes.
+    await translateInto("ar");
     await db
       .update(schema.lessonTranslations)
       .set({ reviewedBy: REVIEWER, reviewedAt: new Date() })
@@ -374,9 +422,13 @@ describe("what the reader is served", () => {
   });
 
   it("keeps serving it once the English moves on, and says so", async () => {
+    // Published here rather than inherited from the test above: this is the
+    // state the assertion is about, so it is this test's to establish.
+    await translate("published");
+
     await db
       .update(schema.lessons)
-      .set({ description: "How atoms hold on, revised." })
+      .set({ description: `How atoms hold on, revised ${uuidv7()}.` })
       .where(eq(schema.lessons.id, readableId));
 
     const lesson = await getLessonBySlug(readableSlug, "ar");
@@ -389,6 +441,14 @@ describe("what the reader is served", () => {
   });
 
   it("applies the same rule to the catalogue", async () => {
+    await translate("published");
+    // Unique, for the same reason as above: rewriting the same words is not
+    // an edit, and the hash would not move.
+    await db
+      .update(schema.lessons)
+      .set({ description: `How atoms hold on, revised ${uuidv7()}.` })
+      .where(eq(schema.lessons.id, readableId));
+
     const summary = (await listLessons("ar")).find(
       (row) => row.slug === readableSlug,
     );
@@ -424,14 +484,34 @@ describe("assessed content is treated differently", () => {
     });
     quizId = quiz.id;
     quizSlug = quiz.slug;
-    await db.insert(schema.quizTranslations).values({
-      quizId,
-      locale: "ar",
-      title: "اختبار الروابط",
-      description: "ستة أسئلة.",
-      status: "published",
-      sourceHash: sql`(select source_hash from quizzes where id = ${quizId})`,
-    });
+  });
+
+  /**
+   * Current against the source, before every test.
+   *
+   * One of these tests deliberately moves the source on. Without this the
+   * next test to run sees a stale translation and fails for the previous
+   * test's reason — which is what `--sequence.shuffle` found.
+   */
+  beforeEach(async () => {
+    const currentHash = sql`(select source_hash from quizzes where id = ${quizId})`;
+    await db
+      .insert(schema.quizTranslations)
+      .values({
+        quizId,
+        locale: "ar",
+        title: "اختبار الروابط",
+        description: "ستة أسئلة.",
+        status: "published",
+        sourceHash: currentHash,
+      })
+      .onConflictDoUpdate({
+        target: [
+          schema.quizTranslations.quizId,
+          schema.quizTranslations.locale,
+        ],
+        set: { status: "published", sourceHash: currentHash },
+      });
   });
 
   afterAll(async () => {
@@ -448,9 +528,11 @@ describe("assessed content is treated differently", () => {
   });
 
   it("falls back to English once the source moves on", async () => {
+    // Unique per run: rewriting the same words is not an edit, and the
+    // generated hash would not move.
     await db
       .update(schema.quizzes)
-      .set({ description: "Six questions, revised." })
+      .set({ description: `Six questions, revised ${uuidv7()}.` })
       .where(eq(schema.quizzes.id, quizId));
 
     const row = await arabicRow();

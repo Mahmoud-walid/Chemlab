@@ -492,6 +492,19 @@ describe("the audit log", () => {
   });
 
   it("refuses updates and deletes", async () => {
+    // A row of its own to aim at. The trigger fires per ROW, so an UPDATE
+    // matching nothing raises nothing — and this test used to rely on some
+    // earlier test having left a `role.update` entry behind, which made it
+    // pass only in the orders where one had. Inserting is allowed; it is
+    // rewriting that the log refuses, which is the claim.
+    await db.insert(schema.auditLog).values({
+      action: "role.update",
+      targetType: "role",
+      targetId: `append-only-probe-${uuidv7()}`,
+      before: null,
+      after: null,
+    });
+
     // An audit log the application can rewrite records only what an attacker
     // was willing to leave behind.
     await expectRefused(
