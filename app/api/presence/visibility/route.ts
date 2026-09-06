@@ -30,7 +30,12 @@ export async function GET() {
     .where(eq(users.id, user.id));
 
   return Response.json(
-    { visibility: row?.visibility ?? "everyone" },
+    // `nobody` when the row is somehow missing, matching the column default
+    // (Q39). A fallback that disagreed with the default would report a
+    // signed-in reader as visible when the database says otherwise — and it
+    // is the wrong direction to be wrong in, since the switch it feeds would
+    // then show "on" for somebody who never turned it on.
+    { visibility: row?.visibility ?? "nobody" },
     { headers: { "cache-control": "no-store, private" } },
   );
 }

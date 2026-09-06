@@ -45,19 +45,22 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
   /**
-   * Who may see this person's presence.
+   * Who may see this person's presence. **Opt-in** — see Q39, resolved.
    *
-   * Defaulted to `everyone` because that is what was asked for, and kept as a
-   * ONE-LINE change because it is the kind of default worth revisiting: an
-   * always-public presence signal on a learning site tells anyone watching
-   * when a particular student is at their desk and when they stop. Recorded as
-   * Q39 in docs/DEFERRED_QUESTIONS.md.
+   * `nobody` by default, on a site whose own metadata says it is for kids. An
+   * always-public presence signal tells anyone watching when a particular
+   * student is at their desk, how long they stay and when they stop — a
+   * behavioural trace about a child, generated continuously whether or not
+   * anybody asked for it. The cost of being wrong in this direction is a
+   * missing green dot; in the other it is a log of a child's daily routine.
+   *
+   * The feature is unchanged: anybody who wants to be seen turns it on.
    *
    * `nobody` is enforced in SQL, not in the client — see the presence view.
    */
   presenceVisibility: presenceVisibilityEnum("presence_visibility")
     .notNull()
-    .default("everyone"),
+    .default("nobody"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

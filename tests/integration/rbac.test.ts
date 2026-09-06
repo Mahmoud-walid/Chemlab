@@ -524,4 +524,117 @@ describe("the audit log", () => {
       /append-only/i,
     );
   });
+
+  /**
+   * Q40, resolved: an account that has audited something CAN now be deleted,
+   * and the log survives it.
+   *
+   * `audit_log.actor_id` is `ON DELETE SET NULL`, and the trigger used to
+   * refuse every UPDATE — so the delete failed with a message about the audit
+   * log from a screen about a user. Both rules were wanted; together they
+   * contradicted each other.
+   *
+   * The trigger now permits exactly one thing more: `actor_id` from a value to
+   * NULL, with every other column identical. Nulling the author of an entry is
+   * not rewriting what the entry says — and the tests below are the boundary,
+   * because "widened by exactly one case" is a claim that needs holding down.
+   */
+  describe("anonymising an actor", () => {
+    /** A user with one audit entry to their name. Returns both ids. */
+    async function actorWithEntry() {
+      // `makeUser` records the id in `created`, whose cleanup deletes it —
+      // harmlessly, since these tests delete their own actors and a missing
+      // row is a no-op.
+      const userId = await makeUser(`q40-${uuidv7()}@example.test`);
+
+      const targetId = `q40-target-${uuidv7()}`;
+      await db.insert(schema.auditLog).values({
+        actorId: userId,
+        action: "role.update",
+        targetType: "role",
+        targetId,
+        before: { name: "before" },
+        after: { name: "after" },
+      });
+
+      return { userId, targetId };
+    }
+
+    const entryFor = async (targetId: string) =>
+      db
+        .select()
+        .from(schema.auditLog)
+        .where(eq(schema.auditLog.targetId, targetId));
+
+    it("lets a user be deleted, and keeps what they did", async () => {
+      const { userId, targetId } = await actorWithEntry();
+
+      // The delete that used to fail.
+      await db.delete(schema.users).where(eq(schema.users.id, userId));
+
+      const [entry] = await entryFor(targetId);
+      expect(entry, "the entry must outlive the actor").toBeDefined();
+      expect(entry!.actorId).toBeNull();
+      // Everything the entry SAYS is untouched — only the author is gone.
+      expect(entry!.action).toBe("role.update");
+      expect(entry!.before).toEqual({ name: "before" });
+      expect(entry!.after).toEqual({ name: "after" });
+    });
+
+    it("refuses to re-point an actor at somebody else", async () => {
+      const { userId, targetId } = await actorWithEntry();
+      const otherId = await makeUser(`q40-other-${uuidv7()}@example.test`);
+
+      // Attributing an action to a different person is the exact forgery the
+      // append-only rule exists for, and nulling is not a licence for it.
+      await expectRefused(
+        () =>
+          db
+            .update(schema.auditLog)
+            .set({ actorId: otherId })
+            .where(eq(schema.auditLog.targetId, targetId)),
+        /append-only/i,
+      );
+
+      await db.delete(schema.users).where(eq(schema.users.id, userId));
+      await db.delete(schema.users).where(eq(schema.users.id, otherId));
+    });
+
+    it("refuses a change smuggled in alongside the null", async () => {
+      const { userId, targetId } = await actorWithEntry();
+
+      // The reason the trigger compares whole rows rather than checking that
+      // `actor_id` became null: one statement can do both.
+      await expectRefused(
+        () =>
+          db
+            .update(schema.auditLog)
+            .set({ actorId: null, action: "tampered" })
+            .where(eq(schema.auditLog.targetId, targetId)),
+        /append-only/i,
+      );
+
+      const [entry] = await entryFor(targetId);
+      expect(entry!.action).toBe("role.update");
+      expect(entry!.actorId).toBe(userId);
+
+      await db.delete(schema.users).where(eq(schema.users.id, userId));
+    });
+
+    it("refuses a second null once the actor is already gone", async () => {
+      const { userId, targetId } = await actorWithEntry();
+      await db.delete(schema.users).where(eq(schema.users.id, userId));
+
+      // Not an anonymisation — there is nothing left to anonymise, so this is
+      // just an UPDATE, and the log refuses those.
+      await expectRefused(
+        () =>
+          db
+            .update(schema.auditLog)
+            .set({ actorId: null })
+            .where(eq(schema.auditLog.targetId, targetId)),
+        /append-only/i,
+      );
+    });
+  });
 });

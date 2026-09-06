@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
 
 import { connect, seedUrl, type SeedDatabase } from "@/db/seed/connect";
@@ -47,8 +47,11 @@ afterAll(async () => {
   await db
     .delete(schema.quizzes)
     .where(sql`${schema.quizzes.slug} like 'hardqdel-%'`);
-  // The actors are left behind deliberately — see Q40: a user who has audited
-  // anything cannot be deleted.
+  // Deletable again since Q40 was resolved — see the note in
+  // `hard-delete.test.ts`.
+  await db
+    .delete(schema.users)
+    .where(inArray(schema.users.id, [ACTOR, CANDIDATE]));
   await close?.();
 });
 

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
 
 import { connect, seedUrl, type SeedDatabase } from "@/db/seed/connect";
@@ -49,8 +49,12 @@ afterAll(async () => {
   await db
     .delete(schema.lessons)
     .where(sql`${schema.lessons.slug} like 'harddel-%'`);
-  // The actors are left behind deliberately — see Q40: a user who has audited
-  // anything cannot be deleted.
+  // Deletable again since Q40 was resolved: the audit log's trigger now
+  // permits the `actor_id -> NULL` its own foreign key asks for, so an actor
+  // who has erased something no longer pins a test user in the database.
+  await db
+    .delete(schema.users)
+    .where(inArray(schema.users.id, [ACTOR, READER]));
   await close?.();
 });
 
