@@ -92,18 +92,44 @@ to prove it.
 
 ## Factories, not fixtures
 
-`tests/factories/` builds the objects a test needs — a user, a lesson, an exam,
-a comment — with sensible defaults and overrides for the fields the test cares
-about:
+`tests/factories/` builds the rows a test needs — a user, a lesson and its
+sections, a quiz and its questions, a comment, a translation — with defaults
+that are valid and overrides for the one field the test actually cares about:
 
 ```ts
-const user = await makeUser({ role: "student" });
-const lesson = await makeLesson({ status: "published", authorId: user.id });
+const reader = await createUser(db);
+const lesson = await createLesson(db, { status: "published", sections: 2 });
+await createComment(db, { subjectId: lesson.id, authorId: reader.id });
 ```
+
+**The point is not brevity.** Every suite that hand-rolls a fixture has to know
+things about the schema that have nothing to do with what it is testing, and
+several got one wrong before these existed:
+
+- a comment needs its threading columns (`path`, `depth`, `root_id`), so the
+  factory goes through the real writer rather than inserting directly;
+- a section body is an array of typed blocks with ids and rich-text runs, not a
+  string;
+- a translation's `source_hash` must be **read back** from the source's
+  generated column, never recomputed — a second implementation of that hash is
+  exactly what `db/queries/translations.ts` exists to prevent;
+- a `.invalid` email address cannot resolve, which matters the first time a
+  mailer is misconfigured.
+
+Each of those cost a failure that looked like a bug in the code under test.
+
+They serve the integration suite and the e2e suite alike: both talk to the same
+database through the same `SeedDatabase` handle, and a factory that only one of
+them could use would be copied into the other within a week.
 
 One big shared fixture creates invisible coupling: a test starts depending on a
 field it never mentions, and changing that field breaks tests that look
-unrelated.
+unrelated. Factories are the opposite — each test builds exactly what it needs.
+
+Deleting a test **account** is deliberately not offered. A user who has audited
+anything cannot be deleted (see Q40 in `docs/DEFERRED_QUESTIONS.md`), so a
+helper that appeared to clean them up would fail precisely in the suites that
+exercise admin actions. Test accounts are left behind; it costs nothing.
 
 `pnpm db:seed` is a different thing — development data for a human browsing the
 app. Do not conflate the two.

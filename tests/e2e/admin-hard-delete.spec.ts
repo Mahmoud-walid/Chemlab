@@ -3,7 +3,7 @@ import { and, eq, like } from "drizzle-orm";
 
 import { connect, seedUrl, type SeedDatabase } from "@/db/seed/connect";
 import * as schema from "@/db/schema";
-import { createComment } from "@/db/queries/comments";
+import { createComment, createLesson } from "../factories";
 import { signInAs } from "./support/accounts";
 
 /**
@@ -46,19 +46,11 @@ test.afterAll(async () => {
 });
 
 async function draft(name: string) {
-  const slug = `${PREFIX}${name}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-  const [lesson] = await db
-    .insert(schema.lessons)
-    .values({
-      slug,
-      title: `Erase ${name}`,
-      description: "Made while learning the editor.",
-      difficulty: "easy",
-      category: "Testing",
-      status: "draft",
-    })
-    .returning({ id: schema.lessons.id });
-  return { id: lesson!.id, slug };
+  return createLesson(db, {
+    slug: `${PREFIX}${name}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    title: `Erase ${name}`,
+    description: "Made while learning the editor.",
+  });
 }
 
 /** Any account, to hang a comment on. Which one is irrelevant here. */
@@ -157,7 +149,6 @@ test.describe("erasing a lesson", () => {
       // Referenced, so it is history rather than a mistake. Written through
       // the real writer, which fills in the threading columns.
       await createComment(db, {
-        subjectType: "lesson",
         subjectId: lesson.id,
         authorId: (await anyUserId())!,
         body: "A question about this lesson.",

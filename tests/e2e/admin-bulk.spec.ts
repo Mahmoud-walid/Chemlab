@@ -3,6 +3,7 @@ import { eq, like } from "drizzle-orm";
 
 import { connect, seedUrl, type SeedDatabase } from "@/db/seed/connect";
 import * as schema from "@/db/schema";
+import { createLesson } from "../factories";
 import { signInAs } from "./support/accounts";
 
 /**
@@ -37,28 +38,13 @@ test.afterAll(async () => {
 
 /** A draft lesson, optionally with a section so it can be published. */
 async function draft(name: string, withSection: boolean) {
-  const slug = `${PREFIX}${name}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-  const [lesson] = await db
-    .insert(schema.lessons)
-    .values({
-      slug,
-      title: `Bulk ${name}`,
-      description: "For the bulk tests.",
-      difficulty: "easy",
-      category: "BulkTesting",
-      status: "draft",
-    })
-    .returning({ id: schema.lessons.id });
-
-  if (withSection) {
-    await db.insert(schema.lessonSections).values({
-      lessonId: lesson!.id,
-      position: 1,
-      heading: "A heading",
-      body: [{ id: "p1", type: "paragraph", text: [{ text: "Words." }] }],
-    });
-  }
-  return { id: lesson!.id, slug };
+  return createLesson(db, {
+    slug: `${PREFIX}${name}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    title: `Bulk ${name}`,
+    description: "For the bulk tests.",
+    category: "BulkTesting",
+    sections: withSection ? 1 : 0,
+  });
 }
 
 const statusOf = async (id: string) => {

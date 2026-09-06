@@ -9,6 +9,7 @@ import {
   lessonsForBulk,
 } from "@/db/queries/admin/bulk-lessons";
 import { isWritable, planBulk, refusedResult } from "@/lib/admin/bulk";
+import { createLesson, createUser } from "../factories";
 import { publishBlockers } from "@/lib/admin/lesson-schema";
 
 /**
@@ -33,27 +34,16 @@ async function lesson(
     sections: number;
   }> = {},
 ): Promise<string> {
-  const id = uuidv7();
-  ids.push(id);
-  await db.insert(schema.lessons).values({
-    id,
-    slug: `bulk-${id}`,
+  const { id } = await createLesson(db, {
+    slug: `bulk-${uuidv7()}`,
     title: `Lesson ${name}`,
     description: "For the bulk tests.",
-    difficulty: "easy",
-    category: "Testing",
     status: overrides.status ?? "draft",
+    // One by default: a lesson with no sections cannot be published, and most
+    // of these tests are about publishing.
+    sections: overrides.sections ?? 1,
   });
-  for (let index = 0; index < (overrides.sections ?? 1); index++) {
-    await db.insert(schema.lessonSections).values({
-      lessonId: id,
-      position: index + 1,
-      heading: `Heading ${index + 1}`,
-      body: [
-        { id: `b${index}`, type: "paragraph", text: [{ text: "Words." }] },
-      ],
-    });
-  }
+  ids.push(id);
   return id;
 }
 
@@ -76,10 +66,7 @@ beforeAll(async () => {
   const url = seedUrl();
   if (!url) throw new Error("no database URL");
   ({ db, close } = connect(url));
-  await db
-    .insert(schema.users)
-    .values({ id: ACTOR, name: "Bulk actor", email: `${ACTOR}@example.test` })
-    .onConflictDoNothing();
+  await createUser(db, { id: ACTOR, name: "Bulk actor" });
 });
 
 afterAll(async () => {

@@ -31,7 +31,18 @@ jobs:
       # Fails when a route ships with no kill switch and no documented reason
       # to be always-open. Filesystem only — no database needed.
       - run: pnpm run pages:check
-      - run: pnpm run test:coverage
+      # Shuffled, like the integration job. The unit tests share no external
+      # state, so the risk is much smaller — but "much smaller" is not
+      # "none": a module-level cache or a mutated import leaks between files
+      # in whatever order they happen to run, and the only way to find that
+      # is to keep changing the order.
+      #
+      # A dedicated script rather than `pnpm run test:coverage --
+      # --sequence.shuffle`. That form appends the flag AFTER a bare `--`,
+      # which Vitest reads as the end of its options — so the flag became a
+      # positional argument and was silently ignored. The integration job had
+      # been "shuffling" that way for weeks without shuffling anything.
+      - run: pnpm run test:coverage:shuffle
 
   build:
     name: build
@@ -98,7 +109,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # Shuffled so an ordering dependency between tests fails here rather than
       # becoming a mystery flake later.
-      - run: pnpm run test:integration -- --sequence.shuffle
+      # See the note on the unit job: the `-- --sequence.shuffle` form this
+      # used to use never reached Vitest.
+      - run: pnpm run test:integration:shuffle
 
   e2e:
     name: e2e

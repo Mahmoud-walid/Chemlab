@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { eq, like } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
+
+import { createQuiz } from "../factories";
 
 import { connect, seedUrl, type SeedDatabase } from "@/db/seed/connect";
 import * as schema from "@/db/schema";
@@ -124,10 +126,51 @@ beforeAll(async () => {
       .where(eq(schema.quizQuestions.id, questionId));
     correctOption.set(questionId, optionIds[0]!);
   }
+
+  /**
+   * The three sittings every summary and detail test reads.
+   *
+   * They used to be created by the first test that needed them, which made
+   * every later test depend on that one having run — a narrative that reads
+   * well top to bottom and fails the moment `--sequence.shuffle` changes the
+   * order. Setup belongs in setup.
+   */
+  await seedAttempt({ userId: USERS[0]!, number: 1, score: 4 });
+  await seedAttempt({
+    userId: USERS[0]!,
+    number: 2,
+    score: 1,
+    status: "voided",
+  });
+  await seedAttempt({
+    userId: USERS[1]!,
+    number: 1,
+    score: 0,
+    status: "in_progress",
+  });
+  // The fourth, with per-question answers. It belongs here for the same
+  // reason as the others: it changes what every summary and detail test
+  // sees, so creating it inside one of them makes the rest depend on that
+  // one having run first.
+  await seedAttempt({
+    userId: USERS[1]!,
+    number: 2,
+    score: 1,
+    answers: [
+      {
+        questionId: questionIds[0]!,
+        correct: true,
+        selected: [correctOption.get(questionIds[0]!)!],
+      },
+      { questionId: questionIds[1]!, correct: false, selected: [] },
+    ],
+  });
 });
 
 afterAll(async () => {
-  await db.delete(schema.quizzes).where(eq(schema.quizzes.id, quizId));
+  // By prefix: a test creates a quiz of its own, and a leftover row makes
+  // `pnpm db:seed`'s verifier fail the NEXT suite to run rather than this one.
+  await db.delete(schema.quizzes).where(like(schema.quizzes.slug, `${SLUG}%`));
   for (const id of USERS) {
     await db.delete(schema.users).where(eq(schema.users.id, id));
   }
@@ -136,10 +179,19 @@ afterAll(async () => {
 
 describe("the per-quiz summary", () => {
   it("lists a quiz nobody has sat, with zeroes", async () => {
+    // Its own quiz, because the suite's main one HAS been sat — three times,
+    // set up before any test runs. This used to assert against that quiz and
+    // pass only while it ran before the test that seeded the sittings.
+    const untouched = await createQuiz(db, {
+      slug: `${SLUG}-untouched-${uuidv7()}`,
+      title: "Nobody has sat this",
+      status: "published",
+    });
+
     // A LEFT join, not an inner one: an inner join would silently drop
     // exactly the quizzes worth noticing.
     const rows = await listQuizAttemptSummaries();
-    const row = rows.find((entry) => entry.slug === SLUG);
+    const row = rows.find((entry) => entry.slug === untouched.slug);
     expect(row).toBeTruthy();
     expect(row!.finished).toBe(0);
     expect(row!.averagePercent).toBeNull();
@@ -147,24 +199,10 @@ describe("the per-quiz summary", () => {
   });
 
   it("counts finished, in-progress and voided separately", async () => {
-    await seedAttempt({ userId: USERS[0]!, number: 1, score: 4 });
-    await seedAttempt({
-      userId: USERS[0]!,
-      number: 2,
-      score: 1,
-      status: "voided",
-    });
-    await seedAttempt({
-      userId: USERS[1]!,
-      number: 1,
-      score: 0,
-      status: "in_progress",
-    });
-
     const row = (await listQuizAttemptSummaries()).find(
       (entry) => entry.slug === SLUG,
     )!;
-    expect(row.finished).toBe(1);
+    expect(row.finished).toBe(2);
     expect(row.voided).toBe(1);
     expect(row.inProgress).toBe(1);
   });
@@ -176,9 +214,10 @@ describe("the per-quiz summary", () => {
     const row = (await listQuizAttemptSummaries()).find(
       (entry) => entry.slug === SLUG,
     )!;
-    // Only the 4/4 attempt is marked and unvoided.
-    expect(row.averagePercent).toBe(100);
-    expect(row.passRate).toBe(100);
+    // Two marked, unvoided sittings: 4/4 and 1/4. The voided 1/4 is excluded,
+    // which is the claim — counting it would drag the average to 50.
+    expect(row.averagePercent).toBe(63);
+    expect(row.passRate).toBe(50);
   });
 });
 
@@ -197,12 +236,14 @@ describe("the per-quiz detail", () => {
     ]);
     // 4/4 = 100%, which belongs in the last bucket rather than an eleventh.
     expect(detail.distribution[9]!.count).toBe(1);
+    // And 1/4 = 25% lands in the 20–30 band.
+    expect(detail.distribution[2]!.count).toBeGreaterThanOrEqual(1);
   });
 
   it("counts every attempt, including the voided one", async () => {
     const detail = (await getQuizAttemptDetail(SLUG, list()))!;
-    expect(detail.total).toBe(3);
-    expect(detail.attempts).toHaveLength(3);
+    expect(detail.total).toBe(4);
+    expect(detail.attempts).toHaveLength(4);
   });
 
   it("shows the candidate's email, and says so when the account is gone", async () => {
@@ -216,21 +257,8 @@ describe("the per-quiz detail", () => {
 describe("per-question difficulty", () => {
   it("counts a blank as skipped, not as wrong", async () => {
     // Averaging blanks into "percent correct" makes a long paper look harder
-    // than it is: a question nobody reached is not a hard question.
-    await seedAttempt({
-      userId: USERS[1]!,
-      number: 2,
-      score: 1,
-      answers: [
-        {
-          questionId: questionIds[0]!,
-          correct: true,
-          selected: [correctOption.get(questionIds[0]!)!],
-        },
-        { questionId: questionIds[1]!, correct: false, selected: [] },
-      ],
-    });
-
+    // than it is: a question nobody reached is not a hard question. The
+    // answered attempt is created in setup — see the note there.
     const detail = (await getQuizAttemptDetail(SLUG, list()))!;
     const first = detail.questions.find((q) => q.id === questionIds[0]!)!;
     const second = detail.questions.find((q) => q.id === questionIds[1]!)!;

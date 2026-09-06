@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, like } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
+
+import { createQuiz, createUser } from "../factories";
 
 import { connect, seedUrl, type SeedDatabase } from "@/db/seed/connect";
 import * as schema from "@/db/schema";
@@ -98,7 +100,12 @@ afterAll(async () => {
   await db
     .delete(schema.activityEvents)
     .where(inArray(schema.activityEvents.actorId, [USER, OTHER]));
-  await db.delete(schema.quizzes).where(eq(schema.quizzes.id, quizId));
+  // By prefix, not by the one id: tests create their own quizzes too, and a
+  // leftover row makes `pnpm db:seed`'s verifier report seven quizzes where
+  // it expects six — which fails the NEXT suite to run, not this one.
+  await db
+    .delete(schema.quizzes)
+    .where(like(schema.quizzes.slug, "users-suite-%"));
   await db.delete(schema.users).where(inArray(schema.users.id, [USER, OTHER]));
   await close?.();
 });
@@ -195,25 +202,45 @@ describe("one person's record", () => {
   });
 
   it("leaves a voided sitting out of their record", async () => {
-    // A struck-out attempt must not be somebody's best score.
-    await db.insert(schema.examAttempts).values({
-      id: uuidv7(),
-      quizId,
-      userId: USER,
-      attemptNumber: 3,
-      seed: 3,
-      quizRevision: new Date(),
-      status: "voided",
-      voidReason: "suite",
-      score: 8,
-      maxScore: 8,
-      passed: true,
-      submittedAt: new Date("2026-01-04T10:00:00Z"),
+    // Its own quiz, its own attempts and its own person. It used to read the
+    // two submitted sittings the test above creates, which made it pass only
+    // when that one had already run — and putting its attempts on the shared
+    // subject would have broken that test's totals in the other order.
+    const sitter = await createUser(db, { name: "Voided sitter" });
+    const voidQuiz = await createQuiz(db, {
+      slug: `users-suite-void-${uuidv7()}`,
+      title: "Voided sitting quiz",
+      status: "published",
     });
 
-    const detail = (await getUserDetail(USER))!;
+    const sitting = (
+      attemptNumber: number,
+      status: "submitted" | "voided",
+      score: number,
+    ) =>
+      db.insert(schema.examAttempts).values({
+        id: uuidv7(),
+        quizId: voidQuiz.id,
+        userId: sitter.id,
+        attemptNumber,
+        seed: attemptNumber,
+        quizRevision: new Date(),
+        status,
+        ...(status === "voided" ? { voidReason: "suite" } : {}),
+        score,
+        maxScore: 8,
+        passed: score >= 4,
+        submittedAt: new Date(`2026-01-0${attemptNumber + 1}T10:00:00Z`),
+      });
+
+    await sitting(1, "submitted", 4);
+    await sitting(2, "submitted", 2);
+    // A struck-out attempt must not be somebody's best score.
+    await sitting(3, "voided", 8);
+
+    const detail = (await getUserDetail(sitter.id))!;
     const result = detail.quizzes.find(
-      (entry) => entry.quizSlug === "users-suite-quiz",
+      (entry) => entry.quizSlug === voidQuiz.slug,
     )!;
     expect(result.attempts).toBe(2);
     expect(result.bestPercent).toBe(50);
@@ -221,6 +248,27 @@ describe("one person's record", () => {
 });
 
 describe("the timeline", () => {
+  /**
+   * Events of this suite's own, rather than whatever an earlier test left.
+   *
+   * Every test here needs a few rows to page through, and they used to come
+   * from the counts test in the describe above — which reads fine top to
+   * bottom and fails the moment the order changes. `--sequence.shuffle`
+   * found it.
+   *
+   * `lesson.saved` deliberately: the counts test asserts exact totals for
+   * `lesson.viewed`, `lesson.completed` and `comment.posted`, so seeding any
+   * of those here would fix one ordering dependency by creating another.
+   */
+  beforeAll(async () => {
+    for (let index = 0; index < 6; index++) {
+      await event(
+        "lesson.saved",
+        new Date(`2026-03-0${index + 1}T10:00:00.000Z`),
+      );
+    }
+  });
+
   it("returns this person's events, newest first", async () => {
     const page = await getUserTimeline(USER, { limit: 50 });
     expect(page.entries.length).toBeGreaterThan(0);

@@ -186,6 +186,40 @@ describe("the nav filter", () => {
 describe("the bypass", () => {
   let userId: string;
 
+  /**
+   * A Super Admin that outlives every test here.
+   *
+   * `assert_super_admin_remains` refuses to remove the LAST holder of the
+   * role — which is the guarantee it exists for. On a database where nobody
+   * holds it, the Super Admin test below creates the only holder, and its
+   * cleanup is then refused: the delete raises, the user is left behind, and
+   * the failure names a trigger rather than anything this suite is about.
+   *
+   * It went unnoticed because a previous run's leftover holder made the
+   * cleanup possible. `pnpm db:local:reset` and CI both start without one, so
+   * this suite has to bring its own — and must never delete it.
+   */
+  let anchorId: string;
+
+  beforeAll(async () => {
+    anchorId = uuidv7();
+    await db.insert(schema.users).values({
+      id: anchorId,
+      email: `bypass-anchor-${anchorId}@pages.invalid`,
+      name: "Super Admin anchor",
+      emailVerified: false,
+    });
+
+    const [role] = await db
+      .select({ id: schema.roles.id })
+      .from(schema.roles)
+      .where(eq(schema.roles.key, "super_admin"));
+    await db
+      .insert(schema.userRoles)
+      .values({ userId: anchorId, roleId: role!.id })
+      .onConflictDoNothing();
+  });
+
   afterEach(async () => {
     if (userId) {
       await db.delete(schema.users).where(eq(schema.users.id, userId));

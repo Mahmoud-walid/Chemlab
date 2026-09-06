@@ -13,6 +13,7 @@ import {
 import { getLessonBySlug } from "@/db/queries/lessons";
 import { applyTranslations } from "@/lib/translations/blocks";
 import type { LessonBlock } from "@/lib/lessons/blocks";
+import { createLesson, createSection, createUser } from "../factories";
 
 /**
  * Writing a translation, against real Postgres.
@@ -44,15 +45,8 @@ beforeAll(async () => {
   if (!url) throw new Error("no database URL");
   ({ db, close } = connect(url));
 
-  for (const [id, name] of [
-    [TRANSLATOR, "Writer"],
-    [REVIEWER, "Reviewer"],
-  ]) {
-    await db
-      .insert(schema.users)
-      .values({ id, name, email: `${id}@example.test` })
-      .onConflictDoNothing();
-  }
+  await createUser(db, { id: TRANSLATOR, name: "Writer" });
+  await createUser(db, { id: REVIEWER, name: "Reviewer" });
 });
 
 afterAll(async () => {
@@ -65,25 +59,21 @@ afterAll(async () => {
 beforeEach(async () => {
   // A fresh lesson per test: these mutate status and source text, and a
   // shared row would make the order of the file part of what is asserted.
-  lessonId = uuidv7();
-  slug = `translate-${lessonId}`;
-  await db.insert(schema.lessons).values({
-    id: lessonId,
-    slug,
+  const lesson = await createLesson(db, {
+    slug: `translate-${uuidv7()}`,
     title: "Acids and bases",
     description: "A first look.",
-    difficulty: "easy",
-    category: "Testing",
     status: "published",
   });
-  sectionId = uuidv7();
-  await db.insert(schema.lessonSections).values({
-    id: sectionId,
-    lessonId,
-    position: 1,
-    heading: "What is an acid?",
-    body: BODY,
-  });
+  lessonId = lesson.id;
+  slug = lesson.slug;
+
+  sectionId = (
+    await createSection(db, lessonId, {
+      heading: "What is an acid?",
+      body: BODY,
+    })
+  ).id;
 });
 
 afterAll(async () => {
@@ -238,25 +228,20 @@ describe("moving through the workflow", () => {
   it("does not touch another lesson's translations", async () => {
     await write();
 
-    const otherId = uuidv7();
-    const otherSlug = `translate-other-${otherId}`;
-    await db.insert(schema.lessons).values({
-      id: otherId,
-      slug: otherSlug,
+    const otherLesson = await createLesson(db, {
+      slug: `translate-other-${uuidv7()}`,
       title: "Bases",
       description: "Later.",
-      difficulty: "easy",
-      category: "Testing",
       status: "published",
     });
-    const otherSection = uuidv7();
-    await db.insert(schema.lessonSections).values({
-      id: otherSection,
-      lessonId: otherId,
-      position: 1,
-      heading: "What is a base?",
-      body: BODY,
-    });
+    const otherId = otherLesson.id;
+    const otherSlug = otherLesson.slug;
+    const otherSection = (
+      await createSection(db, otherId, {
+        heading: "What is a base?",
+        body: BODY,
+      })
+    ).id;
     await saveLessonTranslation(otherId, "ar", {
       title: "القواعد",
       description: "لاحقًا.",
