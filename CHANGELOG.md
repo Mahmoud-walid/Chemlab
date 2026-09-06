@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.22.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.21.0...v0.22.0) (2026-09-06)
+
+
+### Features
+
+* **admin:** erase a draft created by mistake, behind its own permission ([#111](https://github.com/Mahmoud-walid/Chemlab/issues/111)) ([e8d7bc4](https://github.com/Mahmoud-walid/Chemlab/commit/e8d7bc49ea71898bfce0274ce8d3d2ee33110de5))
+* **admin:** row selection, and a bulk action that is all or nothing ([#109](https://github.com/Mahmoud-walid/Chemlab/issues/109)) ([339ba76](https://github.com/Mahmoud-walid/Chemlab/commit/339ba76f01627f805921e2de176e8f6b37702e83))
+
 ## [0.21.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.20.0...v0.21.0) (2026-09-06)
 
 
