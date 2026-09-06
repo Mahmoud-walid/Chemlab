@@ -20,7 +20,12 @@ import type { LessonBlock } from "@/lib/lessons/blocks";
 type Status = "draft" | "in_review" | "published";
 
 const hashOf = (
-  table: "lessons" | "lesson_sections" | "quizzes" | "quiz_questions",
+  table:
+    | "lessons"
+    | "lesson_sections"
+    | "quizzes"
+    | "quiz_questions"
+    | "quiz_options",
   id: string,
 ) => sql`(select source_hash from ${sql.raw(table)} where id = ${id})`;
 
@@ -119,5 +124,26 @@ export async function translateQuestion(
     explanation: "لأن.",
     status: overrides.status ?? "draft",
     sourceHash: hashOf("quiz_questions", questionId),
+  });
+}
+
+/**
+ * A translated ANSWER OPTION.
+ *
+ * Separate from `translateQuestion` on purpose, so a test can translate a
+ * question and leave one of its options alone — the mixed-language case the
+ * whole option-translation feature exists to prevent.
+ */
+export async function translateOption(
+  db: SeedDatabase,
+  optionId: string,
+  overrides: { locale?: string; status?: Status; label?: string } = {},
+): Promise<void> {
+  await db.insert(schema.quizOptionTranslations).values({
+    optionId,
+    locale: overrides.locale ?? "ar",
+    label: overrides.label ?? "خيار",
+    status: overrides.status ?? "draft",
+    sourceHash: hashOf("quiz_options", optionId),
   });
 }
