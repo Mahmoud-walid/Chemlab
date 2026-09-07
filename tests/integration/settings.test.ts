@@ -22,10 +22,29 @@ import { SETTINGS, settingDefinition } from "@/lib/settings/registry";
 let db: SeedDatabase;
 let close: () => Promise<void>;
 
-beforeAll(() => {
+/**
+ * What the table held before this file touched it.
+ *
+ * Captured rather than assumed empty. `afterEach` clears the rows these tests
+ * write, but a row can already be there when the file starts — `pnpm test:e2e`
+ * writes settings through the admin UI, and an interrupted run leaves one
+ * behind. The cleanup test at the bottom used to assert the table was empty
+ * outright, which made it a check on the state of the DEVELOPER'S database
+ * rather than on this file's hygiene, and it failed under `--sequence.shuffle`
+ * whenever the shuffle put it first.
+ */
+let baseline: string[] = [];
+
+beforeAll(async () => {
   const url = seedUrl();
   if (!url) throw new Error("no database URL");
   ({ db, close } = connect(url));
+
+  baseline = (
+    await db.select({ key: schema.settings.key }).from(schema.settings)
+  )
+    .map((row) => row.key)
+    .sort();
 });
 
 afterAll(async () => {
@@ -33,8 +52,16 @@ afterAll(async () => {
 });
 
 afterEach(async () => {
-  // A settings table with leftovers changes what every later test reads.
-  await db.delete(schema.settings);
+  // A settings table with leftovers changes what every later test reads. Only
+  // the keys this file writes: deleting the whole table would wipe a row the
+  // baseline above recorded, and the cleanup test would then pass by having
+  // destroyed the thing it was checking for.
+  await db.delete(schema.settings).where(
+    inArray(
+      schema.settings.key,
+      SETTINGS.map((definition) => definition.key),
+    ),
+  );
 });
 
 describe("with no rows at all", () => {
@@ -188,6 +215,15 @@ describe("a row for a key the registry does not declare", () => {
       .from(schema.settings)
       .where(eq(schema.settings.key, "general.removedSetting"));
     expect(row?.value).toBe("kept");
+
+    // Removed here rather than by `afterEach`, which clears only the keys the
+    // registry declares — and the whole point of this row is that it declares
+    // none. Left behind it would survive into the next run, where the insert
+    // above fails on the primary key: a test that passes exactly once against
+    // any given database.
+    await db
+      .delete(schema.settings)
+      .where(eq(schema.settings.key, "general.removedSetting"));
   });
 });
 
@@ -238,16 +274,16 @@ describe("the registry's permissions", () => {
 });
 
 describe("cleanup", () => {
-  it("leaves no rows behind for the next test", async () => {
-    const rows = await db
-      .select()
-      .from(schema.settings)
-      .where(
-        inArray(
-          schema.settings.key,
-          SETTINGS.map((s) => s.key),
-        ),
-      );
-    expect(rows).toEqual([]);
+  it("leaves the table exactly as it found it", async () => {
+    // Compared against the baseline, not against empty. The claim worth making
+    // is "this file wrote nothing it did not clean up", and that is true
+    // whatever order the tests ran in and whatever the database held first.
+    const keys = (
+      await db.select({ key: schema.settings.key }).from(schema.settings)
+    )
+      .map((row) => row.key)
+      .sort();
+
+    expect(keys).toEqual(baseline);
   });
 });
