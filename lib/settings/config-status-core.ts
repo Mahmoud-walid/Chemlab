@@ -40,6 +40,7 @@ export interface ConfigStatusInput {
   CLOUDINARY_CLOUD_NAME?: string;
   CLOUDINARY_API_KEY?: string;
   CLOUDINARY_API_SECRET?: string;
+  CLOUDINARY_UPLOAD_FOLDER?: string;
   RESEND_API_KEY?: string;
 }
 
@@ -75,10 +76,15 @@ export function configStatusFrom(env: ConfigStatusInput): ConfigStatus {
       present(env.VAPID_PRIVATE_KEY) &&
       present(env.VAPID_SUBJECT),
     slack: present(env.SLACK_WEBHOOK_URL),
+    // All FOUR, the folder included. Without an environment prefix the sign
+    // endpoint has nothing to sign a folder as, and reporting "configured"
+    // sends somebody looking for the problem everywhere except the variable
+    // that is actually missing — the same failure the Web Push row had.
     cloudinary:
       present(env.CLOUDINARY_CLOUD_NAME) &&
       present(env.CLOUDINARY_API_KEY) &&
-      present(env.CLOUDINARY_API_SECRET),
+      present(env.CLOUDINARY_API_SECRET) &&
+      present(env.CLOUDINARY_UPLOAD_FOLDER),
     email: present(env.RESEND_API_KEY),
   };
 }

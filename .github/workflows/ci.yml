@@ -74,6 +74,10 @@ jobs:
       GOOGLE_CLIENT_SECRET: ci-only-google-client-secret
       CI_NOTIFY_SECRET: ci-only-notify-secret-at-least-32-characters
       SLACK_WEBHOOK_URL: https://hooks.slack.invalid/services/ci/only/placeholder
+      # And the media upload secret, for the same reason: unset, its probe in
+      # `bundle:check` searches for an empty string and passes without having
+      # looked at anything.
+      CLOUDINARY_API_SECRET: ci-only-cloudinary-api-secret
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4

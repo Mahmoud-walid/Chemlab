@@ -20,7 +20,8 @@ unique key, so the admin UI can group by resource without parsing strings.
 
 **Actions:** `read`, `create`, `update`, `delete`, `publish`, `moderate`,
 `assign`, `impersonate`, `export`, `toggle`, `bypass`, `access`, `read_pii`,
-`update_security`, `void`, `write`, `review`, `delete_hard`, `subscribe_ci`.
+`update_security`, `void`, `write`, `review`, `delete_hard`, `subscribe_ci`,
+`upload_video`.
 
 `lesson:delete_hard` and `quiz:delete_hard` are separate from their `delete`
 counterparts for the same reason `setting:update_security` is separate from
@@ -60,6 +61,16 @@ provider list decide who gets in; renaming the site does not). Both are
 separate permissions because the narrower half is a different decision to
 trust somebody with — and both are two-part names, so the vocabulary stays
 `resource:action` instead of growing a third segment.
+
+`media:upload_video` is separate from `media:create` for a reason that is
+about money rather than trust. An image is transformed once and served from a
+CDN; a video is transcoded per rendition and billed per viewer, so **one**
+lesson video watched by a class can outweigh every image on the platform.
+Splitting it means "may add pictures" is grantable without also granting the
+line item that can end a free tier in an afternoon. `admin` and `editor` hold
+it — the roles that write the lessons a video would go in. Whether a normal
+account should ever have it is Q43's neighbour, Q41, and until that is answered
+the default is no. See `docs/MEDIA.md`.
 
 `notification:subscribe_ci` gates the **Development** section of
 `/profile/settings` — build alerts for this repository — and is the one

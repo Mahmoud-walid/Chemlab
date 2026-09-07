@@ -84,6 +84,17 @@ export const ACTIONS = [
   // So: a grant that says exactly "works on this project", carrying nothing
   // else with it. Held by no role by default; a Super Admin grants it.
   "subscribe_ci",
+
+  // `media:upload_video`. Who may put a VIDEO in the account, as opposed to a
+  // picture.
+  //
+  // Separate from `media:create` because the two cost entirely different
+  // things. An image is transformed once and served from a CDN; a video is
+  // transcoded per rendition and billed per viewer, so one lesson video
+  // watched by a class can outweigh every image on the platform. Splitting it
+  // means "may add pictures" is grantable without also granting the line item
+  // that can end a free tier in an afternoon.
+  "upload_video",
   // `translation:review`. Checking a chemistry translation is a language
   // competence, not a publishing right, so it is separate from `write` and
   // from `lesson:publish`. A mistranslated definition is a factual error, and
@@ -273,6 +284,11 @@ export const PERMISSIONS: PermissionSpec[] = [
   { resource: "media", action: "read", description: "Browse uploaded media" },
   { resource: "media", action: "create", description: "Upload media" },
   { resource: "media", action: "delete", description: "Delete media" },
+  {
+    resource: "media",
+    action: "upload_video",
+    description: "Upload video, which is billed per rendition and per viewer",
+  },
 
   {
     resource: "notification",
@@ -394,6 +410,7 @@ export const ROLES: RoleSpec[] = [
       p("setting", "update_security"),
       p("media", "read"),
       p("media", "create"),
+      p("media", "upload_video"),
       p("media", "delete"),
       p("notification", "read"),
       p("notification", "create"),
@@ -427,6 +444,10 @@ export const ROLES: RoleSpec[] = [
       p("quiz", "publish"),
       p("media", "read"),
       p("media", "create"),
+      // An editor writes the lessons, so an editor adds the lesson videos.
+      // Held by no other role: a normal account uploading video is a
+      // bandwidth decision nobody has taken yet (Q41).
+      p("media", "upload_video"),
       p("translation", "read"),
       // Write but not review: an editor can translate, and somebody else
       // signs it off. Self-approval is how an unchecked translation reaches

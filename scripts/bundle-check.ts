@@ -142,6 +142,9 @@ function secrets(): [string, string][] {
     // credential: anyone holding it can post to the channel.
     "CI_NOTIFY_SECRET",
     "SLACK_WEBHOOK_URL",
+    // Signs every upload this server authorises. A copy of it is the ability
+    // to write anything into the media account.
+    "CLOUDINARY_API_SECRET",
   ];
 
   return names
