@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.25.1](https://github.com/Mahmoud-walid/Chemlab/compare/v0.25.0...v0.25.1) (2026-09-07)
+
+
+### Bug Fixes
+
+* **tests:** the settings suite could only pass once per database ([056d5b6](https://github.com/Mahmoud-walid/Chemlab/commit/056d5b6ffc8cabeff47fb0883248d575c8e0a545))
+* **tests:** the settings suite could only pass once per database ([e3868af](https://github.com/Mahmoud-walid/Chemlab/commit/e3868af012bf6c221c2afcf80fd8b9fbb2cb7a54))
+
 ## [0.25.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.24.0...v0.25.0) (2026-09-07)
 
 
