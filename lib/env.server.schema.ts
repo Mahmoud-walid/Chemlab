@@ -138,6 +138,37 @@ export const serverEnvSchema = z.object({
       message: "must be a Slack incoming-webhook URL",
     })
     .optional(),
+
+  /**
+   * Cloudinary (#27).
+   *
+   * `CLOUDINARY_API_SECRET` signs every upload this server authorises. A copy
+   * of it is the ability to write anything into the account under any folder,
+   * so it is used in exactly one place and must never carry a `NEXT_PUBLIC_`
+   * prefix — `pnpm bundle:check` greps the built client output for its value.
+   */
+  CLOUDINARY_CLOUD_NAME: z.string().min(1).optional(),
+  CLOUDINARY_API_KEY: z.string().min(1).optional(),
+  CLOUDINARY_API_SECRET: z.string().min(1).optional(),
+  /**
+   * The environment prefix every upload goes under, and the thing that makes
+   * "delete everything this preview uploaded" a safe sentence.
+   *
+   * **Set per deployment, never derived from `NODE_ENV`.** A preview runs a
+   * production build and `NODE_ENV` reads "production" there — deriving it in
+   * code is exactly how a preview's uploads land in the production folder and
+   * its clean-up takes real content with them. Validated as a single path
+   * segment: a value with a slash in it would silently change the folder
+   * DEPTH, and every prefix query written against the convention would then
+   * match the wrong tree.
+   */
+  CLOUDINARY_UPLOAD_FOLDER: z
+    .string()
+    .regex(/^[a-z0-9][a-z0-9-]{0,63}$/, {
+      message:
+        "must be one lowercase path segment, e.g. production, development, preview-pr-42",
+    })
+    .optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
@@ -187,6 +218,25 @@ export function pushConfigured(
  */
 export function ciNotifyConfigured(env: Partial<ServerEnv>): boolean {
   return Boolean(env.CI_NOTIFY_SECRET);
+}
+
+/**
+ * True when an upload can be signed at all.
+ *
+ * All four together, and the folder is not the odd one out: without it the
+ * server has no environment prefix to sign, and the only alternatives are
+ * refusing the upload or inventing a prefix — and an invented one is
+ * "production", which is the mistake this whole convention exists to prevent.
+ * Half a configuration is not "partly working"; it is an upload that goes to
+ * the wrong place or fails at Cloudinary, so it counts as unconfigured.
+ */
+export function cloudinaryConfigured(env: Partial<ServerEnv>): boolean {
+  return Boolean(
+    env.CLOUDINARY_CLOUD_NAME &&
+    env.CLOUDINARY_API_KEY &&
+    env.CLOUDINARY_API_SECRET &&
+    env.CLOUDINARY_UPLOAD_FOLDER,
+  );
 }
 
 /** True when a CI alert can also reach Slack. Its absence is not an error —

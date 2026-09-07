@@ -16,6 +16,7 @@ const full = {
   CLOUDINARY_CLOUD_NAME: "cloud",
   CLOUDINARY_API_KEY: "key",
   CLOUDINARY_API_SECRET: "secret",
+  CLOUDINARY_UPLOAD_FOLDER: "production",
   RESEND_API_KEY: "re_x",
 };
 
@@ -56,6 +57,18 @@ describe("configuration status", () => {
     expect(configStatusFrom({ GOOGLE_CLIENT_ID: "id" }).googleOAuth).toBe(
       false,
     );
+    // Cloudinary needs FOUR. Three of them without the upload folder is an
+    // account the server can reach and no environment prefix to sign a folder
+    // as — an upload that either fails or goes to the wrong tree, and
+    // reporting it as configured sends the search everywhere except the
+    // variable that is actually missing.
+    expect(
+      configStatusFrom({
+        CLOUDINARY_CLOUD_NAME: "cloud",
+        CLOUDINARY_API_KEY: "key",
+        CLOUDINARY_API_SECRET: "secret",
+      }).cloudinary,
+    ).toBe(false);
     expect(
       configStatusFrom({ NEXT_PUBLIC_VAPID_PUBLIC_KEY: "pub" }).webPush,
     ).toBe(false);

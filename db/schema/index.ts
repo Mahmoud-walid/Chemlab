@@ -19,3 +19,4 @@ export * from "./auth";
 export * from "./rbac";
 export * from "./activity";
 export * from "./settings";
+export * from "./media";

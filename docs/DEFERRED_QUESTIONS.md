@@ -46,7 +46,17 @@ requires before a public app leaves testing mode. See Q8.
 **Blocks:** the media pipeline, and therefore lesson images/video and avatars.
 
 Provide `CLOUDINARY_CLOUD_NAME` (may be public), `CLOUDINARY_API_KEY` and
-`CLOUDINARY_API_SECRET` (server-only).
+`CLOUDINARY_API_SECRET` (server-only) — **plus `CLOUDINARY_UPLOAD_FOLDER`**,
+one lowercase segment per deployment (`production`, `development`,
+`preview-pr-42`). It is what makes "delete everything this preview uploaded" a
+safe sentence, and it is a variable rather than a derived value because a
+preview runs a production build and `NODE_ENV` reads "production" there.
+
+The tables, the signature, the folder convention and the constraints are built
+and tested (`docs/MEDIA.md`). What is still blocked is everything that talks to
+Cloudinary: the sign and confirm endpoints, the upload UI, the image loader,
+video delivery, and the reclamation job. A signature endpoint that has never
+signed anything a real Cloudinary accepted is a guess with tests around it.
 
 ### Q4. Slack webhook for CI alerts
 
@@ -619,6 +629,87 @@ The alternatives, for the record: soft-deleting accounts was rejected because
 "delete my account" would then not delete a row; copying the actor's name into
 the entry and dropping the foreign key was rejected because the name would stop
 updating when somebody changes theirs.
+
+### Q41 — may a normal account upload video at all?
+
+**Needed before:** `media:upload_video` is granted to anything beyond `admin`
+and `editor`. Nothing is blocked today; the default is no.
+
+Video's cost profile is nothing like an image's. An image is transformed once
+and served from a CDN; a video is transcoded per rendition and billed per
+viewer, so **one** lesson video watched by a class can outweigh every image on
+the platform. That is why it is a separate permission rather than part of
+`media:create`.
+
+Today `admin` and `editor` hold it — the roles that write the lessons the video
+would go in — and nobody else does. Granting it more widely is a bandwidth
+decision with a bill attached, not a permissions tidy-up.
+
+**Recommendation:** leave it as is. If learners should be able to submit video
+at some point, that is a different feature (a moderated submission queue), not
+a wider grant on this one.
+
+---
+
+### Q42 — should SVG uploads be permitted?
+
+**Needed before:** SVG is added to the MIME allowlist. Currently excluded.
+
+An SVG is XML. It can carry `<script>`, and it would be served from our own
+delivery domain — so a stored SVG is a stored cross-site scripting payload,
+waiting for a reader to open the asset URL directly. Cloudinary offers
+sanitisation, but it is a setting that can be off, and "the safe default is not
+to accept the format" costs nothing while nobody has asked for it.
+
+The case for allowing it: chemistry diagrams are exactly the kind of thing that
+is drawn as vector art, and a rasterised diagram looks poor at every size it
+was not exported at.
+
+**Recommendation:** keep it excluded until an author actually needs a vector
+diagram. If one does, turn Cloudinary's sanitisation on **and** serve SVG from
+a separate origin, so a sanitiser bypass is not same-origin with the app.
+
+---
+
+### Q43 — what is a normal account's storage quota?
+
+**Needed before:** the quota check in the sign endpoint is meaningful.
+
+`user_media_quota.bytes_limit` is deliberately `NOT NULL` with **no default**:
+a number invented here would be a policy decided by whoever typed fastest, and
+a wrong one is either an author blocked mid-lesson or a free tier consumed by
+one account.
+
+It needs a number. What informs it: an avatar is capped at 2 MB, a lesson image
+at 10 MB, a video at 200 MB — so an author who writes ten illustrated lessons
+is in the low hundreds of megabytes, and one who adds video is not.
+
+**Recommendation:** two numbers, not one. A generous limit for the roles that
+hold `media:create` (authors), and a small one for everybody else, since a
+normal account's only upload today is an avatar.
+
+---
+
+### Q44 — do previews share the production Cloudinary account?
+
+**Needed before:** preview deployments are given Cloudinary credentials.
+
+Two options. Share the production account with a distinct
+`CLOUDINARY_UPLOAD_FOLDER` per preview — one account, and the folder convention
+already keeps the trees separate and makes `chemlab/preview-*` deletable by
+prefix in one call. Or use a second, free Cloudinary account for
+non-production, so preview traffic cannot touch the production quota at all.
+
+The trade is quota against credentials. Sharing means a preview's uploads and
+transformations are billed against production's headroom; separating means a
+second set of secrets to hold, rotate, and get wrong.
+
+**Recommendation:** share, with the folder prefix, plus
+`scripts/media-gc.ts` deleting `chemlab/preview-*` older than 30 days. Preview
+volume is a handful of test uploads; a second account is real operational
+weight for a small saving.
+
+---
 
 ## Per-issue open questions
 
