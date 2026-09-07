@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.25.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.24.0...v0.25.0) (2026-09-07)
+
+
+### Features
+
+* **ci:** a Development section for build alerts, and a drain that runs ([588f4b0](https://github.com/Mahmoud-walid/Chemlab/commit/588f4b06d3d14282d9ba8340eeca86cb62c43a91))
+* **ci:** a Development section for build alerts, and a drain that runs ([a4191e0](https://github.com/Mahmoud-walid/Chemlab/commit/a4191e05a0b5e3729d8df4150614959afd067cde))
+* **media:** the media pipeline's foundation, minus everything Cloudinary ([d50bdc1](https://github.com/Mahmoud-walid/Chemlab/commit/d50bdc15a7eec841ef0fe2e55b914acf6c83292b))
+* **media:** the media pipeline's foundation, minus everything Cloudinary ([7f56e6e](https://github.com/Mahmoud-walid/Chemlab/commit/7f56e6e1c3abbb95d181d305ab0e3f2aad7f7ad7))
+
 ## [0.24.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.23.1...v0.24.0) (2026-09-06)
 
 
