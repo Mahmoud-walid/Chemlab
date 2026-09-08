@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.25.2](https://github.com/Mahmoud-walid/Chemlab/compare/v0.25.1...v0.25.2) (2026-09-08)
+
+
+### Documentation
+
+* **claude:** rewrite CLAUDE.md as a full handover ([d1aa257](https://github.com/Mahmoud-walid/Chemlab/commit/d1aa257cf1890b45b406e000bdf6df5b2455a611))
+* **claude:** rewrite CLAUDE.md as a full handover ([3ca4bed](https://github.com/Mahmoud-walid/Chemlab/commit/3ca4bedc12575a07008a7e0b526692fc1d5bc815))
+
 ## [0.25.1](https://github.com/Mahmoud-walid/Chemlab/compare/v0.25.0...v0.25.1) (2026-09-07)
 
 
