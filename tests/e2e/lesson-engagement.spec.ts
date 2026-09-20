@@ -141,8 +141,22 @@ test.describe("engagement", () => {
       );
 
     await openLesson(page);
+
+    // The bar is optimistic by design: `savedByViewer` flips before the POST
+    // resolves, so the "Saved" label says the click was received, not that the
+    // row exists. Navigating on that signal races the round trip, and under
+    // the load of the full suite the navigation wins — /profile/saved reads
+    // the database and truthfully reports nothing saved. Same failure the exam
+    // spec hit on reload; same fix, for the same reason.
+    const stored = page.waitForResponse(
+      (response) =>
+        response.url().includes("/save") &&
+        response.request().method() === "POST" &&
+        response.status() < 400,
+    );
     await page.getByRole("button", { name: /^save/i }).click();
     await expect(page.getByRole("button", { name: /saved/i })).toBeVisible();
+    await stored;
 
     await page.goto("/profile/saved");
     await expect(

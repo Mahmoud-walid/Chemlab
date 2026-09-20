@@ -36,10 +36,9 @@ export function categoryMessageKey(category: string): string {
 
 interface ElementCellProps {
   element: Element;
-  compact?: boolean;
 }
 
-export function ElementCell({ element, compact = false }: ElementCellProps) {
+export function ElementCell({ element }: ElementCellProps) {
   const t = useTranslations("element");
   const format = useFormatter();
   const style = getCategoryStyle(element.category);

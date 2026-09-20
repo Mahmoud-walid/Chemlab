@@ -5,6 +5,27 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  // ── Unused variables ───────────────────────────────────────────────────
+  // Omitting a key by destructuring it out (`const { admin: _admin, ...rest }`)
+  // is how this codebase keeps a payload from reaching the client — see
+  // `app/[locale]/layout.tsx`, where dropping it would put the admin catalogue
+  // into every public page. The inherited default reports those bindings as
+  // unused, which trains the reader to skim the warning list; the deliberate
+  // ones have to be silent for the genuine ones to be worth reading.
+  {
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          ignoreRestSiblings: true,
+          varsIgnorePattern: "^_",
+          argsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
+
   // ── i18n guards ────────────────────────────────────────────────────────
   // Locale-unaware navigation drops the locale on client-side transitions,
   // sending an Arabic reader back to English mid-session.

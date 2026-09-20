@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { and, eq, sql } from "drizzle-orm";
-import { uuidv7 } from "uuidv7";
+import { eq } from "drizzle-orm";
 
 import { connect, seedUrl, type SeedDatabase } from "@/db/seed/connect";
 import * as schema from "@/db/schema";
@@ -20,9 +19,6 @@ let db: SeedDatabase;
 let close: () => Promise<void>;
 
 const SLUG = "periodic-table-basics";
-
-/** The candidate whose sitting the void test strikes out. */
-let voidableEmail: string;
 
 test.beforeAll(() => {
   const url = seedUrl();
@@ -53,7 +49,6 @@ test.describe("exam results", () => {
     // A real sitting first, so the screen has something to show.
     await page.goto("/");
     const email = uniqueEmail("admin-exams");
-    voidableEmail = email;
     await signUpViaApi(page, email);
     await page.goto(`/quiz/${SLUG}`);
     await page.getByRole("button", { name: /start quiz/i }).click();

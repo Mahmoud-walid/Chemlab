@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { eq, inArray, sql } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
 
 import { connect, seedUrl, type SeedDatabase } from "@/db/seed/connect";
