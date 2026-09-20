@@ -23,31 +23,42 @@ let db: SeedDatabase;
 let close: () => Promise<void>;
 
 /**
- * What the table held before this file touched it.
+ * What the table held before this file touched it — captured, cleared, and
+ * put back in `afterAll`.
  *
- * Captured rather than assumed empty. `afterEach` clears the rows these tests
- * write, but a row can already be there when the file starts — `pnpm test:e2e`
- * writes settings through the admin UI, and an interrupted run leaves one
- * behind. The cleanup test at the bottom used to assert the table was empty
- * outright, which made it a check on the state of the DEVELOPER'S database
- * rather than on this file's hygiene, and it failed under `--sequence.shuffle`
- * whenever the shuffle put it first.
+ * Recording the rows was not enough. Two describe blocks below state their
+ * precondition in their own name ("with no rows at all"), and a row left by
+ * something else makes that name a lie: `pnpm test:e2e` writes settings
+ * through the admin UI, so running both suites against one database — which
+ * is what the container does — left six registry rows here. The file then
+ * failed in two different ways depending on luck: `afterEach` deleted every
+ * registry key including those six, so the cleanup test correctly reported
+ * that this file had destroyed rows it did not create; and "serves every
+ * registry default" failed too whenever a leftover value happened not to
+ * equal the default it was shadowing.
+ *
+ * Clearing the table up front is what makes the preconditions true, and
+ * restoring it afterwards is what keeps that from being a destructive act. A
+ * test file may own this table while it runs; it may not consume it.
  */
-let baseline: string[] = [];
+let preexisting: (typeof schema.settings.$inferSelect)[] = [];
 
 beforeAll(async () => {
   const url = seedUrl();
   if (!url) throw new Error("no database URL");
   ({ db, close } = connect(url));
 
-  baseline = (
-    await db.select({ key: schema.settings.key }).from(schema.settings)
-  )
-    .map((row) => row.key)
-    .sort();
+  preexisting = await db.select().from(schema.settings);
+  await db.delete(schema.settings);
 });
 
 afterAll(async () => {
+  // Before letting go of the connection, and before anything else can read
+  // the table: whatever was here is the developer's configuration or the
+  // e2e suite's, and neither is this file's to spend.
+  if (preexisting.length > 0) {
+    await db.insert(schema.settings).values(preexisting);
+  }
   await close?.();
 });
 
@@ -274,16 +285,18 @@ describe("the registry's permissions", () => {
 });
 
 describe("cleanup", () => {
-  it("leaves the table exactly as it found it", async () => {
-    // Compared against the baseline, not against empty. The claim worth making
-    // is "this file wrote nothing it did not clean up", and that is true
-    // whatever order the tests ran in and whatever the database held first.
+  it("leaves the table exactly as this file found it: empty", async () => {
+    // Empty is the state `beforeAll` established, so this is a check on this
+    // file's hygiene — "it wrote nothing it did not clean up" — and not, as
+    // an earlier version was, a check on what the developer's database
+    // happened to contain. What was there before is restored in `afterAll`,
+    // after this assertion has had its look.
     const keys = (
       await db.select({ key: schema.settings.key }).from(schema.settings)
     )
       .map((row) => row.key)
       .sort();
 
-    expect(keys).toEqual(baseline);
+    expect(keys).toEqual([]);
   });
 });
