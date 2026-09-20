@@ -1,13 +1,7 @@
 "use client";
 
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  useTransition,
-} from "react";
+import { useCallback, useEffect, useMemo, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { Link, usePathname, useRouter } from "@/i18n/navigation";

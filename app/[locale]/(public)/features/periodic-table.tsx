@@ -133,7 +133,7 @@ export function PeriodicTable({ elements }: PeriodicTableProps) {
                   style={{ gridTemplateColumns: "repeat(15, minmax(0, 1fr))" }}
                 >
                   {row.map((el) => (
-                    <ElementCell key={el.number} element={el} compact />
+                    <ElementCell key={el.number} element={el} />
                   ))}
                 </div>
               </div>

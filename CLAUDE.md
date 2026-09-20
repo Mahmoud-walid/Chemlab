@@ -99,8 +99,10 @@ The package manager is pinned by `packageManager` in `package.json`
 - **Next.js 16 App Router + Turbopack**, React 19, TypeScript 5.9 strict,
   Tailwind v4, shadcn/ui (added via its CLI — `pnpm ui:add` — never
   hand-copied, so upstream fixes stay mergeable).
-- **Postgres** via Drizzle ORM. Neon in the owner's environment; a local
-  Postgres 17 in CI and in the container.
+- **Postgres** via Drizzle ORM. Neon in the owner's environment; **Postgres 17
+  in CI, Postgres 16 in the container**. That gap is real and not cosmetic: a
+  suite that passes locally has not been run on the version CI will run it on,
+  so a version-specific behaviour fails in CI having passed on your machine.
 - **Better Auth** for identity. **next-intl** for i18n. **Vitest** +
   **Playwright** for tests.
 
@@ -248,9 +250,10 @@ so treat it as a place bugs hide.
 
 ## 9. Local Postgres in the container
 
-The container runs Postgres 17 locally. **It dies regularly, always from a
-stale pid file, and it always presents as `Failed to collect page data` during
-`next build`** — which looks like a Next.js problem and is not.
+The container runs **Postgres 16** locally — cluster `16`, which is why the
+command below names 16 and not the 17 that CI runs (§4). **It dies regularly,
+always from a stale pid file, and it always presents as `Failed to collect page
+data` during `next build`** — which looks like a Next.js problem and is not.
 
 ```bash
 pg_ctlcluster 16 main start    # "Removed stale pid file." then it works
@@ -263,6 +266,31 @@ escape hatch:
 
 ```bash
 PLAYWRIGHT_CHROMIUM_EXECUTABLE=/opt/pw-browsers/chromium pnpm test:e2e
+```
+
+That is not enough on its own. A fresh container has no `node_modules` and no
+`.env.local`, and **e2e needs more than `DATABASE_URL`**: the sign-up journeys
+need `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL`, because
+`authConfigured(env)` makes `/sign-up` answer **404** when they are missing —
+correctly, but it presents as every account test timing out on
+`getByLabel('Name')`, which reads like a broken selector and is not. The
+throwaway values for all of them are already in `.github/workflows/ci.yml`
+(`e2e` job, `env:`) and are documented there as non-secrets; copy them into
+`.env.local` rather than inventing new ones.
+
+**And kill any leftover server before re-running.** `playwright.config.ts`
+sets `reuseExistingServer: !isCI`, so a `next-server` that outlived an
+interrupted run is silently reused — and you then test **the build it was
+started with**, not the one your change or your new `.env.local` produced. This
+is the worst failure mode in this file, because unlike every other trap here it
+does not fail: it gives you a plausible green or a plausible red from the wrong
+code.
+
+```bash
+# Not `pkill -f next-server`: that pattern matches the shell running it, so it
+# kills your own session. The bracket keeps grep from matching itself.
+ps aux | grep '[n]ext-server' | awk '{print $2}' | xargs -r kill -9
+rm -rf .next
 ```
 
 The owner uses **Neon**; keep container testing on local Postgres. Migrations
@@ -294,7 +322,7 @@ are applied locally by you and **to Neon by the owner**, when they are ready.
 
 ---
 
-## 11. Where things stand (2026-09-07, v0.25.1)
+## 11. Where things stand (2026-09-20, v0.25.2)
 
 Issue **#8** is the epic and the map; it is now ticked from reality and states
 what blocks what. **Every issue in the v1 plan is merged except three, and all

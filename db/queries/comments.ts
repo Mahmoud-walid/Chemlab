@@ -19,7 +19,7 @@ import {
   commentReports,
 } from "@/db/schema/comments";
 import { users } from "@/db/schema/auth";
-import { decodeCursor, encodeCursor, type Cursor } from "@/lib/comments/cursor";
+import { decodeCursor, encodeCursor } from "@/lib/comments/cursor";
 import { HOUR_MS } from "@/lib/comments/rate-limit";
 
 /**
@@ -65,11 +65,6 @@ export interface CommentPage {
   items: CommentRow[];
   nextCursor: string | null;
 }
-
-const AUTHOR_FIELDS = {
-  authorName: users.name,
-  authorImage: users.image,
-};
 
 /**
  * A tombstone tells the reader something was here and is gone; it must not
