@@ -293,6 +293,14 @@ ps aux | grep '[n]ext-server' | awk '{print $2}' | xargs -r kill -9
 rm -rf .next
 ```
 
+**The container's clone is shallow.** `git log` shows roughly the last 70
+commits and nothing before them, which is enough to make a confident, wrong
+statement about this repository's history — including that `jayemscript`'s
+commits are missing and their authorship was rewritten. They are not and it was
+not: all 14 are present, and `git fetch --unshallow` (a few seconds) shows
+them. Check `git rev-parse --is-shallow-repository` before concluding anything
+from history, blame, or an author count.
+
 The owner uses **Neon**; keep container testing on local Postgres. Migrations
 are applied locally by you and **to Neon by the owner**, when they are ready.
 
