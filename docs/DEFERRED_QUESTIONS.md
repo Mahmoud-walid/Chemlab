@@ -655,24 +655,39 @@ conditions together, not one: Cloudinary's sanitisation on, **and** SVG served
 from a separate origin, so that a sanitiser bypass is not same-origin with the
 app.
 
-### Q43 — what is a normal account's storage quota?
+### Q43 — what is a normal account's storage quota? — **RESOLVED**
 
-**Needed before:** the quota check in the sign endpoint is meaningful.
+**Answered 2026-09-21: two numbers.** 2 GB for accounts holding
+`media:create`, 10 MB for everybody else. They live in
+`MEDIA_QUOTA_BYTES` (`lib/media/quota.ts`).
 
-`user_media_quota.bytes_limit` is deliberately `NOT NULL` with **no default**:
-a number invented here would be a policy decided by whoever typed fastest, and
-a wrong one is either an author blocked mid-lesson or a free tier consumed by
-one account.
+One number could not serve both populations. An author illustrating ten
+lessons at five images each is in the low hundreds of megabytes before anybody
+calls it excessive; a normal account's only upload is its own avatar, capped
+at 2 MB. Small enough for a reader is an author blocked mid-lesson; generous
+enough for an author is a gigabyte handed to anybody who can complete a
+sign-up form.
 
-It needs a number. What informs it: an avatar is capped at 2 MB, a lesson image
-at 10 MB, a video at 200 MB — so an author who writes ten illustrated lessons
-is in the low hundreds of megabytes, and one who adds video is not.
+**2 GB** is roughly 200 illustrated lessons at the 10 MB image cap, or ten
+videos at the 200 MB cap — far enough from the working range that an author
+never plans around it. **10 MB** is five avatars, deliberately not one:
+replacing a picture writes the new file before the old is reclaimed, so a
+limit of exactly one avatar would refuse the first change and read as a bug.
 
-**Recommendation:** two numbers, not one. A generous limit for the roles that
-hold `media:create` (authors), and a small one for everybody else, since a
-normal account's only upload today is an avatar.
+The default is keyed off **`media:create`**, not off a role name. Roles are
+data here and a deployment may define its own; a permission is what the rest
+of the authorisation layer already reasons about.
 
----
+`bytes_limit` stays `NOT NULL` with no database default. A row means somebody
+was given a specific allowance; its absence means the platform default
+applies, and `defaultQuotaBytes()` is where that is decided in the open rather
+than in a schema nobody re-reads.
+
+**What is still blocked on Cloudinary (Q3):** the enforcement. `checkQuota()`
+is pure and takes the running total as an argument; reading and incrementing
+`bytes_used` belongs in the sign and confirm endpoints, and it has to be one
+transaction — two uploads that check at the same moment would otherwise both
+pass and overrun the quota together.
 
 ### Q44 — do previews share the production Cloudinary account? — **RESOLVED: yes**
 
