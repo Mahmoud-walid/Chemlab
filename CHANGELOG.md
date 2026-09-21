@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.26.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.25.3...v0.26.0) (2026-09-21)
+
+
+### Features
+
+* **media:** the storage quota policy, minus the enforcement ([#138](https://github.com/Mahmoud-walid/Chemlab/issues/138)) ([23e1eb8](https://github.com/Mahmoud-walid/Chemlab/commit/23e1eb8a8b9be4de7c8b0002a535eda29b1e4c60))
+
+
+### Documentation
+
+* record the owner's answers to Q41, Q42 and Q44 ([#136](https://github.com/Mahmoud-walid/Chemlab/issues/136)) ([148c867](https://github.com/Mahmoud-walid/Chemlab/commit/148c867752ac9b126f5d52bc2ce5b1b22425fd42))
+
 ## [0.25.3](https://github.com/Mahmoud-walid/Chemlab/compare/v0.25.2...v0.25.3) (2026-09-21)
 
 
