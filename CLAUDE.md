@@ -346,17 +346,25 @@ three are waiting on a credential rather than on work.**
 (quiz option translations), `0024` (presence opt-in + audit anonymisation),
 `0025` (media tables). The owner applies them when ready.
 
-**One decision is waiting on the owner:** **Q43**, a normal account's storage
-quota. It needs an actual number, which is why it cannot be inferred —
-`user_media_quota.bytes_limit` is `NOT NULL` with no default on purpose, and a
-figure invented here would be a policy set by whoever typed fastest.
+**No decision is waiting on the owner.** Q41–Q44 were all answered on
+2026-09-21, which closes the deferred-questions backlog: every remaining item
+in the v1 plan is waiting on a **credential**, not on a decision and not on
+work.
 
-Q41, Q42 and Q44 were answered on 2026-09-21 and all three confirmed the
-current behaviour: video stays an `admin`/`editor` permission, SVG stays off
-the MIME allowlist, and previews share one Cloudinary account separated by
-`CLOUDINARY_UPLOAD_FOLDER`. Q44 creates one piece of future work —
-`scripts/media-gc.ts`, to delete `chemlab/preview-*` older than 30 days — which
-cannot be written until the Cloudinary account exists.
+Q41, Q42 and Q44 confirmed the current behaviour — video stays an
+`admin`/`editor` permission, SVG stays off the MIME allowlist, and previews
+share one Cloudinary account separated by `CLOUDINARY_UPLOAD_FOLDER`. **Q43**
+set the storage quotas: `MEDIA_QUOTA_BYTES` in `lib/media/quota.ts`, 2 GB for
+accounts holding `media:create` and 10 MB for everybody else, keyed off the
+permission rather than a role name because roles here are data.
+
+Two pieces of future work fall out of those answers, and neither can be
+written before the Cloudinary account exists: `scripts/media-gc.ts`, deleting
+`chemlab/preview-*` older than 30 days (Q44), and the quota's **enforcement**
+(Q43). `checkQuota()` is pure and takes the running total as an argument;
+reading and incrementing `bytes_used` belongs in the sign and confirm
+endpoints and has to be one transaction, or two uploads that check at the same
+moment both pass and overrun the quota together.
 
 Resolved recently and worth knowing: presence defaults to **`nobody`** (opt-in,
 Q39); the audit log is immutable **and** an audited actor can be deleted, via a
