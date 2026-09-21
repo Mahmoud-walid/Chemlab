@@ -90,33 +90,23 @@ reused, not duplicated.)
 identity attached, for no benefit here — the setting is narrower and expires
 with nothing.
 
-### Q4c. The licence swap dropped the original author's notice
+### Q4c. The licence swap dropped the original author's notice — **RESOLVED**
 
-`LICENSE.md` (MIT, © jayemscript) was deleted in #6/#7 and replaced with
-`LICENSE` (Apache 2.0). Two problems came with it, neither urgent but both
-worth closing:
+**Answered 2026-09-21: `Mahmoud-walid`, 2026.** Both halves are closed.
 
-**1. The Apache file still has the placeholder.** Line 189 reads
-`Copyright [yyyy] [name of copyright owner]` — the boilerplate was never filled
-in, so the licence currently names no owner at all. That is just an unfinished
-edit, and I can fix it as soon as you tell me the name and year to use.
+The Apache placeholder on line 189 now reads `Copyright 2026 Mahmoud-walid`,
+so the licence names an owner instead of naming nobody.
 
-**2. 14 of the 22 commits on `main` are still jayemscript's.** The periodic
-table, quiz section and lessons came to you under MIT, and MIT says its
-copyright notice "shall be included in all copies or substantial portions of
-the Software". You can licence **your own** contributions however you like, and
-MIT explicitly permits sublicensing — but the original notice is supposed to
-travel with the inherited code, and right now it does not exist anywhere in the
-repository.
+And a `NOTICE` file records that the periodic table, the quiz section and the
+original lessons originate from jayemscript's MIT-licensed _chemverse_,
+carrying the original notice text verbatim — recovered from `16dc131^:LICENSE.md`
+rather than retyped, so it is the notice that actually travelled with the code.
+`NOTICE` is Apache's own convention for exactly this, which is why the project
+keeps Apache 2.0 rather than reverting.
 
-**Recommendation:** keep Apache 2.0 for the project and add a `NOTICE` file —
-which is Apache's own convention for exactly this — recording that portions
-originate from jayemscript's MIT-licensed chemverse, with the original notice
-text. It costs one small file, removes the compliance question entirely, and
-credits the person whose code the app is largely built from.
-
-I have not done this unprompted because licensing is your call, not mine. Say
-the word and it is a five-minute PR.
+What this does not change: the 14 commits authored by `jayemscript` stay as
+they are. Section 1 of `CLAUDE.md` forbids rewriting them, and they are the
+record that the MIT grant happened.
 
 ### Q5. Who may register, and is email verification required?
 
