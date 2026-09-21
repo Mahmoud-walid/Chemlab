@@ -346,10 +346,17 @@ three are waiting on a credential rather than on work.**
 (quiz option translations), `0024` (presence opt-in + audit anonymisation),
 `0025` (media tables). The owner applies them when ready.
 
-**Four decisions are waiting on the owner**, recorded with recommendations as
-**Q41–Q44** in `docs/DEFERRED_QUESTIONS.md`: whether a normal account may
-upload video, whether SVG is ever allowed, what a storage quota is, and whether
-previews share the production Cloudinary account.
+**One decision is waiting on the owner:** **Q43**, a normal account's storage
+quota. It needs an actual number, which is why it cannot be inferred —
+`user_media_quota.bytes_limit` is `NOT NULL` with no default on purpose, and a
+figure invented here would be a policy set by whoever typed fastest.
+
+Q41, Q42 and Q44 were answered on 2026-09-21 and all three confirmed the
+current behaviour: video stays an `admin`/`editor` permission, SVG stays off
+the MIME allowlist, and previews share one Cloudinary account separated by
+`CLOUDINARY_UPLOAD_FOLDER`. Q44 creates one piece of future work —
+`scripts/media-gc.ts`, to delete `chemlab/preview-*` older than 30 days — which
+cannot be written until the Cloudinary account exists.
 
 Resolved recently and worth knowing: presence defaults to **`nobody`** (opt-in,
 Q39); the audit log is immutable **and** an audited actor can be deleted, via a
