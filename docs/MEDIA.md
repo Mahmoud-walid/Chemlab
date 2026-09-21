@@ -99,7 +99,10 @@ a ten-minute upload rather than after.
 and it would be served from our own delivery domain — a stored one is a stored
 cross-site scripting payload waiting for a reader to open it directly.
 Cloudinary offers sanitisation; the safe default is not to accept the format.
-Recorded as Q42 in case lesson authors turn out to need vector diagrams.
+Confirmed as **Q42** (2026-09-21): SVG stays excluded. If an author does need
+a vector diagram it is reopened on two conditions together — Cloudinary's
+sanitisation on **and** SVG served from a separate origin, so a sanitiser
+bypass is not same-origin with the app.
 
 **Video has its own permission** because its cost profile is nothing like an
 image's. An image is transformed once and served from a CDN; a video is
@@ -107,7 +110,9 @@ transcoded per rendition and billed per viewer, so one lesson video watched by
 a class can outweigh every image on the platform. Splitting the permission
 means "may add pictures" is grantable without the line item that can end a free
 tier in an afternoon. `admin` and `editor` hold it; nobody else does, and
-whether a normal account ever should is Q41.
+**Q41** (2026-09-21) settled that nobody else should. Letting learners submit
+video would be a different feature — a moderated submission queue — not a wider
+grant on this permission.
 
 ## Why there are tables at all
 

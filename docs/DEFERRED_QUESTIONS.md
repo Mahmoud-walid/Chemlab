@@ -620,46 +620,40 @@ The alternatives, for the record: soft-deleting accounts was rejected because
 the entry and dropping the foreign key was rejected because the name would stop
 updating when somebody changes theirs.
 
-### Q41 — may a normal account upload video at all?
+### Q41 — may a normal account upload video at all? — **RESOLVED: no**
 
-**Needed before:** `media:upload_video` is granted to anything beyond `admin`
-and `editor`. Nothing is blocked today; the default is no.
+**Answered 2026-09-21: no.** `media:upload_video` stays with `admin` and
+`editor` only — the roles that write the lessons a video would go in.
 
 Video's cost profile is nothing like an image's. An image is transformed once
 and served from a CDN; a video is transcoded per rendition and billed per
-viewer, so **one** lesson video watched by a class can outweigh every image on
-the platform. That is why it is a separate permission rather than part of
-`media:create`.
+viewer, so one lesson video watched by a class can outweigh every image on the
+platform. That is why it is a separate permission rather than part of
+`media:create`: "may add pictures" stays grantable without the line item that
+can end a free tier in an afternoon.
 
-Today `admin` and `editor` hold it — the roles that write the lessons the video
-would go in — and nobody else does. Granting it more widely is a bandwidth
-decision with a bill attached, not a permissions tidy-up.
+No code changes: this confirms what `db/seed/rbac.ts` already seeds. If
+learners should ever submit video, that is a different feature — a moderated
+submission queue — and not a wider grant on this permission.
 
-**Recommendation:** leave it as is. If learners should be able to submit video
-at some point, that is a different feature (a moderated submission queue), not
-a wider grant on this one.
+### Q42 — should SVG uploads be permitted? — **RESOLVED: no**
 
----
-
-### Q42 — should SVG uploads be permitted?
-
-**Needed before:** SVG is added to the MIME allowlist. Currently excluded.
+**Answered 2026-09-21: no.** SVG stays off the MIME allowlist.
 
 An SVG is XML. It can carry `<script>`, and it would be served from our own
-delivery domain — so a stored SVG is a stored cross-site scripting payload,
+delivery domain — so a stored SVG is a stored cross-site-scripting payload,
 waiting for a reader to open the asset URL directly. Cloudinary offers
-sanitisation, but it is a setting that can be off, and "the safe default is not
-to accept the format" costs nothing while nobody has asked for it.
+sanitisation, but it is a setting that can be switched off, and refusing the
+format costs nothing while nobody has asked for it.
 
-The case for allowing it: chemistry diagrams are exactly the kind of thing that
-is drawn as vector art, and a rasterised diagram looks poor at every size it
-was not exported at.
+No code changes: `lib/media/constraints.ts` already lists exact MIME types
+rather than an `image/*` prefix, precisely so that `image/svg+xml` cannot
+arrive through a wildcard.
 
-**Recommendation:** keep it excluded until an author actually needs a vector
-diagram. If one does, turn Cloudinary's sanitisation on **and** serve SVG from
-a separate origin, so a sanitiser bypass is not same-origin with the app.
-
----
+**If an author does need a vector diagram**, this is reopened on two
+conditions together, not one: Cloudinary's sanitisation on, **and** SVG served
+from a separate origin, so that a sanitiser bypass is not same-origin with the
+app.
 
 ### Q43 — what is a normal account's storage quota?
 
@@ -680,26 +674,23 @@ normal account's only upload today is an avatar.
 
 ---
 
-### Q44 — do previews share the production Cloudinary account?
+### Q44 — do previews share the production Cloudinary account? — **RESOLVED: yes**
 
-**Needed before:** preview deployments are given Cloudinary credentials.
+**Answered 2026-09-21: yes — one account, separated by folder.** Each
+deployment sets its own `CLOUDINARY_UPLOAD_FOLDER` (`production`,
+`development`, `preview-pr-42`), which is what makes "delete everything this
+preview uploaded" a safe sentence: the tree is deletable by prefix in one
+call, and `belongsToEnvironment()` already refuses anything outside it.
 
-Two options. Share the production account with a distinct
-`CLOUDINARY_UPLOAD_FOLDER` per preview — one account, and the folder convention
-already keeps the trees separate and makes `chemlab/preview-*` deletable by
-prefix in one call. Or use a second, free Cloudinary account for
-non-production, so preview traffic cannot touch the production quota at all.
+The trade was quota against credentials. A second account would keep preview
+traffic off production's headroom, but preview volume is a handful of test
+uploads — not worth a second set of secrets to hold, rotate and get wrong.
 
-The trade is quota against credentials. Sharing means a preview's uploads and
-transformations are billed against production's headroom; separating means a
-second set of secrets to hold, rotate, and get wrong.
-
-**Recommendation:** share, with the folder prefix, plus
-`scripts/media-gc.ts` deleting `chemlab/preview-*` older than 30 days. Preview
-volume is a handful of test uploads; a second account is real operational
-weight for a small saving.
-
----
+**Outstanding work this creates**, once the Cloudinary account exists (Q3):
+`scripts/media-gc.ts`, deleting `chemlab/preview-*` older than 30 days. It
+cannot be written before then — a reclamation job that has never called
+Cloudinary is a guess, and the one mistake worth making impossible here is a
+preview's clean-up reaching production's assets.
 
 ## Per-issue open questions
 
