@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.25.3](https://github.com/Mahmoud-walid/Chemlab/compare/v0.25.2...v0.25.3) (2026-09-21)
+
+
+### Documentation
+
+* name the copyright owner and restore the original author's notice ([#135](https://github.com/Mahmoud-walid/Chemlab/issues/135)) ([e128def](https://github.com/Mahmoud-walid/Chemlab/commit/e128def3ccf1155726098ab43fcaccc5bce90275))
+
 ## [0.25.2](https://github.com/Mahmoud-walid/Chemlab/compare/v0.25.1...v0.25.2) (2026-09-08)
 
 
