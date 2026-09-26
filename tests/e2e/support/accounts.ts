@@ -1,5 +1,5 @@
 import { expect, type BrowserContext, type Page } from "@playwright/test";
-import { eq } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 
 import * as schema from "@/db/schema";
 import type { SeedDatabase } from "@/db/seed/connect";
@@ -169,11 +169,11 @@ const accountsByRole = new Map<string, string>();
  * same session rows the sign-in created. `auth.spec.ts` still drives the real
  * form and the real endpoint, so the sign-in path itself stays covered.
  *
- * One hazard to know about: a test that SIGNS OUT as a shared role deletes the
- * session row these cookies name, and the next test to reuse them would fail
- * somewhere far from the cause. No test does that today — `auth.spec.ts` signs
- * out of its own throwaway account — and one that needs to should sign in with
- * its own address rather than a shared role.
+ * The cache is checked against the SERVER before it is trusted — see
+ * `sessionIsLive`. That closes the hazard this comment used to warn about: a
+ * test that signs out as a shared role, or an admin revoking a session, used to
+ * leave cookies that looked fine locally and failed somewhere far from the
+ * cause.
  */
 const sessionCookies = new Map<string, Cookie[]>();
 
@@ -181,12 +181,18 @@ const sessionCookies = new Map<string, Cookie[]>();
 type Cookie = Awaited<ReturnType<BrowserContext["cookies"]>>[number];
 
 /**
- * Whether a set of cookies still contains a live session.
+ * Whether a set of cookies is worth REPLAYING at all.
  *
- * Cookies carry an expiry, and a worker running for several minutes can hold
- * one that has passed. Replaying an expired cookie lands on the sign-in page
- * with an error about the page under test, so the age is checked and a fresh
- * sign-in happens instead.
+ * Cookies carry an expiry, and a worker running for several minutes can hold one
+ * that has passed. Replaying an expired cookie lands on the sign-in page with an
+ * error about the page under test, so the age is checked first.
+ *
+ * This is a local check and cannot be more than that: a cookie's expiry says
+ * when the BROWSER will stop sending it, never whether the server still honours
+ * it. Sessions here are database rows, which is the whole reason they were
+ * chosen over stateless tokens — they can be revoked now rather than at expiry —
+ * so a perfectly unexpired cookie can name a row that is gone. `sessionIsLive`
+ * is the half that asks.
  */
 function stillValid(cookies: Cookie[]): boolean {
   if (cookies.length === 0) return false;
@@ -195,6 +201,81 @@ function stillValid(cookies: Cookie[]): boolean {
   return cookies.every(
     (cookie) => cookie.expires === -1 || cookie.expires > now + 30,
   );
+}
+
+/**
+ * The session token out of a Better Auth cookie jar, or null.
+ *
+ * The cookie's value is `<token>.<signature>`; the token is the part stored in
+ * `sessions.token`. Split on the FIRST dot only — the signature contains them,
+ * the token does not (32 URL-safe characters).
+ */
+function sessionTokenFrom(cookies: Cookie[]): string | null {
+  const cookie = cookies.find((candidate) =>
+    candidate.name.endsWith("session_token"),
+  );
+  if (!cookie) return null;
+  const token = decodeURIComponent(cookie.value).split(".")[0];
+  return token && token.length > 0 ? token : null;
+}
+
+/**
+ * Whether the cached cookies name a session row that is still live.
+ *
+ * The failure this exists for: `stillValid` passed, the cookies were replayed,
+ * the helper reported success, and the test ran on as an ANONYMOUS visitor —
+ * failing later on a selector that was never the problem. Anything that deletes
+ * the row does it: a sign-out as a shared role, an admin revoking a session, a
+ * reseeded database between runs.
+ *
+ * Asked of the DATABASE, and that is the whole point rather than an
+ * optimisation. The obvious implementation — call `/api/auth/get-session` and
+ * see whether it names a user — is WRONG here, and quietly: `cookieCache` is
+ * enabled with a five-minute window (`COOKIE_CACHE_SECONDS`), so that endpoint
+ * is served from the signed cookie without reading the database and keeps
+ * reporting a deleted session as live for up to five minutes. The helper would
+ * then hand back a session that works for the next few requests and dies
+ * mid-test, which is worse than the bug it replaced. Measured: written that way,
+ * the recovery test below still found zero session rows afterwards.
+ *
+ * The TOKEN is matched, not just "a session for this user exists". A user can
+ * hold several sessions, and the question is whether the one about to be
+ * replayed is alive — not whether some other one is.
+ *
+ * The email is joined in as well, so a cache that somehow held another account's
+ * cookies fails loudly here instead of running the test as the wrong person.
+ *
+ * Never throws: this is on the fast path of every `signInAs`, and a helper that
+ * fails while ASKING whether it needs to sign in has made things worse. Anything
+ * unexpected reads as "not live", which costs one sign-in.
+ */
+async function cachedSessionIsLive(
+  db: SeedDatabase,
+  cookies: Cookie[],
+  email: string,
+): Promise<boolean> {
+  const token = sessionTokenFrom(cookies);
+  if (!token) return false;
+
+  try {
+    const [row] = await db
+      .select({ id: schema.sessions.id })
+      .from(schema.sessions)
+      .innerJoin(schema.users, eq(schema.users.id, schema.sessions.userId))
+      .where(
+        and(
+          eq(schema.sessions.token, token),
+          eq(schema.users.email, email),
+          // Expiry checked in SQL rather than trusted from the cookie: the row
+          // is the authority on when the session ends.
+          gt(schema.sessions.expiresAt, new Date()),
+        ),
+      )
+      .limit(1);
+    return Boolean(row);
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -223,10 +304,21 @@ export async function signInAs(
   // A session this worker already established: replay its cookies rather than
   // spending another sign-in. This is the whole reason the suite stopped
   // tripping the rate limiter — see `sessionCookies` above.
+  //
+  // Replayed, then VERIFIED. The local expiry check is not enough on its own:
+  // sessions are database rows and can be revoked while the cookie still looks
+  // fine, and the helper reporting success for a dead cookie is how a test ends
+  // up running as an anonymous visitor and failing on an unrelated selector.
   const known = sessionCookies.get(roleKey);
   if (known && stillValid(known)) {
     await page.context().addCookies(known);
-    return email;
+    if (await cachedSessionIsLive(db, known, email)) return email;
+
+    // No `sessionCookies.delete` here on purpose. Every path below ends in
+    // `sessionCookies.set`, so clearing the entry first changes nothing —
+    // measured: removing a delete placed here failed no test, which is how it
+    // was found to be dead. A line whose comment claims a benefit it does not
+    // provide is worse than no line.
   }
 
   // Known to this worker already: the account exists, so sign in directly.
