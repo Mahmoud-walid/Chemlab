@@ -29,6 +29,39 @@ const lessonRows = (page: import("@playwright/test").Page) =>
 const quizRows = (page: import("@playwright/test").Page) =>
   page.getByRole("link", { name: /^start quiz:/i });
 
+/**
+ * Type into the search box, and be sure React received it.
+ *
+ * `fill()` sets the DOM value and dispatches an input event. If the page has
+ * not hydrated yet — and these pages are server-rendered, so they LOOK ready
+ * long before they are — nothing is listening, the value sits in the input and
+ * the list never changes. That failed once in the full suite under parallel
+ * load and passed every time in isolation, which is the shape of flake worth
+ * fixing at the cause rather than by widening a timeout.
+ *
+ * The clear button is the proof of hydration, because it is rendered from the
+ * state the keystroke was supposed to set. Retrying the fill until it appears
+ * is the only signal available: nothing else on the page distinguishes
+ * hydrated from not.
+ */
+async function search(
+  page: import("@playwright/test").Page,
+  text: string,
+  // The clear button's accessible name, which is translated — the Arabic page
+  // has no button called "Clear search", and defaulting silently would make
+  // this helper time out for fifteen seconds and report a hydration failure
+  // that never happened.
+  clearLabel: RegExp = /clear search/i,
+) {
+  const box = page.getByRole("searchbox");
+  await expect(async () => {
+    await box.fill(text);
+    await expect(page.getByRole("button", { name: clearLabel })).toBeVisible({
+      timeout: 1_000,
+    });
+  }).toPass({ timeout: 15_000 });
+}
+
 test.describe("the lesson catalogue", () => {
   test("starts at one page rather than the whole curriculum", async ({
     page,
@@ -101,7 +134,7 @@ test.describe("the lesson catalogue", () => {
     const revealed = await lessonRows(page).count();
     expect(revealed).toBeGreaterThan(LESSON_PAGE);
 
-    await page.getByRole("searchbox").fill("atom");
+    await search(page, "atom");
 
     const matches = await lessonRows(page).count();
     expect(matches).toBeGreaterThan(0);
@@ -110,7 +143,7 @@ test.describe("the lesson catalogue", () => {
 
   test("says so, quoting the query, when nothing matches", async ({ page }) => {
     await page.goto("/en/lessons");
-    await page.getByRole("searchbox").fill("zzzznotathing");
+    await search(page, "zzzznotathing");
 
     await expect(lessonRows(page)).toHaveCount(0);
     // "No lessons found" would read as an empty catalogue. The reader needs
@@ -120,22 +153,20 @@ test.describe("the lesson catalogue", () => {
 
   test("clearing the search brings the catalogue back", async ({ page }) => {
     await page.goto("/en/lessons");
-    const box = page.getByRole("searchbox");
-
-    await box.fill("zzzznotathing");
+    await search(page, "zzzznotathing");
     await expect(lessonRows(page)).toHaveCount(0);
 
     await page.getByRole("button", { name: /clear search/i }).click();
     await expect(lessonRows(page)).toHaveCount(LESSON_PAGE);
-    await expect(box).toHaveValue("");
+    await expect(page.getByRole("searchbox")).toHaveValue("");
   });
 
   test("Escape clears the search, as the native contract promises", async ({
     page,
   }) => {
     await page.goto("/en/lessons");
+    await search(page, "zzzznotathing");
     const box = page.getByRole("searchbox");
-    await box.fill("zzzznotathing");
     await box.press("Escape");
     await expect(box).toHaveValue("");
     await expect(lessonRows(page)).toHaveCount(LESSON_PAGE);
@@ -168,7 +199,7 @@ test.describe("the quiz catalogue", () => {
 
   test("searching finds a quiz by its title", async ({ page }) => {
     await page.goto("/en/quiz");
-    await page.getByRole("searchbox").fill("periodic");
+    await search(page, "periodic");
 
     const matches = quizRows(page);
     await expect(matches).toHaveCount(1);
@@ -207,12 +238,16 @@ test.describe("the Arabic catalogue", () => {
     });
     await expect(arabicRows).toHaveCount(LESSON_PAGE);
 
-    const box = page.getByRole("searchbox");
-    await box.fill("zzzznotathing");
+    // "\u0645\u0633\u062D \u0627\u0644\u0628\u062D\u062B" — clear search.
+    await search(
+      page,
+      "zzzznotathing",
+      /\u0645\u0633\u062D \u0627\u0644\u0628\u062D\u062B/,
+    );
     await expect(arabicRows).toHaveCount(0);
     await expect(page.getByText(/zzzznotathing/)).toBeVisible();
 
-    await box.press("Escape");
+    await page.getByRole("searchbox").press("Escape");
     await expect(arabicRows).toHaveCount(LESSON_PAGE);
   });
 });

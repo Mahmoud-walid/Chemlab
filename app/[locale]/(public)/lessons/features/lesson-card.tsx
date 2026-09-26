@@ -53,9 +53,16 @@ const LessonCard: React.FC<LessonCardProps> = ({
     >
       {/* The lesson number as a left rail. Hidden below `sm`, where the row is
           already narrow and the number is the least useful thing in it. */}
+      {/*
+        `text-muted-foreground`, not `/50` of it. Measured: at 50% opacity this
+        was 2.47:1 against the dark background where axe wants 3:1 for 24px
+        bold, and `tests/e2e/a11y-dark.spec.ts` failed on all six visible rows.
+        Decorative text is still text — `aria-hidden` excuses it from the
+        accessibility tree, not from being legible.
+      */}
       <span
         aria-hidden
-        className="hidden w-10 shrink-0 pt-0.5 font-serif text-2xl font-bold text-muted-foreground/50 tabular-nums transition-colors duration-150 group-hover:text-primary-text sm:block"
+        className="hidden w-10 shrink-0 pt-0.5 font-serif text-2xl font-bold text-muted-foreground tabular-nums transition-colors duration-150 group-hover:text-primary-text sm:block"
       >
         {/* Padded to two digits so the rail is a column and not a ragged edge,
             and kept in Latin digits to match the "1.1", "1.2" section numbers
