@@ -173,10 +173,36 @@ test.describe("the lesson catalogue", () => {
   });
 });
 
+/**
+ * Small enough that four quiz rows do not fit, plus the hook's lookahead.
+ *
+ * `useInfiniteReveal` observes the sentinel with `rootMargin: "600px"`, so it
+ * reveals the next page while the sentinel is still 600px BELOW the fold. Only
+ * six quizzes are seeded against a page size of four, so at the default
+ * 1280x720 the sentinel lands around y=981 — inside 720+600 — and the second
+ * page is revealed before the first assertion can see the first. The test then
+ * passes or fails on whether its first poll beats the observer callback.
+ *
+ * Measured, so the numbers are not folklore: at 1280x720 the page renders all
+ * 6 rows with the sentinel already gone. Sentinel top against the 600px
+ * trigger line — 1280x720: reveals everything. 1280x360: +21px. 390x640: +3px.
+ * **390x400: +239px**, which is the one with room to survive a padding change.
+ *
+ * A real phone is the awkward case rather than an extreme one: 390x640 clears
+ * it by three pixels. That is worth knowing before anybody trims the seed or
+ * the row height — not a reason to widen this, a reason it is pinned.
+ *
+ * The lesson catalogue needs none of this: 14 items against a page size of 6
+ * put its sentinel at y=1529, clear of 720+600 by 209px, which is why those
+ * tests have never flaked.
+ */
+const QUIZ_REVEAL_VIEWPORT = { width: 390, height: 400 };
+
 test.describe("the quiz catalogue", () => {
   test("starts at one page and has no previous/next buttons", async ({
     page,
   }) => {
+    await page.setViewportSize(QUIZ_REVEAL_VIEWPORT);
     await page.goto("/en/quiz");
     await expect(quizRows(page)).toHaveCount(QUIZ_PAGE);
     // Pagination is gone, not hidden.
@@ -186,6 +212,7 @@ test.describe("the quiz catalogue", () => {
   });
 
   test("reveals the rest as the reader scrolls", async ({ page }) => {
+    await page.setViewportSize(QUIZ_REVEAL_VIEWPORT);
     await page.goto("/en/quiz");
     await expect(quizRows(page)).toHaveCount(QUIZ_PAGE);
 
