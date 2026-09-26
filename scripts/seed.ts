@@ -11,6 +11,7 @@
  * is transactional and PgBouncer in transaction mode cannot hold what it needs.
  */
 import "@/lib/load-env";
+import { describeError } from "@/lib/describe-error";
 import { eq, sql } from "drizzle-orm";
 import * as schema from "@/db/schema";
 import { connect, seedUrl } from "@/db/seed/connect";
@@ -348,7 +349,7 @@ async function main() {
     console.log("\nverified");
   } catch (error) {
     console.error("Seed failed; the transaction was rolled back.");
-    console.error(error instanceof Error ? error.message : String(error));
+    console.error(describeError(error));
     process.exit(1);
   } finally {
     await close();

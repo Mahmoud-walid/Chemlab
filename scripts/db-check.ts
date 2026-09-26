@@ -7,6 +7,7 @@
  * against either driver — see `db/driver.ts`.
  */
 import "@/lib/load-env";
+import { describeError } from "@/lib/describe-error";
 import { neon } from "@neondatabase/serverless";
 import { Pool } from "pg";
 import { driverFor } from "@/db/driver";
@@ -69,7 +70,7 @@ async function main() {
   } catch (error) {
     // Deliberately not echoing the URL: it carries the password inline.
     console.error("Could not reach the database.");
-    console.error(error instanceof Error ? error.message : String(error));
+    console.error(describeError(error));
     process.exit(1);
   } finally {
     await pool?.end();

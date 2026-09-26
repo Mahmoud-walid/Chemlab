@@ -9,6 +9,7 @@
  * migrations as its own deliberate step.
  */
 import "@/lib/load-env";
+import { describeError } from "@/lib/describe-error";
 import { neon } from "@neondatabase/serverless";
 import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
 import { migrate as migrateNeon } from "drizzle-orm/neon-http/migrator";
@@ -52,7 +53,7 @@ async function main() {
   } catch (error) {
     // Never echo the URL: it carries the password inline.
     console.error("Migration failed.");
-    console.error(error instanceof Error ? error.message : String(error));
+    console.error(describeError(error));
     process.exit(1);
   }
 }

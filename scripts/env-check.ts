@@ -8,6 +8,7 @@
  * whether each is present, and enough shape to debug a typo.
  */
 import "../lib/load-env";
+import { describeError } from "../lib/describe-error";
 import { parseEnv } from "../lib/env";
 import {
   authConfigured,
@@ -79,7 +80,7 @@ try {
   }
 } catch (error) {
   failed = true;
-  console.error(error instanceof Error ? error.message : String(error));
+  console.error(describeError(error));
 }
 
 heading("Server configuration");
@@ -123,7 +124,7 @@ if (!process.env.DATABASE_URL) {
     report(databaseDiagnostics(env));
   } catch (error) {
     failed = true;
-    console.error(error instanceof Error ? error.message : String(error));
+    console.error(describeError(error));
   }
 }
 
@@ -188,7 +189,7 @@ try {
   }
 } catch (error) {
   failed = true;
-  console.error(error instanceof Error ? error.message : String(error));
+  console.error(describeError(error));
 }
 
 heading("Integrations");
@@ -277,7 +278,7 @@ try {
   }
 } catch (error) {
   failed = true;
-  console.error(error instanceof Error ? error.message : String(error));
+  console.error(describeError(error));
 }
 
 heading("Leak check");
