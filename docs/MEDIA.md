@@ -17,11 +17,18 @@ In place today:
 - the environment variables, reported by `pnpm env:check` and the admin
   settings screen.
 
+- `db/queries/media-quota.ts` — the quota reservation, and the only part of the
+  enforcement that needed no account (see Quotas below).
+
 Not built: `POST /api/media/sign`, `POST /api/media/confirm`, the upload
 dropzone, the `next/image` Cloudinary loader, HLS video delivery, and
 `scripts/media-gc.ts`. Each of those can only be verified against a real
 account, and a signature endpoint that has never signed anything a real
 Cloudinary accepted is a guess with tests around it.
+
+The quota was listed here as blocked too, and that was wrong: the **endpoints**
+need the account, the transaction against `user_media_quota` needs Postgres and
+nothing else.
 
 ## The file never touches this server
 
@@ -113,6 +120,81 @@ tier in an afternoon. `admin` and `editor` hold it; nobody else does, and
 **Q41** (2026-09-21) settled that nobody else should. Letting learners submit
 video would be a different feature — a moderated submission queue — not a wider
 grant on this permission.
+
+## Quotas: the comparison is the easy half
+
+Two numbers, set by **Q43**: **2 GB** for accounts holding `media:create`, **10
+MB** for everybody else, in `MEDIA_QUOTA_BYTES` (`lib/media/quota.ts`). Keyed off
+the permission rather than a role name, because roles here are data and a
+deployment may define its own.
+
+`bytes_limit` is `NOT NULL` with no database default. A row means somebody was
+given a specific allowance; its absence means the platform default applies, and
+`defaultQuotaBytes()` is where that is decided in the open rather than in a
+schema nobody re-reads. `reserveQuota` writes the row on a first upload.
+
+**The dangerous part is not the arithmetic.** `checkQuota()` is pure and
+exhaustively unit-tested. What can actually go wrong is that the check and the
+increment are two steps: read the total, decide, add. Two uploads that read at
+the same moment both see room, both write, and the account ends up over its limit
+by the size of the second file — with correct arithmetic in both and no error
+anywhere.
+
+So `db/queries/media-quota.ts` locks the row with `for update`, calls
+`checkQuota()`, and writes inside the same transaction.
+
+- **Not one conditional `UPDATE`.** `set bytes_used = bytes_used + $n where
+bytes_used + $n <= bytes_limit` is atomic and shorter, and it writes the policy
+  a second time in SQL where it can drift from `checkQuota()` without either copy
+  looking wrong. A quota that disagrees with itself depending on which layer you
+  ask is worse than one round trip.
+- **`for update`, not `for update skip locked`.** The push queue and the
+  notification fan-out use `skip locked` because two drains must not claim the
+  same row. Here skipping would mean the second uploader proceeds _without having
+  seen_ the first one's increment, which is the overrun itself. Same clause,
+  opposite reasons.
+
+### Reserved at signing, settled at confirm
+
+The size at signing time is whatever the client claimed, because the file never
+touches this server and no other number exists yet. That is safe, and not
+because the claim is trusted: over-claiming only costs the claimant headroom,
+which `settleQuota` returns, and under-claiming is corrected against
+Cloudinary's **signed** response. The lie that matters — understating a file to
+slip past the quota — is undone at confirm rather than prevented at sign.
+
+`settleQuota` **can push an account over its limit, and must.** The file already
+exists by then; refusing the correction would leave the stored total lower than
+the bytes that really exist, which makes every later check wrong in the
+uploader's favour. It reports `overQuota` instead, so the next upload is refused
+and a deliberate overrun can be deleted.
+
+Both `releaseQuota` and `settleQuota` floor at zero. A negative total has no
+honest rendering and would read as free space on the next check — reachable by a
+confirm webhook that arrives twice, which is tested.
+
+### What the concurrency test had to become
+
+Worth recording, because two obvious versions of it were written, run against a
+mutant with the lock removed, and **passed**:
+
+- Two concurrent reservations that only fit one at a time: against local Postgres
+  two `Promise.all` calls usually complete sequentially, so the overrun never
+  happens.
+- A competing transaction holding the row to force the interleaving: also green
+  without the lock, because `reserveQuota` opens with `insert ... on conflict do
+nothing`, which probes the primary-key index and therefore blocks on the held
+  row by itself. The unlocked `select` then reads committed data and refuses
+  correctly — the insert was quietly acting as the barrier the test thought it
+  was providing.
+
+What catches it is the **lost update**: enough contenders that they really
+overlap, and an invariant no interleaving can satisfy by luck — the stored total
+must equal the bytes actually handed out. Eight contenders for five megabytes,
+and the mutant fails 5 runs out of 5.
+
+The daily upload count (`uploads_today`, `window_started_at`) is **not
+implemented** — no number has been chosen. See **Q45**.
 
 ## Why there are tables at all
 
