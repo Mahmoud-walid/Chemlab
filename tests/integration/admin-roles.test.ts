@@ -3,6 +3,7 @@ import { and, eq, inArray, notInArray, sql } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
 
 import { connect, seedUrl, type SeedDatabase } from "@/db/seed/connect";
+import { SEEDED_ROLE_KEYS } from "@/db/seed/authorization";
 import * as schema from "@/db/schema";
 import { SUPER_ADMIN_ROLE_KEY } from "@/db/schema/rbac";
 import { buildContext } from "@/lib/authz-core";
@@ -41,6 +42,16 @@ interface SeededRole extends RoleFacts {
 
 let byKey: Map<string, SeededRole>;
 
+/**
+ * The SEEDED roles only, by key from the spec.
+ *
+ * Not "every row in `roles`", which is what this read used to be. The table may
+ * legitimately hold roles somebody created at runtime — that is the entire point
+ * of authorization being data — and under a shuffled run it also holds whatever
+ * an earlier failing run of this very file left behind. Either way, assertions
+ * about system roles must not see them: "every role in the table is a system
+ * role" was a claim this file had no business making.
+ */
 async function loadRoles(): Promise<Map<string, SeededRole>> {
   const roles = await db
     .select({
@@ -49,7 +60,8 @@ async function loadRoles(): Promise<Map<string, SeededRole>> {
       isSystem: schema.roles.isSystem,
       isProtected: schema.roles.isProtected,
     })
-    .from(schema.roles);
+    .from(schema.roles)
+    .where(inArray(schema.roles.key, [...SEEDED_ROLE_KEYS]));
 
   const grants = await db
     .select({
@@ -106,7 +118,8 @@ describe("the seeded roles are what the rules were written against", () => {
   it("finds all five", () => {
     // Without this the assertions below would pass vacuously on an unseeded
     // database — `byKey.get("admin")!` on an empty map throws somewhere less
-    // informative.
+    // informative. Scoped to the seeded keys, so a custom role created by
+    // another test or by an operator cannot break it.
     expect([...byKey.keys()].sort()).toEqual([
       "admin",
       "editor",
@@ -239,6 +252,8 @@ describe("what a real Editor and Moderator may grant", () => {
 
 describe("editing a seeded role's grants", () => {
   it("is refused for every one of them, Super Admin included", () => {
+    // `byKey` holds only the seeded five, so this loop cannot pick up a custom
+    // role and then assert that a non-system role is a system role.
     // `db/seed/authorization.ts` reconciles each seeded role's grants on every
     // deploy. An edit here would work, look like it worked, and revert.
     for (const key of byKey.keys()) {
@@ -254,28 +269,57 @@ describe("editing a seeded role's grants", () => {
   });
 });
 
-describe("a custom role, end to end against Postgres", () => {
+/** A custom role this file owns, created and torn down by the block using it. */
+async function makeCustomRole(): Promise<{ id: string; key: string }> {
+  const id = uuidv7();
   const key = unique("custom_role").replace(/-/g, "_").toLowerCase();
-  let roleId: string;
+  await db
+    .insert(schema.roles)
+    .values({ id, key, name: "Custom", isSystem: false, isProtected: false });
+  return { id, key };
+}
 
-  it("can be created, and is neither system nor protected", async () => {
-    roleId = uuidv7();
-    await db.insert(schema.roles).values({
-      id: roleId,
-      key,
-      name: "Custom",
-      isSystem: false,
-      isProtected: false,
-    });
+async function dropCustomRole(id: string): Promise<void> {
+  await db.delete(schema.userRoles).where(eq(schema.userRoles.roleId, id));
+  await db.delete(schema.roles).where(eq(schema.roles.id, id));
+}
 
+/**
+ * Each test here owns its state, and that is a correction.
+ *
+ * The first version was four `it` blocks sharing a `roleId` that the FIRST one
+ * assigned — so every other test depended on running after it. CI shuffles both
+ * Vitest suites precisely to catch that, and it did: `role_id` arrived as
+ * `default`, Postgres refused the NOT NULL, and the job went red while the file
+ * passed locally every time in declaration order.
+ *
+ * CLAUDE.md §6 states the rule this broke — "if you add a test that only passes
+ * in one order, the shuffle is right and the test is wrong" — so the tests are
+ * what changed, not the shuffle.
+ */
+describe("a custom role, end to end against Postgres", () => {
+  let role: { id: string; key: string };
+
+  beforeAll(async () => {
+    role = await makeCustomRole();
+  });
+
+  afterAll(async () => {
+    await dropCustomRole(role.id);
+  });
+
+  it("is created as neither system nor protected", async () => {
     const [row] = await db
       .select({
         isSystem: schema.roles.isSystem,
         isProtected: schema.roles.isProtected,
       })
       .from(schema.roles)
-      .where(eq(schema.roles.id, roleId));
+      .where(eq(schema.roles.id, role.id));
 
+    // Neither, and both matter: `isSystem` would make the next `pnpm db:seed`
+    // reconcile grants it has no spec for, and `isProtected` would make the
+    // role undeletable by whoever just created it.
     expect(row).toEqual({ isSystem: false, isProtected: false });
   });
 
@@ -284,7 +328,7 @@ describe("a custom role, end to end against Postgres", () => {
       refusalsForPermissionEdit({
         actor: actorHolding(SUPER_ADMIN_ROLE_KEY),
         role: {
-          key,
+          key: role.key,
           permissionNames: [],
           isSystem: false,
           isProtected: false,
@@ -296,8 +340,15 @@ describe("a custom role, end to end against Postgres", () => {
 
   it("reconciles its grants to exactly the intended set", async () => {
     // The shape `setRolePermissions` uses: insert the wanted ones, delete
-    // everything else for this role. Run here against real SQL because the
+    // everything else for this role. Run against real SQL because the
     // `notInArray` half is where a wrong predicate silently keeps a grant.
+    //
+    // Starts by clearing, so the assertion does not depend on what any other
+    // test in this file left behind.
+    await db
+      .delete(schema.rolePermissions)
+      .where(eq(schema.rolePermissions.roleId, role.id));
+
     const wanted = ["audit:read", "activity:read"];
     const rows = await db
       .select({ id: schema.permissions.id })
@@ -308,13 +359,15 @@ describe("a custom role, end to end against Postgres", () => {
 
     await db
       .insert(schema.rolePermissions)
-      .values(wantedIds.map((permissionId) => ({ roleId, permissionId })))
+      .values(
+        wantedIds.map((permissionId) => ({ roleId: role.id, permissionId })),
+      )
       .onConflictDoNothing();
     await db
       .delete(schema.rolePermissions)
       .where(
         and(
-          eq(schema.rolePermissions.roleId, roleId),
+          eq(schema.rolePermissions.roleId, role.id),
           notInArray(schema.rolePermissions.permissionId, wantedIds),
         ),
       );
@@ -326,7 +379,7 @@ describe("a custom role, end to end against Postgres", () => {
         schema.permissions,
         eq(schema.permissions.id, schema.rolePermissions.permissionId),
       )
-      .where(eq(schema.rolePermissions.roleId, roleId));
+      .where(eq(schema.rolePermissions.roleId, role.id));
 
     expect(after.map((row) => row.name).sort()).toEqual([...wanted].sort());
 
@@ -337,7 +390,7 @@ describe("a custom role, end to end against Postgres", () => {
       .delete(schema.rolePermissions)
       .where(
         and(
-          eq(schema.rolePermissions.roleId, roleId),
+          eq(schema.rolePermissions.roleId, role.id),
           notInArray(schema.rolePermissions.permissionId, keep),
         ),
       );
@@ -345,49 +398,60 @@ describe("a custom role, end to end against Postgres", () => {
     const narrowed = await db
       .select({ permissionId: schema.rolePermissions.permissionId })
       .from(schema.rolePermissions)
-      .where(eq(schema.rolePermissions.roleId, roleId));
+      .where(eq(schema.rolePermissions.roleId, role.id));
     expect(narrowed.map((row) => row.permissionId)).toEqual(keep);
   });
 
   it("cannot be deleted while somebody holds it — the FK is RESTRICT", async () => {
+    // Its own role and its own holder, added and removed inside the test, so
+    // nothing outside it depends on the order this runs in.
+    const doomed = await makeCustomRole();
     const holder = await createUser(db, { name: "Custom role holder" });
     await db
       .insert(schema.userRoles)
-      .values({ userId: holder.id, roleId })
+      .values({ userId: holder.id, roleId: doomed.id })
       .onConflictDoNothing();
 
     // The rule layer refuses first, with a count the operator can act on.
     expect(
       refusalsForRoleDelete({
-        role: { key, permissionNames: [], isSystem: false, isProtected: false },
+        role: {
+          key: doomed.key,
+          permissionNames: [],
+          isSystem: false,
+          isProtected: false,
+        },
         holderCount: 1,
       }),
     ).toEqual(["has-holders"]);
 
     // And the database refuses the bypass. CASCADE here would silently strip
-    // access from everybody holding the role, which is the failure the
-    // RESTRICT exists to prevent.
+    // access from everybody holding the role, which is the failure the RESTRICT
+    // exists to prevent.
     await expect(
-      db.delete(schema.roles).where(eq(schema.roles.id, roleId)),
+      db.delete(schema.roles).where(eq(schema.roles.id, doomed.id)),
     ).rejects.toThrow();
 
-    await db
-      .delete(schema.userRoles)
-      .where(
-        and(
-          eq(schema.userRoles.userId, holder.id),
-          eq(schema.userRoles.roleId, roleId),
-        ),
-      );
+    await dropCustomRole(doomed.id);
   });
 
   it("deletes once nobody holds it, taking its grants with it", async () => {
-    await db.delete(schema.roles).where(eq(schema.roles.id, roleId));
+    const doomed = await makeCustomRole();
+    const [permission] = await db
+      .select({ id: schema.permissions.id })
+      .from(schema.permissions)
+      .where(eq(schema.permissions.name, "audit:read"));
+    await db
+      .insert(schema.rolePermissions)
+      .values({ roleId: doomed.id, permissionId: permission!.id })
+      .onConflictDoNothing();
+
+    await db.delete(schema.roles).where(eq(schema.roles.id, doomed.id));
 
     const roles = await db
       .select({ id: schema.roles.id })
       .from(schema.roles)
-      .where(eq(schema.roles.id, roleId));
+      .where(eq(schema.roles.id, doomed.id));
     expect(roles).toEqual([]);
 
     // `role_permissions.role_id` is CASCADE, unlike `user_roles.role_id`. The
@@ -396,7 +460,7 @@ describe("a custom role, end to end against Postgres", () => {
     const grants = await db
       .select({ permissionId: schema.rolePermissions.permissionId })
       .from(schema.rolePermissions)
-      .where(eq(schema.rolePermissions.roleId, roleId));
+      .where(eq(schema.rolePermissions.roleId, doomed.id));
     expect(grants).toEqual([]);
   });
 });
