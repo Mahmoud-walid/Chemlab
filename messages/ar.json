@@ -71,11 +71,6 @@
     },
     "subtitle": "اختبر معلوماتك في {count, plural, zero {لا اختبارات} one {اختبار واحد} two {اختبارين} few {# اختبارات} many {# اختبارًا} other {# اختبار}}",
     "questionCount": "{count, plural, zero {لا أسئلة} one {سؤال واحد} two {سؤالان} few {# أسئلة} many {# سؤالًا} other {# سؤال}}",
-    "pagination": {
-      "page": "صفحة {current} من {total}",
-      "previous": "الصفحة السابقة",
-      "next": "الصفحة التالية"
-    },
     "backToQuizzes": "العودة إلى الاختبارات",
     "result": "النتيجة",
     "correctOf": "{score} / {total} إجابة صحيحة",
@@ -127,7 +122,15 @@
     "answeredProgress": "الأسئلة المُجابة",
     "scoreProgress": "الدرجة: {percent} بالمئة",
     "questionPosition": "السؤال {current} من {total}",
-    "answeredCount": "{answered} مُجابة"
+    "answeredCount": "{answered} مُجابة",
+    "searchLabel": "ابحث في الاختبارات",
+    "searchPlaceholder": "ابحث في الاختبارات بالعنوان أو الموضوع أو التصنيف",
+    "clearSearch": "مسح البحث",
+    "noMatches": "لا نتائج تطابق «{query}».",
+    "noMatchesHint": "جرّب كلمة واحدة أقصر، أو امسح البحث لعرض كل الاختبارات.",
+    "loadMore": "عرض {count, plural, zero {لا اختبارات} one {اختبار واحد إضافي} two {اختبارين إضافيين} few {# اختبارات إضافية} many {# اختبارًا إضافيًا} other {# اختبار إضافي}}",
+    "quizCount": "{count, plural, zero {لا اختبارات} one {اختبار واحد} two {اختباران} few {# اختبارات} many {# اختبارًا} other {# اختبار}}",
+    "filterLabel": "تصفية"
   },
   "lessons": {
     "title": "الدروس",
@@ -161,7 +164,13 @@
     "shareCopied": "تم نسخ الرابط",
     "shareFailed": "تعذّرت المشاركة. انسخ الرابط:",
     "signInToLike": "سجّل الدخول للإعجاب بالدروس وحفظها.",
-    "engagementFailed": "لم تُنفَّذ العملية. حاول مرة أخرى."
+    "engagementFailed": "لم تُنفَّذ العملية. حاول مرة أخرى.",
+    "searchLabel": "ابحث في الدروس",
+    "searchPlaceholder": "ابحث في الدروس بالعنوان أو الموضوع أو التصنيف",
+    "clearSearch": "مسح البحث",
+    "noMatches": "لا نتائج تطابق «{query}».",
+    "noMatchesHint": "جرّب كلمة واحدة أقصر، أو امسح البحث لعرض المقرَّر كاملًا.",
+    "loadMore": "عرض {count, plural, zero {لا دروس} one {درس واحد إضافي} two {درسين إضافيين} few {# دروس إضافية} many {# درسًا إضافيًا} other {# درس إضافي}}"
   },
   "element": {
     "atomicNumber": "العدد الذري",
