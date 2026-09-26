@@ -113,13 +113,13 @@ protects nothing and looks exactly like one that works. So:
 
 ## Starting roles
 
-| Role        | Key           | What it is                                                          |
-| ----------- | ------------- | ------------------------------------------------------------------- |
-| Super Admin | `super_admin` | Everything, implicitly. Protected and undeletable.                  |
-| Admin       | `admin`       | Runs the platform day to day; cannot redefine authorization itself. |
-| Editor      | `editor`      | Writes and publishes content. No users, roles or settings.          |
-| Moderator   | `moderator`   | Comments and the people who wrote them, nothing else.               |
-| Member      | `member`      | Every signed-up visitor. No admin permissions.                      |
+| Role        | Key           | What it is                                                                        |
+| ----------- | ------------- | --------------------------------------------------------------------------------- |
+| Super Admin | `super_admin` | Everything, implicitly. Protected and undeletable.                                |
+| Admin       | `admin`       | Runs the platform day to day. Defines roles, out of permissions it already holds. |
+| Editor      | `editor`      | Writes and publishes content. No users, roles or settings.                        |
+| Moderator   | `moderator`   | Comments and the people who wrote them, nothing else.                             |
+| Member      | `member`      | Every signed-up visitor. No admin permissions.                                    |
 
 A user may hold several roles; their effective permissions are the **union**.
 
@@ -183,9 +183,18 @@ first one.
 ## The admin screens
 
 `/admin/roles` needs `role:read`; each action inside needs its own permission.
-Today only Super Admin holds `role:create`, `role:update` and `role:delete` —
-`db/seed/rbac.ts` gives Admin `role:read` and `role:assign`, so an Admin can
-staff the roles that exist without being able to invent one.
+**Admin holds `role:create`, `role:update`, `role:delete` and `role:assign`** —
+it can define roles, not only staff the ones that exist.
+
+That does not make Admin a Super Admin in instalments, and the reason is the
+ceiling rather than the gate: every path that puts a permission somewhere —
+granting a role, editing a role's grants, cloning a role — refuses anything the
+actor does not hold themselves, and `super_admin` by key. So the most powerful
+role an Admin can create is one exactly as powerful as an Admin.
+
+What widening Admin deliberately did **not** include is the three permissions no
+role holds by default. They stay runtime grants, and three e2e specs assert the
+panel offers nothing without them.
 
 Assigning happens on the person, at `/admin/users/<id>`, because "what can this
 account do" is a question about the account.
@@ -222,7 +231,29 @@ silently revert. The form is absent and the screen says where the answer lives.
 Change a system role in `db/seed/rbac.ts` and re-seed.
 
 Custom roles created at runtime are `is_system: false`, which the seed
-deliberately never touches, so their grants **are** editable.
+deliberately never touches, so their grants **are** editable — and so are their
+name and description. A system role's name is not: `roles_protect_system` freezes
+only the key, so the database would accept the rename and
+`db/seed/authorization.ts` would put the spec's name back on the next deploy with
+nothing reporting it. Same trap as the grants, same answer.
+
+### Cloning is how a system role's power becomes customisable
+
+Since a system role's own grants cannot be edited, "Editor, plus hard delete" has
+to be a **copy**: the new role starts with the source's grants and is a custom
+role the seed never reconciles. Without it that role is sixteen boxes ticked by
+hand with one of them silently forgotten.
+
+Cloning carries the same ceiling as granting, and it has to: a copy that took
+grants the actor does not hold would mint exactly the role they may not hand out,
+and `refusalsForAssign` would then permit handing it out, because by that point
+the permissions belong to the new role.
+
+Cloning `super_admin` needs no special case — it holds no grant rows, so the copy
+is an empty role. The short-circuit lives on the key and does not travel.
+
+This is also the documented route to the three permissions no role holds by
+default: put them on a custom role, and assign that.
 
 Super Admin gets no checkbox list at all: rendering 53 ticked boxes would
 suggest the power comes from those rows and that unticking one removes it, which

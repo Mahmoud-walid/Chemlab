@@ -8,7 +8,24 @@ import { createRole } from "../actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "@/components/ui/sonner";
+
+/** A role this reader may copy the grants of. */
+export interface CloneSource {
+  id: string;
+  name: string;
+  grantCount: number;
+}
+
+/** The sentinel for "no source". An empty string cannot be a Select value. */
+const NO_SOURCE = "none";
 
 /**
  * Creating a role.
@@ -18,14 +35,21 @@ import { toast } from "@/components/ui/sonner";
  * the opposite of the page switches — a deliberate act with a permanent part to
  * it, which deserves a button and a round trip.
  *
- * The new role starts with no grants. That is not an omission: creating a role
- * and deciding what it may do are separate decisions with separate permissions
- * (`role:create`, `role:update`), and a form that did both would let somebody
- * holding only the first do the second.
+ * Either empty, or cloned. Cloning is what makes a SYSTEM role's power
+ * customisable: its own grants cannot be edited, because the seed reconciles
+ * them on every deploy — so "Editor, plus hard delete" is otherwise sixteen
+ * boxes ticked by hand with one of them silently forgotten.
+ *
+ * The picker offers only sources this reader could grant in full. A source
+ * holding more than they do is absent rather than listed-and-refused, and the
+ * action re-checks against a freshly-read role anyway.
  */
 export function CreateRoleForm({
   labels,
+  sources,
 }: {
+  /** Roles whose grants this reader may copy. Empty hides the picker. */
+  sources: CloneSource[];
   labels: {
     heading: string;
     key: string;
@@ -36,6 +60,9 @@ export function CreateRoleForm({
     submit: string;
     submitting: string;
     failed: string;
+    cloneLabel: string;
+    cloneNone: string;
+    cloneHint: string;
   };
 }) {
   const t = useTranslations("admin.roles");
@@ -44,11 +71,17 @@ export function CreateRoleForm({
   const [key, setKey] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [source, setSource] = useState<string>(NO_SOURCE);
 
   function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     startTransition(async () => {
-      const result = await createRole({ key, name, description });
+      const result = await createRole({
+        key,
+        name,
+        description,
+        copyFromRoleId: source === NO_SOURCE ? undefined : source,
+      });
 
       if (result.ok && result.roleId) {
         toast.success({
@@ -58,6 +91,7 @@ export function CreateRoleForm({
         setKey("");
         setName("");
         setDescription("");
+        setSource(NO_SOURCE);
         // Straight to the new role, because the next thing anybody wants is to
         // decide what it grants — and that lives on its own page.
         router.push(`/admin/roles/${result.roleId}`);
@@ -119,6 +153,31 @@ export function CreateRoleForm({
           onChange={(event) => setDescription(event.target.value)}
         />
       </div>
+
+      {sources.length > 0 && (
+        <div className="space-y-1.5">
+          <Label htmlFor="role-clone">{labels.cloneLabel}</Label>
+          <Select value={source} onValueChange={setSource} disabled={pending}>
+            <SelectTrigger id="role-clone" className="w-full sm:w-80">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_SOURCE}>{labels.cloneNone}</SelectItem>
+              {sources.map((candidate) => (
+                <SelectItem key={candidate.id} value={candidate.id}>
+                  {candidate.name}
+                  {candidate.grantCount > 0 && (
+                    <span className="ms-2 text-xs text-muted-foreground tabular-nums">
+                      {candidate.grantCount}
+                    </span>
+                  )}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">{labels.cloneHint}</p>
+        </div>
+      )}
 
       <Button type="submit" disabled={pending}>
         {pending ? labels.submitting : labels.submit}

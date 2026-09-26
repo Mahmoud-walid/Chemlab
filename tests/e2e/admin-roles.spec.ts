@@ -134,16 +134,36 @@ test.describe("what the roles screen says about a role", () => {
     ).toHaveCount(0);
   });
 
-  test("an admin is offered no New role form — that needs role:create", async ({
-    page,
-  }) => {
-    // `db/seed/rbac.ts` gives Admin `role:read` and `role:assign` only, so an
-    // Admin can staff the roles that exist without being able to invent one.
+  test("an admin IS offered the New role form", async ({ page }) => {
+    // Inverted deliberately. This test previously asserted the opposite,
+    // because `db/seed/rbac.ts` gave Admin `role:read` and `role:assign` only
+    // — so every variation the platform needed went through a Super Admin. The
+    // owner asked for that to change, so Admin now holds `role:create`,
+    // `role:update` and `role:delete`.
+    //
+    // The ceiling did NOT change, and that is what the next test checks: an
+    // Admin can define a role, but only out of permissions they already hold.
     await signInAs(page, db, "admin");
     await page.goto("/en/admin/roles");
     await expect(
       page.getByRole("button", { name: /create role/i }),
-    ).toHaveCount(0);
+    ).toBeVisible();
+  });
+
+  test("the clone picker offers system roles, which are otherwise read-only", async ({
+    page,
+  }) => {
+    // The point of cloning: a system role's own grants cannot be edited because
+    // the seed reconciles them every deploy, so the copy is the only way to get
+    // "Editor, plus one more thing".
+    await signInAs(page, db, "admin");
+    await page.goto("/en/admin/roles");
+
+    await page.getByRole("combobox", { name: /start from/i }).click();
+    await expect(page.getByRole("option", { name: /^Editor/ })).toBeVisible();
+    await expect(
+      page.getByRole("option", { name: /an empty role/i }),
+    ).toBeVisible();
   });
 });
 
@@ -252,5 +272,162 @@ test.describe("granting and revoking on a user", () => {
         return rows.map((row) => row.key);
       })
       .toContain("admin");
+  });
+});
+
+test.describe("an Admin defining a role", () => {
+  /** Roles this file creates, removed afterwards whatever the tests did. */
+  const created: string[] = [];
+
+  test.afterAll(async () => {
+    for (const key of created) {
+      const [role] = await db
+        .select({ id: schema.roles.id })
+        .from(schema.roles)
+        .where(eq(schema.roles.key, key));
+      if (!role) continue;
+      await db
+        .delete(schema.userRoles)
+        .where(eq(schema.userRoles.roleId, role.id));
+      await db.delete(schema.roles).where(eq(schema.roles.id, role.id));
+    }
+  });
+
+  test("clones Editor, then narrows the copy — the original untouched", async ({
+    page,
+  }) => {
+    await signInAs(page, db, "admin");
+    await page.goto("/en/admin/roles");
+
+    const key = `e2e_clone_w${process.env.TEST_WORKER_INDEX ?? "0"}_${Date.now()}`;
+    created.push(key);
+
+    await page.getByLabel(/^key$/i).fill(key);
+    await page.getByLabel(/display name/i).fill("Cloned editor");
+    await page.getByRole("combobox", { name: /start from/i }).click();
+    await page.getByRole("option", { name: /^Editor/ }).click();
+    await page.getByRole("button", { name: /create role/i }).click();
+
+    // Straight to the new role, because deciding what it grants is the next
+    // thing anybody wants.
+    await page.waitForURL(/\/admin\/roles\/[0-9a-f-]+/);
+
+    const [clone] = await db
+      .select({ id: schema.roles.id })
+      .from(schema.roles)
+      .where(eq(schema.roles.key, key));
+    expect(clone, "the clone was not written").toBeTruthy();
+
+    const grantsOf = async (roleId: string) => {
+      const rows = await db
+        .select({ name: schema.permissions.name })
+        .from(schema.rolePermissions)
+        .innerJoin(
+          schema.permissions,
+          eq(schema.permissions.id, schema.rolePermissions.permissionId),
+        )
+        .where(eq(schema.rolePermissions.roleId, roleId));
+      return rows.map((row) => row.name).sort();
+    };
+
+    const [editor] = await db
+      .select({ id: schema.roles.id })
+      .from(schema.roles)
+      .where(eq(schema.roles.key, "editor"));
+
+    const editorGrants = await grantsOf(editor!.id);
+    expect(await grantsOf(clone!.id)).toEqual(editorGrants);
+    expect(editorGrants.length).toBeGreaterThan(5);
+
+    // And the copy is editable where the original is not — the whole reason
+    // cloning exists.
+    await expect(
+      page.getByRole("button", { name: /save grants/i }),
+    ).toBeVisible();
+
+    const box = page.getByRole("checkbox", { name: /publish/ }).first();
+    await box.uncheck();
+    await page.getByRole("button", { name: /save grants/i }).click();
+
+    await expect
+      .poll(async () => (await grantsOf(clone!.id)).length)
+      .toBeLessThan(editorGrants.length);
+
+    // The original is untouched. A clone that edited its source would be the
+    // seed-revert trap wearing a different hat.
+    expect(await grantsOf(editor!.id)).toEqual(editorGrants);
+  });
+
+  test("renames its own role, and is offered no rename on a system one", async ({
+    page,
+  }) => {
+    await signInAs(page, db, "admin");
+    await page.goto("/en/admin/roles");
+
+    const key = `e2e_rename_w${process.env.TEST_WORKER_INDEX ?? "0"}_${Date.now()}`;
+    created.push(key);
+
+    await page.getByLabel(/^key$/i).fill(key);
+    await page.getByLabel(/display name/i).fill("Before");
+    await page.getByRole("button", { name: /create role/i }).click();
+    await page.waitForURL(/\/admin\/roles\/[0-9a-f-]+/);
+
+    await page.getByLabel(/display name/i).fill("After");
+    await page.getByRole("button", { name: /save name/i }).click();
+
+    await expect
+      .poll(async () => {
+        const [row] = await db
+          .select({ name: schema.roles.name })
+          .from(schema.roles)
+          .where(eq(schema.roles.key, key));
+        return row?.name;
+      })
+      .toBe("After");
+
+    // A system role offers no rename at all: the database would accept it and
+    // the next `pnpm db:seed` would silently put the spec's name back.
+    const [editor] = await db
+      .select({ id: schema.roles.id })
+      .from(schema.roles)
+      .where(eq(schema.roles.key, "editor"));
+    await page.goto(`/en/admin/roles/${editor!.id}`);
+    await expect(page.getByRole("button", { name: /save name/i })).toHaveCount(
+      0,
+    );
+  });
+
+  test("cannot clone its way past its own permissions", async ({ page }) => {
+    // The ceiling. `role:create` did not become "create anything": a source
+    // holding more than the Admin does is absent from the picker, and the action
+    // refuses it even if the id is posted directly.
+    await signInAs(page, db, "admin");
+
+    const key = `e2e_beyond_w${process.env.TEST_WORKER_INDEX ?? "0"}_${Date.now()}`;
+    created.push(key);
+
+    // A role holding something no seeded role holds, written directly — an
+    // operator with a Super Admin could have made this.
+    const [hardDelete] = await db
+      .select({ id: schema.permissions.id })
+      .from(schema.permissions)
+      .where(eq(schema.permissions.name, "lesson:delete_hard"));
+    const beyondId = crypto.randomUUID();
+    await db.insert(schema.roles).values({
+      id: beyondId,
+      key,
+      name: "Beyond an Admin",
+      isSystem: false,
+      isProtected: false,
+    });
+    await db
+      .insert(schema.rolePermissions)
+      .values({ roleId: beyondId, permissionId: hardDelete!.id });
+
+    await page.goto("/en/admin/roles");
+    await page.getByRole("combobox", { name: /start from/i }).click();
+    await expect(
+      page.getByRole("option", { name: /beyond an admin/i }),
+    ).toHaveCount(0);
   });
 });

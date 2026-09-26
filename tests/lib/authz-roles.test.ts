@@ -5,8 +5,10 @@ import {
   refusalsForAssign,
   refusalsForPermissionEdit,
   refusalsForRevoke,
+  refusalsForRoleClone,
   refusalsForRoleCreate,
   refusalsForRoleDelete,
+  refusalsForRoleRename,
   type RoleActor,
   type RoleFacts,
 } from "@/lib/authz-roles";
@@ -517,5 +519,113 @@ describe("creating a role", () => {
   it("caps the key length rather than letting the column decide", () => {
     expect(ROLE_KEY_PATTERN.test("a".repeat(39))).toBe(true);
     expect(ROLE_KEY_PATTERN.test("a".repeat(40))).toBe(false);
+  });
+});
+
+describe("renaming a role", () => {
+  it("accepts a new name on a custom role", () => {
+    expect(
+      refusalsForRoleRename({
+        role: role({ key: "auditor", isSystem: false }),
+        name: "Content auditor",
+      }),
+    ).toEqual([]);
+  });
+
+  it("refuses a system role, because the seed rewrites its name too", () => {
+    // The less obvious half of the seed problem. `roles_protect_system` freezes
+    // only the KEY, so the database would allow this rename — and
+    // `db/seed/authorization.ts` would put "Editor" back on the next deploy
+    // with nothing reporting it.
+    expect(
+      refusalsForRoleRename({
+        role: role({ isSystem: true }),
+        name: "Content editor",
+      }),
+    ).toContain("system-role");
+  });
+
+  it("refuses a blank name, whitespace included", () => {
+    expect(
+      refusalsForRoleRename({
+        role: role({ key: "auditor", isSystem: false }),
+        name: "   ",
+      }),
+    ).toEqual(["no-name"]);
+  });
+
+  it("does not consult the actor's own permissions — a label is not power", () => {
+    // Renaming is `role:update` and nothing more. Gating it on the grants would
+    // mean an Admin could not fix a typo on a role they can otherwise edit.
+    expect(
+      refusalsForRoleRename({
+        role: role({
+          key: "auditor",
+          isSystem: false,
+          permissionNames: ["audit:read"],
+        }),
+        name: "Auditor",
+      }),
+    ).toEqual([]);
+  });
+});
+
+describe("cloning a role", () => {
+  it("lets an Admin clone a role whose grants they hold", () => {
+    expect(
+      refusalsForRoleClone({
+        actor: adminActor,
+        source: role({ permissionNames: ["lesson:read", "lesson:create"] }),
+      }),
+    ).toEqual([]);
+  });
+
+  it("refuses a source granting more than the actor holds", () => {
+    // Without this, cloning launders the escalation: copy the grants into a new
+    // role, and `refusalsForAssign` then permits handing it out, because by
+    // then the permissions are the new role's own.
+    expect(
+      refusalsForRoleClone({
+        actor: adminActor,
+        source: role({
+          key: "auditor",
+          permissionNames: ["audit:read"],
+          isSystem: false,
+        }),
+      }),
+    ).toEqual(["would-escalate"]);
+  });
+
+  it("allows cloning super_admin, which copies nothing", () => {
+    // No special case needed: it holds no grant rows, so the copy is an empty
+    // role. The short-circuit lives on the KEY and does not travel.
+    expect(
+      refusalsForRoleClone({ actor: adminActor, source: SUPER_ADMIN }),
+    ).toEqual([]);
+  });
+
+  it("lets a Super Admin clone anything", () => {
+    expect(
+      refusalsForRoleClone({
+        actor: superAdminActor,
+        source: role({
+          key: "auditor",
+          permissionNames: ["audit:read", "lesson:delete_hard"],
+          isSystem: false,
+        }),
+      }),
+    ).toEqual([]);
+  });
+
+  it("allows cloning a SYSTEM role, unlike editing one", () => {
+    // The asymmetry is the point, and it is what makes a system role's power
+    // customisable at all: the seed reconciles the ORIGINAL, and the copy is a
+    // custom role it never touches.
+    expect(
+      refusalsForRoleClone({
+        actor: adminActor,
+        source: role({ isSystem: true, permissionNames: ["lesson:read"] }),
+      }),
+    ).toEqual([]);
   });
 });

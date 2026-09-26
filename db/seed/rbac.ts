@@ -374,7 +374,7 @@ export const ROLES: RoleSpec[] = [
     key: "admin",
     name: "Admin",
     description:
-      "Runs the platform day to day, but cannot redefine authorization itself.",
+      "Runs the platform day to day. Defines roles, but only out of permissions it already holds — and never Super Admin.",
     isSystem: true,
     isProtected: false,
     permissions: [
@@ -404,6 +404,20 @@ export const ROLES: RoleSpec[] = [
       p("user", "update"),
       p("role", "read"),
       p("role", "assign"),
+      // Authorization is data, so an Admin who cannot define a role has to ask
+      // a Super Admin for every variation the platform needs — and the answer
+      // is usually "a role like Editor, minus one permission". These three make
+      // that self-service.
+      //
+      // What an Admin still cannot do is grant a role more powerful than their
+      // own: `lib/authz-roles.ts` refuses any grant, edit or clone carrying a
+      // permission the actor does not hold, and `super_admin` by key. So the
+      // ceiling on what an Admin can create is exactly what an Admin already
+      // has, which is the property that keeps these three from being a
+      // Super Admin in instalments.
+      p("role", "create"),
+      p("role", "update"),
+      p("role", "delete"),
       p("permission", "read"),
       p("setting", "read"),
       p("setting", "update"),
