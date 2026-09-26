@@ -99,7 +99,12 @@ describe("message catalogues", () => {
     // branch this repository actually has; an Arabic-script example would
     // name a branch that does not exist, in a field where a pattern matching
     // nothing is the exact failure the validation exists to prevent.
-    key === "notifications.ci.branchesPlaceholder";
+    key === "notifications.ci.branchesPlaceholder" ||
+    // An example role KEY, in the field that takes a role key. Keys are
+    // `lower_snake_case` ASCII by `ROLE_KEY_PATTERN` — an Arabic-script example
+    // would show a value the field rejects, in a field whose whole difficulty is
+    // that the format is not obvious.
+    key === "admin.roles.create.keyPlaceholder";
 
   it("actually translates — Arabic values are not copies of the English", () => {
     const allowedIdentical = new Set(["locale.en", "locale.ar"]);

@@ -851,7 +851,9 @@
           "published": "Published",
           "page_toggled": "Opened or closed a page",
           "settings_changed": "Changed settings",
-          "exported": "Exported data"
+          "exported": "Exported data",
+          "role_assigned": "Granted a role",
+          "role_revoked": "Revoked a role"
         }
       },
       "export": "Export CSV",
@@ -1196,6 +1198,97 @@
       "apply": "Apply",
       "cancel": "Cancel",
       "confirmCountLabel": "Number of rows"
+    },
+    "roles": {
+      "title": "Roles and permissions",
+      "subtitle": "Authorization here is data, not code. These rows are what the server actually checks.",
+      "columns": {
+        "role": "Role",
+        "key": "Key",
+        "permissions": "Grants",
+        "holders": "Held by"
+      },
+      "badges": {
+        "system": "System",
+        "protected": "Protected",
+        "custom": "Custom"
+      },
+      "superAdminNote": "Super Admin holds no grant rows on purpose — its power is a short-circuit in the code, so unlinking a row cannot reduce it.",
+      "seedNote": "A system role's grants are declared in db/seed/rbac.ts and reconciled on every deploy, so they cannot be edited here — an edit would appear to work and then revert.",
+      "noPermissions": "No grants",
+      "permissionCount": "{count, plural, one {# grant} other {# grants}}",
+      "holderCount": "{count, plural, one {# person} other {# people}}",
+      "empty": "No roles exist. Run pnpm db:seed.",
+      "view": "Open {role}",
+      "backToRoles": "Back to roles",
+      "unheldNote": "Three permissions are held by no role on purpose: lesson:delete_hard, quiz:delete_hard and notification:subscribe_ci. A Super Admin grants them when they are needed.",
+      "holders": {
+        "heading": "Who holds it",
+        "none": "Nobody holds this role."
+      },
+      "grants": {
+        "heading": "What it grants",
+        "save": "Save grants",
+        "saving": "Saving…",
+        "saved": "Grants saved",
+        "failed": "Nothing was changed",
+        "selected": "{count} selected",
+        "selectAll": "Select every {resource} permission",
+        "clearAll": "Clear selection",
+        "implicit": "Everything, implicitly"
+      },
+      "create": {
+        "heading": "New role",
+        "key": "Key",
+        "keyHint": "lower_snake_case, starting with a letter. This is what code matches on and it cannot be changed later.",
+        "name": "Display name",
+        "description": "Description",
+        "submit": "Create role",
+        "submitting": "Creating…",
+        "created": "{name} created",
+        "failed": "The role was not created",
+        "keyPlaceholder": "content_auditor"
+      },
+      "remove": {
+        "action": "Delete role",
+        "confirmTitle": "Delete {role}?",
+        "confirmBody": "Its grants go with it. The audit log keeps a record of what it could do.",
+        "confirm": "Delete it",
+        "cancel": "Cancel",
+        "deleted": "{role} deleted",
+        "failed": "The role was not deleted"
+      },
+      "assign": {
+        "heading": "Roles",
+        "hint": "A person's effective permissions are the union of every role they hold.",
+        "add": "Grant a role",
+        "addPlaceholder": "Choose a role…",
+        "adding": "Granting…",
+        "assigned": "{role} granted",
+        "revoke": "Revoke {role}",
+        "revoking": "Revoking…",
+        "revoked": "{role} revoked",
+        "failed": "Nothing was changed",
+        "none": "This account holds no roles.",
+        "noneAssignable": "There is no role you can grant that this account does not already hold.",
+        "readOnly": "You can see these roles but not change them — that needs role:assign."
+      },
+      "refusals": {
+        "needs-super-admin": "Only a Super Admin can grant or revoke Super Admin.",
+        "would-escalate": "That role grants permissions you do not hold yourself.",
+        "already-held": "This account already holds that role.",
+        "not-held": "This account does not hold that role.",
+        "would-lock-out-self": "That would remove your own ability to change roles. Another holder of role:assign has to do it.",
+        "last-super-admin": "At least one Super Admin must always exist.",
+        "system-role": "A system role's grants come from db/seed/rbac.ts and are reconciled on every deploy.",
+        "unknown-permission": "That permission is not in the vocabulary. Run pnpm db:seed.",
+        "protected": "This role is protected and cannot be deleted.",
+        "has-holders": "People still hold this role. Revoke it from them first.",
+        "bad-key": "The key must be lower_snake_case and start with a letter.",
+        "key-taken": "A role with that key already exists.",
+        "no-name": "A display name is required.",
+        "gone": "That no longer exists. Reload the page."
+      }
     }
   },
   "pages": {
