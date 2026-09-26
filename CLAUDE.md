@@ -373,6 +373,19 @@ are applied locally by you and **to Neon by the owner**, when they are ready.
   calls, three executions. `--conditions=react-server` does not install the
   scope either. So integration tests really do re-read, which is what they
   need — but a query-count assertion cannot be made from there.
+- **The driver is picked from the hostname, so no suite here ever exercises the
+  one production uses.** `driverFor()` returns `node-postgres` for the container
+  and for CI and `neon` only for `*.neon.tech`. That is the gap that let
+  `db/client.ts` build its Neon handle on `drizzle-orm/neon-http`, whose
+  `.transaction()` **throws** `No transactions support in neon-http driver` —
+  while 34 call sites, exam submission and the whole admin write surface among
+  them, called exactly that. Every suite was green the entire time, because
+  `node-postgres` holds transactions fine. It is now
+  `drizzle-orm/neon-serverless` over a pooled WebSocket, the same driver
+  `db/seed/connect.ts` opens, and `tests/lib/db-transactions.test.ts` pins both
+  the refusal and the rule. The general lesson is the one in §4: **green here
+  and green in CI says nothing about the driver, or the Postgres major, that a
+  reader actually gets.**
 
 ---
 

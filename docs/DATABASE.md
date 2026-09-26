@@ -23,10 +23,39 @@ It matches on the host **suffix**: `neon.tech.example.com`, or the literal
 string appearing in a password or database name, is not Neon.
 
 Everything above the driver — schema, queries, migrations — is unchanged
-between the two. Neon's HTTP mode has no interactive multi-statement
-transactions, so use `drizzle-orm/neon-http` for single-shot queries and
-`drizzle-orm/neon-serverless` where a real transaction is needed (the seed
-script does).
+between the two.
+
+### Neon is opened over WebSocket, because a client is chosen once for everything
+
+Neon offers two transports and only one of them has a session, so only one of
+them can hold an interactive transaction. Drizzle is explicit about it rather
+than degrading: `.transaction()` on `drizzle-orm/neon-http` throws
+`No transactions support in neon-http driver`, before it connects, on every
+call.
+
+The tempting reading is that this is a per-query choice — HTTP for a single-shot
+read, `neon-serverless` where a transaction is needed. It is not, because
+`getDb()` returns **one** client and every caller shares it. So the decision is
+made once, for all of them, and it is settled by whichever caller needs the
+most: today thirty-four of them wrap writes in a transaction, including
+publishing a lesson, assigning a role, erasing a row, and submitting an exam.
+`db/client.ts` therefore builds the Neon handle on `drizzle-orm/neon-serverless`
+and a pooled WebSocket, the same driver `db/seed/connect.ts` opens for the seed
+and the integration tests.
+
+This was wrong once, and the way it stayed wrong is the part worth keeping:
+`driverFor()` reads the hostname, so the container and CI both get
+`node-postgres`, which holds transactions perfectly well. Every suite passed
+while the driver production actually used could not run any of those writes at
+all. `tests/lib/db-transactions.test.ts` is the guard — it pins the HTTP
+driver's refusal as a fact, so the rule is not folklore, and it fails if the
+app's client is moved back onto it.
+
+The cost is a WebSocket handshake on a cold invocation. It is a smaller trade
+than it looks: HTTP pays a round trip per statement, so a page taking five reads
+pays five, where the pool pays once and reuses the connection. If the read path
+is ever worth optimising, the shape is a second handle used explicitly — not a
+change to this one, which is load-bearing for every write.
 
 ## Local Postgres is the default for development
 
@@ -158,6 +187,30 @@ against the new schema:
 
 If a migration cannot be made backward-compatible, say so in the PR: that
 release cannot be rolled back by redeploying the previous tag.
+
+### A migration run is one transaction, on every driver
+
+Drizzle's shared Postgres migrator wraps the whole run in a single transaction
+and writes each migration's `__drizzle_migrations` row **inside** it, so a
+failure halfway rolls back the schema and the bookkeeping together and the run is
+simply retryable.
+
+`neon-http` is the one driver that cannot do this, and rather than failing it
+ships its own loop: every statement on its own, and all of the bookkeeping rows
+deferred until after the last one. That combination is worse than merely
+non-atomic. Three pending migrations with the third failing leaves one and two
+fully applied and _neither recorded_, so the next `pnpm db:migrate` replays them
+against a schema that already has them, every `CREATE TABLE` fails, and the way
+out is editing `__drizzle_migrations` by hand.
+
+`scripts/db-migrate.ts` therefore opens Neon on `neon-serverless` as well. The
+transport suits DDL for a second reason: a WebSocket is a real session, so it can
+hold the session-level locks that are the whole point of using the direct
+endpoint.
+
+None of this was visible from here. CI and the container resolve to
+`node-postgres`, which has been applying every migration transactionally and
+green all along; Neon was the only place without it.
 
 ## Building without a database
 
