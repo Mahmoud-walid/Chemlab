@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.27.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.26.1...v0.27.0) (2026-09-26)
+
+
+### Features
+
+* **catalogue:** infinite scroll, single-column rows and search on lessons and quizzes ([#143](https://github.com/Mahmoud-walid/Chemlab/issues/143)) ([860f412](https://github.com/Mahmoud-walid/Chemlab/commit/860f412e024c4c393716f324cfee7cc264e942d2))
+
 ## [0.26.1](https://github.com/Mahmoud-walid/Chemlab/compare/v0.26.0...v0.26.1) (2026-09-26)
 
 
