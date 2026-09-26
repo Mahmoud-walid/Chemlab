@@ -16,11 +16,15 @@ import { recordActivity } from "@/lib/activity/record";
 import { requirePermission } from "@/lib/authz";
 import {
   refusalsForPermissionEdit,
+  refusalsForRoleClone,
   refusalsForRoleCreate,
   refusalsForRoleDelete,
+  refusalsForRoleRename,
   type PermissionEditRefusal,
+  type RoleCloneRefusal,
   type RoleCreateRefusal,
   type RoleDeleteRefusal,
+  type RoleRenameRefusal,
 } from "@/lib/authz-roles";
 
 /**
@@ -57,23 +61,78 @@ function afterChange() {
   revalidatePath("/admin", "layout");
 }
 
+/**
+ * Creates a role, optionally copying another role's grants into it.
+ *
+ * The copy is what makes a SYSTEM role's power customisable at all. Its own
+ * grants cannot be edited — the seed reconciles them every deploy — so
+ * "Editor, plus hard delete" is otherwise sixteen boxes ticked by hand with one
+ * of them silently forgotten. Cloned, it is one box. It is also the documented
+ * route to the three permissions no role holds by default: put them on a custom
+ * role and assign that.
+ *
+ * `role:create` is the gate for both paths. The copy carries its own refusal,
+ * because copying grants the actor does not hold would mint exactly the role
+ * they may not hand out — and `refusalsForAssign` would then permit handing it
+ * out, since by that point the permissions are the new role's own.
+ */
 export async function createRole(input: {
   key: string;
   name: string;
   description: string;
-}): Promise<RoleMutationResult<RoleCreateRefusal>> {
+  /** A role to copy the grants of. Omit for an empty role. */
+  copyFromRoleId?: string;
+}): Promise<RoleMutationResult<RoleCreateRefusal | RoleCloneRefusal>> {
   const actor = await requirePermission("role:create");
 
   const key = input.key.trim().toLowerCase();
   const name = input.name.trim();
   const existing = await listRoles();
 
-  const refusals = refusalsForRoleCreate({
-    key,
-    name,
-    existingKeys: existing.map((role) => role.key),
-  });
+  const refusals: (RoleCreateRefusal | RoleCloneRefusal)[] =
+    refusalsForRoleCreate({
+      key,
+      name,
+      existingKeys: existing.map((role) => role.key),
+    });
+
+  const source = input.copyFromRoleId
+    ? existing.find((role) => role.id === input.copyFromRoleId)
+    : undefined;
+  if (input.copyFromRoleId && !source) return { ok: false, gone: true };
+
+  if (source) {
+    // Pushed onto the same list, not returned early: an operator who fixes the
+    // key and is then told the source is off limits has been made to discover
+    // the rules one round trip at a time.
+    refusals.push(
+      ...refusalsForRoleClone({
+        actor,
+        source: {
+          key: source.key,
+          permissionNames: source.permissionNames,
+          isSystem: source.isSystem,
+          isProtected: source.isProtected,
+        },
+      }),
+    );
+  }
+
   if (refusals.length > 0) return { ok: false, refusals };
+
+  // Resolved before the transaction: a name in the source's grant list with no
+  // row would mean the vocabulary and the database disagree, and a clone that
+  // silently copied the subset that exists would look like it worked.
+  const copiedIds =
+    source && source.permissionNames.length > 0
+      ? await getDb()
+          .select({ id: permissions.id })
+          .from(permissions)
+          .where(inArray(permissions.name, source.permissionNames))
+      : [];
+  if (source && copiedIds.length !== source.permissionNames.length) {
+    return { ok: false, refusals: ["unknown-permission"] };
+  }
 
   // Generated here rather than read back with `.returning({ … })`: the union of
   // the two drivers `getDb()` can return does not agree on that method's
@@ -95,13 +154,32 @@ export async function createRole(input: {
       isProtected: false,
     });
 
+    if (copiedIds.length > 0) {
+      await tx.insert(rolePermissions).values(
+        copiedIds.map((row) => ({
+          roleId: created,
+          permissionId: row.id,
+          grantedBy: actor.userId,
+        })),
+      );
+    }
+
     await tx.insert(auditLog).values({
       actorId: actor.userId,
       action: "role.create",
       targetType: "role",
       targetId: created,
       before: null,
-      after: { key, name, isSystem: false, isProtected: false },
+      after: {
+        key,
+        name,
+        isSystem: false,
+        isProtected: false,
+        // Named in the entry, because "role.create" alone would not say that
+        // this role arrived holding sixteen permissions.
+        clonedFrom: source?.key ?? null,
+        permissions: source ? [...source.permissionNames].sort() : [],
+      },
     });
   });
 
@@ -109,7 +187,7 @@ export async function createRole(input: {
     verb: "admin.created",
     objectType: "role",
     objectId: created,
-    metadata: { key },
+    metadata: { key, clonedFrom: source?.key ?? null },
   });
 
   afterChange();
@@ -208,6 +286,72 @@ export async function setRolePermissions(input: {
     objectType: "role",
     objectId: input.roleId,
     metadata: { key: role.key, permissions: next.length },
+  });
+
+  afterChange();
+  return { ok: true };
+}
+
+/**
+ * Changes a role's display name and description.
+ *
+ * `role:update`, same as its grants, and refused on system roles for the same
+ * reason — but the reason is less obvious here. `roles_protect_system` freezes
+ * the KEY only, so the database would happily accept this rename; what would
+ * undo it is `db/seed/authorization.ts`, which upserts `name` and `description`
+ * from the spec on every deploy. The edit would hold until then and quietly
+ * revert to "Editor" with nothing reporting it.
+ *
+ * The key is never editable, whatever the role: it is what code matches on
+ * (`SUPER_ADMIN_ROLE_KEY`, the seed's conflict target) and what a permission
+ * error names.
+ */
+export async function renameRole(input: {
+  roleId: string;
+  name: string;
+  description: string;
+}): Promise<RoleMutationResult<RoleRenameRefusal>> {
+  const actor = await requirePermission("role:update");
+
+  const all = await listRoles();
+  const role = all.find((candidate) => candidate.id === input.roleId);
+  if (!role) return { ok: false, gone: true };
+
+  const name = input.name.trim();
+  const description = input.description.trim() || null;
+
+  const refusals = refusalsForRoleRename({
+    role: {
+      key: role.key,
+      permissionNames: role.permissionNames,
+      isSystem: role.isSystem,
+      isProtected: role.isProtected,
+    },
+    name,
+  });
+  if (refusals.length > 0) return { ok: false, refusals };
+
+  await getDb().transaction(async (tx) => {
+    await tx
+      .update(roles)
+      .set({ name, description })
+      .where(eq(roles.id, input.roleId));
+
+    await tx.insert(auditLog).values({
+      actorId: actor.userId,
+      action: "role.rename",
+      targetType: "role",
+      targetId: input.roleId,
+      before: { name: role.name, description: role.description },
+      after: { name, description },
+    });
+  });
+
+  await recordActivity({
+    verb: "admin.updated",
+    objectType: "role",
+    objectId: input.roleId,
+    metadata: { key: role.key, renamed: true },
   });
 
   afterChange();

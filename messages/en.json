@@ -1288,6 +1288,22 @@
         "key-taken": "A role with that key already exists.",
         "no-name": "A display name is required.",
         "gone": "That no longer exists. Reload the page."
+      },
+      "clone": {
+        "label": "Start from",
+        "none": "Nothing — an empty role",
+        "hint": "Copies that role's grants into the new one. The original is untouched, which is how a system role's power becomes editable: the copy is yours to change.",
+        "from": "Cloned from {role}"
+      },
+      "rename": {
+        "heading": "Name and description",
+        "name": "Display name",
+        "description": "Description",
+        "save": "Save name",
+        "saving": "Saving…",
+        "saved": "Name saved",
+        "failed": "Nothing was changed",
+        "keyFrozen": "The key cannot be changed. Code matches on it, and a permission error names it."
       }
     }
   },

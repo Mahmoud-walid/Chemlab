@@ -11,6 +11,7 @@ import type { Locale } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
 import { DeleteRoleButton } from "../features/delete-role-button";
 import { GrantsEditor } from "../features/grants-editor";
+import { RenameRoleForm } from "../features/rename-role-form";
 
 export const dynamic = "force-dynamic";
 
@@ -96,6 +97,28 @@ export default async function AdminRoleDetailPage({
           )}
         </div>
       </div>
+
+      {/* Absent on a system role: the seed rewrites `name` and `description`
+          from the spec on every deploy, so the edit would hold until then and
+          quietly revert. The header above already shows both. */}
+      {canUpdate && !role.isSystem && (
+        <RenameRoleForm
+          roleId={role.id}
+          roleKey={role.key}
+          initialName={role.name}
+          initialDescription={role.description ?? ""}
+          labels={{
+            heading: t("rename.heading"),
+            name: t("rename.name"),
+            description: t("rename.description"),
+            save: t("rename.save"),
+            saving: t("rename.saving"),
+            saved: t("rename.saved"),
+            failed: t("rename.failed"),
+            keyFrozen: t("rename.keyFrozen"),
+          }}
+        />
+      )}
 
       <section className="space-y-3">
         <h2 className="font-semibold">{t("grants.heading")}</h2>

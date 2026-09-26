@@ -11,7 +11,9 @@ import {
   refusalsForAssign,
   refusalsForPermissionEdit,
   refusalsForRevoke,
+  refusalsForRoleClone,
   refusalsForRoleDelete,
+  refusalsForRoleRename,
   type RoleFacts,
 } from "@/lib/authz-roles";
 import { listRoles } from "@/db/queries/admin/roles";
@@ -138,6 +140,38 @@ describe("the seeded roles are what the rules were written against", () => {
 
   it("gives admin role:assign, which is what makes the rest of this file matter", () => {
     expect(byKey.get("admin")!.permissionNames).toContain("role:assign");
+  });
+
+  it("gives admin the role-management permissions", () => {
+    // Changed at the owner's request: Admin previously held `role:read` and
+    // `role:assign` only, so every role the platform needed went through a Super
+    // Admin. Asserted from the DATABASE rather than the spec, so a seed that
+    // failed to reconcile the new grants fails here rather than at runtime.
+    for (const permission of ["role:create", "role:update", "role:delete"]) {
+      expect(byKey.get("admin")!.permissionNames, permission).toContain(
+        permission,
+      );
+    }
+  });
+
+  it("still withholds the three permissions no role holds by default", () => {
+    // The ceiling on what widening Admin did NOT include. These three are
+    // documented in docs/PERMISSIONS.md as runtime grants, and three e2e specs
+    // assert the panel offers nothing without them. A seed edit that swept them
+    // in with the rest would break those tests; this one names them so the
+    // omission is deliberate rather than forgotten.
+    for (const permission of [
+      "lesson:delete_hard",
+      "quiz:delete_hard",
+      "notification:subscribe_ci",
+    ]) {
+      for (const [key, role] of byKey) {
+        expect(
+          role.permissionNames,
+          `${key} holds ${permission}`,
+        ).not.toContain(permission);
+      }
+    }
   });
 });
 
@@ -489,5 +523,98 @@ describe("revoking, with the real super_admin role", () => {
     // The count is read so the query shape is exercised too, not just asserted
     // on a literal.
     expect(Array.isArray(holders)).toBe(true);
+  });
+});
+
+describe("an Admin's ceiling, after gaining role:create", () => {
+  it("may clone any seeded role, because all of them are subsets of Admin", () => {
+    // Editor, Moderator and Member are subsets by construction; Super Admin
+    // holds no grant rows, so its copy is empty. Read from the database, so a
+    // permission added to Editor and not Admin fails here.
+    for (const key of byKey.keys()) {
+      expect(
+        refusalsForRoleClone({
+          actor: actorHolding("admin"),
+          source: byKey.get(key)!,
+        }),
+        key,
+      ).toEqual([]);
+    }
+  });
+
+  it("may not clone a role holding a permission it lacks", async () => {
+    // The laundering this closes: copy the grants into a new role, and
+    // `refusalsForAssign` would then permit handing it out, because by then the
+    // permissions belong to the new role.
+    const [held] = await db
+      .select({ name: schema.permissions.name })
+      .from(schema.permissions)
+      .where(eq(schema.permissions.name, "lesson:delete_hard"));
+    expect(held, "the catalogue has no lesson:delete_hard").toBeTruthy();
+
+    expect(
+      refusalsForRoleClone({
+        actor: actorHolding("admin"),
+        source: {
+          key: "beyond_admin",
+          permissionNames: [held!.name],
+          isSystem: false,
+          isProtected: false,
+        },
+      }),
+    ).toEqual(["would-escalate"]);
+  });
+
+  it("may not rename a seeded role, whatever it holds", () => {
+    // `roles_protect_system` permits this edit — it freezes the key only — so
+    // the refusal is the service layer's alone, and the thing it prevents is the
+    // next `pnpm db:seed` reverting the name with nothing reporting it.
+    for (const key of byKey.keys()) {
+      expect(
+        refusalsForRoleRename({ role: byKey.get(key)!, name: "Renamed" }),
+        key,
+      ).toContain("system-role");
+    }
+  });
+
+  it("can rename a role it created, and the database keeps it", async () => {
+    const created = await makeCustomRole();
+    try {
+      expect(
+        refusalsForRoleRename({
+          role: {
+            key: created.key,
+            permissionNames: [],
+            isSystem: false,
+            isProtected: false,
+          },
+          name: "Renamed",
+        }),
+      ).toEqual([]);
+
+      await db
+        .update(schema.roles)
+        .set({ name: "Renamed", description: "why it exists" })
+        .where(eq(schema.roles.id, created.id));
+
+      const [row] = await db
+        .select({
+          name: schema.roles.name,
+          description: schema.roles.description,
+          key: schema.roles.key,
+        })
+        .from(schema.roles)
+        .where(eq(schema.roles.id, created.id));
+
+      expect(row).toEqual({
+        name: "Renamed",
+        description: "why it exists",
+        // The key is untouched by a rename, which is the whole point of it being
+        // a separate column from the label.
+        key: created.key,
+      });
+    } finally {
+      await dropCustomRole(created.id);
+    }
   });
 });

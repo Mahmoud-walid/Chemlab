@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { listRoles } from "@/db/queries/admin/roles";
 import { requireAdminPermission } from "@/lib/admin/guard";
 import { hasPermission } from "@/lib/authz";
+import { refusalsForRoleClone } from "@/lib/authz-roles";
 import { SUPER_ADMIN_ROLE_KEY } from "@/db/schema/rbac";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
@@ -36,6 +37,29 @@ export default async function AdminRolesPage({
   const canCreate = hasPermission(actor, "role:create");
 
   const roles = await listRoles();
+
+  /**
+   * The roles this reader could copy in full.
+   *
+   * Filtered by the same pure rule the action re-applies, so a source holding
+   * more than they do is absent rather than offered and then refused. System
+   * roles are deliberately IN this list: the seed reconciles the original, never
+   * the copy, which is what makes their power customisable at all.
+   */
+  const cloneSources = canCreate
+    ? roles.filter(
+        (role) =>
+          refusalsForRoleClone({
+            actor,
+            source: {
+              key: role.key,
+              permissionNames: role.permissionNames,
+              isSystem: role.isSystem,
+              isProtected: role.isProtected,
+            },
+          }).length === 0,
+      )
+    : [];
 
   const t = await getTranslations("admin.roles");
 
@@ -139,7 +163,15 @@ export default async function AdminRolesPage({
             submit: t("create.submit"),
             submitting: t("create.submitting"),
             failed: t("create.failed"),
+            cloneLabel: t("clone.label"),
+            cloneNone: t("clone.none"),
+            cloneHint: t("clone.hint"),
           }}
+          sources={cloneSources.map((role) => ({
+            id: role.id,
+            name: role.name,
+            grantCount: role.permissionNames.length,
+          }))}
         />
       )}
     </div>

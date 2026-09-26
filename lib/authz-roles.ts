@@ -254,6 +254,81 @@ export function refusalsForRoleDelete({
   return refusals;
 }
 
+export type RoleRenameRefusal =
+  /** A seeded role: `pnpm db:seed` rewrites its name and description on deploy. */
+  | "system-role"
+  /** No display name. */
+  | "no-name";
+
+/**
+ * Whether the actor may change a role's display name and description.
+ *
+ * Refused on system roles for the same reason their grants are, and it is the
+ * less obvious half: `db/seed/authorization.ts` upserts `name` and
+ * `description` from `db/seed/rbac.ts` on every deploy, so a rename here would
+ * hold until the next one and then quietly revert to "Editor". The database
+ * trigger PERMITS this edit — `roles_protect_system` freezes only the key — so
+ * nothing would stop it or report it.
+ *
+ * Deliberately not gated on the actor's own permissions: a label is not power.
+ * `role:update` is the whole check.
+ */
+export function refusalsForRoleRename({
+  role,
+  name,
+}: {
+  role: RoleFacts;
+  name: string;
+}): RoleRenameRefusal[] {
+  const refusals: RoleRenameRefusal[] = [];
+  if (role.isSystem) refusals.push("system-role");
+  if (name.trim() === "") refusals.push("no-name");
+  return refusals;
+}
+
+export type RoleCloneRefusal =
+  /** The source grants something the actor does not hold. */
+  | "would-escalate"
+  /**
+   * A name in the source's grant list has no row.
+   *
+   * Reachable only when the vocabulary and the database disagree — `pnpm db:seed`
+   * has not run since a permission was added. Refused rather than copying the
+   * subset that does exist, which would look like it worked and produce a role
+   * quietly weaker than the one it was cloned from.
+   */
+  | "unknown-permission";
+
+/**
+ * Whether the actor may copy `source`'s grants into a new role.
+ *
+ * Cloning is how a system role's power becomes customisable without editing the
+ * system role — "Editor, plus hard delete" is a clone with one box ticked,
+ * where otherwise it is sixteen ticked by hand and one of them silently
+ * forgotten. It is also the documented route for the three permissions no role
+ * holds by default (`docs/PERMISSIONS.md`): put them on a custom role and
+ * assign that.
+ *
+ * Subject to the same ceiling as granting, and it has to be: a clone that
+ * copied grants the actor does not hold would mint exactly the role they are
+ * not allowed to hand out, and `refusalsForAssign` would then let them hand it
+ * out, because by then the permissions would be the new role's own.
+ *
+ * Cloning `super_admin` needs no special case — it holds no grant rows, so the
+ * copy is an empty role and the short-circuit does not travel with the key.
+ */
+export function refusalsForRoleClone({
+  actor,
+  source,
+}: {
+  actor: RoleActor;
+  source: RoleFacts;
+}): RoleCloneRefusal[] {
+  return grantsBeyondActor(actor, source.permissionNames)
+    ? ["would-escalate"]
+    : [];
+}
+
 /**
  * `lower_snake_case`, starting with a letter.
  *

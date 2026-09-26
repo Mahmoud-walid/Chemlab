@@ -215,11 +215,22 @@ permissions exist and who has them. Names are `resource:action`.
 
 **`role:assign` is only half of an authorization decision.** It answers whether
 somebody may touch roles at all, never _which_ — and an Admin holds it. The
-which is in `lib/authz-roles.ts`: no granting a role that grants more than you
-hold, `super_admin` only by a Super Admin, no revoking your own last
-`role:assign`, no removing the last Super Admin. A system role's grants are not
-editable through the admin UI at all, because `pnpm db:seed` reconciles them on
-every deploy and the edit would silently revert. See `docs/PERMISSIONS.md`.
+which is in `lib/authz-roles.ts`: no granting, editing or **cloning** a role
+that carries more than you hold, `super_admin` only by a Super Admin, no
+revoking your own last `role:assign`, no removing the last Super Admin.
+
+**Admin holds `role:create`, `role:update` and `role:delete`** (widened at the
+owner's request). That is safe because of the ceiling above, not because of the
+gate: the most powerful role an Admin can define is one exactly as powerful as
+an Admin. The three permissions no role holds by default were deliberately left
+out of that widening, and `tests/integration/admin-roles.test.ts` asserts they
+stay out.
+
+A system role's **grants, name and description** are all un-editable through the
+admin UI, because `pnpm db:seed` reconciles all three on every deploy and the
+edit would silently revert. The database only stops the key — the rest is the
+service layer's refusal. Cloning is the way round it: the copy is a custom role
+the seed never touches. See `docs/PERMISSIONS.md`.
 
 `requirePermission("lesson:publsh")` **throws** rather than denying. Denying
 would look exactly like a guard that works and stay invisible until somebody
