@@ -345,7 +345,21 @@ test.describe("an Admin defining a role", () => {
       page.getByRole("button", { name: /save grants/i }),
     ).toBeVisible();
 
-    const box = page.getByRole("checkbox", { name: /publish/ }).first();
+    // Targeted by the checkbox's id, not by a name regex.
+    //
+    // It was `getByRole("checkbox", { name: /publish/ }).first()`, and giving the
+    // Admin `lesson:delete_hard` broke it in the most quiet way available: that
+    // permission's DESCRIPTION reads "Erase a draft lesson that was never
+    // published", so `/publish/` matched it, and within the lesson group
+    // `delete_hard` sorts before `publish`. `.first()` then found a box the clone
+    // does not hold, `uncheck()` on an already-unchecked box is a no-op, and the
+    // grant count did not budge — a passing action with no effect.
+    //
+    // The id is `perm-<permission name>`, so this names exactly one permission.
+    // An attribute selector rather than `#perm-lesson:publish`, because the colon
+    // would need CSS escaping.
+    const box = page.locator('[id="perm-lesson:publish"]');
+    await expect(box).toBeChecked();
     await box.uncheck();
     await page.getByRole("button", { name: /save grants/i }).click();
 
@@ -406,12 +420,18 @@ test.describe("an Admin defining a role", () => {
     const key = `e2e_beyond_w${process.env.TEST_WORKER_INDEX ?? "0"}_${Date.now()}`;
     created.push(key);
 
-    // A role holding something no seeded role holds, written directly — an
+    // A role holding something the ADMIN does not hold, written directly — an
     // operator with a Super Admin could have made this.
-    const [hardDelete] = await db
+    //
+    // `user:impersonate`, not `lesson:delete_hard` as it was: the Admin holds
+    // that one now. It holds 49 of the 53 permissions, so the ceiling is only the
+    // four nothing implements — thin, but the rule has to keep holding at
+    // whatever the boundary is, and this is where it is proven from a browser.
+    const [beyondAdmin] = await db
       .select({ id: schema.permissions.id })
       .from(schema.permissions)
-      .where(eq(schema.permissions.name, "lesson:delete_hard"));
+      .where(eq(schema.permissions.name, "user:impersonate"));
+    expect(beyondAdmin, "the catalogue has no user:impersonate").toBeTruthy();
     const beyondId = crypto.randomUUID();
     await db.insert(schema.roles).values({
       id: beyondId,
@@ -422,7 +442,7 @@ test.describe("an Admin defining a role", () => {
     });
     await db
       .insert(schema.rolePermissions)
-      .values({ roleId: beyondId, permissionId: hardDelete!.id });
+      .values({ roleId: beyondId, permissionId: beyondAdmin!.id });
 
     await page.goto("/en/admin/roles");
     await page.getByRole("combobox", { name: /start from/i }).click();
