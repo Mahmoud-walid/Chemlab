@@ -154,23 +154,70 @@ describe("the seeded roles are what the rules were written against", () => {
     }
   });
 
-  it("still withholds the three permissions no role holds by default", () => {
-    // The ceiling on what widening Admin did NOT include. These three are
-    // documented in docs/PERMISSIONS.md as runtime grants, and three e2e specs
-    // assert the panel offers nothing without them. A seed edit that swept them
-    // in with the rest would break those tests; this one names them so the
-    // omission is deliberate rather than forgotten.
+  it("gives admin the three permissions that were once held by no role", () => {
+    // Inverted at the owner's decision. This asserted the opposite until now —
+    // that `lesson:delete_hard`, `quiz:delete_hard` and
+    // `notification:subscribe_ci` were held by NO role, which was the documented
+    // default and the reason three e2e specs granted them for a test's duration.
+    //
+    // In practice that meant whoever runs the platform could not clear a spam
+    // draft or see their own build alerts without a Super Admin. The
+    // interruptions that make an irreversible erase deliberate are unchanged and
+    // are where they belong: the typed slug in the dialog, and the server-side
+    // refusals for a commented or published item.
+    //
+    // Read from the DATABASE, not the spec, so a seed that failed to reconcile
+    // the new grants fails here rather than at runtime.
+    for (const permission of [
+      "lesson:delete_hard",
+      "quiz:delete_hard",
+      "notification:subscribe_ci",
+    ]) {
+      expect(byKey.get("admin")!.permissionNames, permission).toContain(
+        permission,
+      );
+    }
+  });
+
+  it("gives them to no OTHER seeded role", () => {
+    // Widening the Admin was one decision, not a general relaxation. The gate is
+    // exactly as strict for everybody else, which is what the e2e specs now
+    // assert against an editor.
     for (const permission of [
       "lesson:delete_hard",
       "quiz:delete_hard",
       "notification:subscribe_ci",
     ]) {
       for (const [key, role] of byKey) {
+        if (key === "admin" || key === SUPER_ADMIN_ROLE_KEY) continue;
         expect(
           role.permissionNames,
           `${key} holds ${permission}`,
         ).not.toContain(permission);
       }
+    }
+  });
+
+  it("still holds none of the four permissions nothing implements", () => {
+    // `user:delete`, `user:impersonate`, `permission:create` and
+    // `permission:delete` have no use sites in app/, lib/ or db/. Granting them
+    // would put a checkbox on a role that changes nothing, and
+    // `permission:create` is worse than unimplemented: `isKnownPermission` reads
+    // the vocabulary from `db/seed/rbac.ts`, so a permission created at runtime
+    // throws `UnknownPermissionError` the first time anything checks it.
+    //
+    // Asserted so the omission is a decision on the record rather than something
+    // nobody got round to — and so these four stay the ceiling the clone test
+    // below reaches for.
+    for (const permission of [
+      "user:delete",
+      "user:impersonate",
+      "permission:create",
+      "permission:delete",
+    ]) {
+      expect(byKey.get("admin")!.permissionNames, permission).not.toContain(
+        permission,
+      );
     }
   });
 });
@@ -546,11 +593,16 @@ describe("an Admin's ceiling, after gaining role:create", () => {
     // The laundering this closes: copy the grants into a new role, and
     // `refusalsForAssign` would then permit handing it out, because by then the
     // permissions belong to the new role.
+    //
+    // `user:impersonate`, not `lesson:delete_hard` as it was: the Admin holds
+    // that one now. It holds 49 of 53 permissions, so the ceiling is THIN — only
+    // the four nothing implements sit outside it. Thin is not absent, and the
+    // rule has to keep holding at whatever the boundary happens to be.
     const [held] = await db
       .select({ name: schema.permissions.name })
       .from(schema.permissions)
-      .where(eq(schema.permissions.name, "lesson:delete_hard"));
-    expect(held, "the catalogue has no lesson:delete_hard").toBeTruthy();
+      .where(eq(schema.permissions.name, "user:impersonate"));
+    expect(held, "the catalogue has no user:impersonate").toBeTruthy();
 
     expect(
       refusalsForRoleClone({

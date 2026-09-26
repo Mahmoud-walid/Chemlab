@@ -274,18 +274,28 @@ describe("the permission that reveals the settings section", () => {
     expect(row).toBeDefined();
   });
 
-  it("is held by no role, not even Admin", async () => {
-    // The whole reason it is a permission rather than a role check: holding
-    // admin is not a request to be woken by a build. A Super Admin grants it
-    // to whoever works on this project; nobody has it by default.
+  it("is held by the Admin alone", async () => {
+    // It is still a PERMISSION rather than a role check, and that reasoning is
+    // untouched by the Admin now holding it: deriving it from `admin:access`
+    // would contradict what `ci_notification_preferences` says out loud — holding
+    // admin is not a request to be woken by a build, which is why the opt-in row
+    // exists — and somebody who wants build alerts should not have to be granted
+    // admin to get them. A custom role can carry it to exactly them.
+    //
+    // Inverted at the owner's decision, and asserted exactly rather than loosened
+    // to "at least Admin": what this gate keeps off the settings page of a site
+    // aimed at children is branch names, commit messages and failure detail, and
+    // that is worth nothing if the permission quietly spreads to Editor on some
+    // later seed edit.
     const rows = await db.execute<{ key: string }>(sql`
       select r.key
       from roles r
       join role_permissions rp on rp.role_id = r.id
       join permissions p on p.id = rp.permission_id
       where p.name = 'notification:subscribe_ci'
+      order by r.key
     `);
 
-    expect(rows.rows).toEqual([]);
+    expect(rows.rows.map((row) => row.key)).toEqual(["admin"]);
   });
 });

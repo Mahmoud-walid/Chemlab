@@ -9,20 +9,28 @@ import { signInAs } from "./support/accounts";
  * The Development section of the settings page.
  *
  * The claim worth a browser: the section is ABSENT for somebody who does not
- * hold `notification:subscribe_ci` — including an admin — and appears once it
- * is granted. Branch names, commit messages and CI failure detail on the
- * settings page of a site aimed at children is the failure this gate exists
- * to prevent, and "the server would refuse the API" is not an answer to a
- * section that renders.
+ * hold `notification:subscribe_ci`, and present for somebody who does. Branch
+ * names, commit messages and CI failure detail on the settings page of a site
+ * aimed at children is the failure this gate exists to prevent, and "the server
+ * would refuse the API" is not an answer to a section that renders.
+ *
+ * The Admin holds the permission now (`db/seed/rbac.ts`, at the owner's
+ * decision), so the absence tests are asked of an EDITOR — privileged enough
+ * that they cannot pass by the account being powerless.
  */
 
 /**
  * Serial, and not because of speed.
  *
- * These tests grant the permission to the shared `admin` role for their
- * duration, and one asserts the section is absent without it. `fullyParallel`
- * splits a single file across workers, so in parallel that test can load the
- * page while another has the grant in place.
+ * It was the shared GRANT that forced this: the tests granted the permission to
+ * the `admin` role for their duration while another asserted the section was
+ * absent without it, and `fullyParallel` splits one file across workers.
+ *
+ * The grant is gone — the Admin holds it from `db/seed/rbac.ts` — but serial
+ * stays, for a reason that has not gone anywhere: two of these tests write and
+ * read `ci_notification_preferences` for the SAME shared admin account, so in
+ * parallel one can save while the other reads. The hard-delete specs dropped
+ * serial in this change because they had no such row; this one keeps it.
  */
 test.describe.configure({ mode: "serial", timeout: 120_000 });
 
@@ -60,44 +68,57 @@ async function signInAsAdmin(page: import("@playwright/test").Page) {
   return adminUserId;
 }
 
-/** Grants the permission to a role for this test only, then takes it back. */
+/**
+ * Runs `run` with `notification:subscribe_ci` confirmed on the role.
+ *
+ * It used to GRANT the permission and take it back afterwards, because no role
+ * held it. The Admin holds it from `db/seed/rbac.ts` now, so this asserts the
+ * seed instead of mutating the role — and the change of direction matters: a
+ * grant-and-revoke here would strip a SEEDED permission halfway through the run
+ * and leave every later test failing for a reason nothing states.
+ *
+ * Kept as a wrapper rather than deleted, so the assertion sits exactly where the
+ * old grant did: if `pnpm db:seed` ever stops granting this, these tests say so
+ * in one line instead of failing on a missing button.
+ */
 async function withPermission(roleKey: string, run: () => Promise<void>) {
-  const [role] = await db
-    .select({ id: schema.roles.id })
-    .from(schema.roles)
-    .where(eq(schema.roles.key, roleKey));
-  const [permission] = await db
-    .select({ id: schema.permissions.id })
-    .from(schema.permissions)
-    .where(eq(schema.permissions.name, "notification:subscribe_ci"));
+  const [row] = await db
+    .select({ roleId: schema.rolePermissions.roleId })
+    .from(schema.rolePermissions)
+    .innerJoin(schema.roles, eq(schema.roles.id, schema.rolePermissions.roleId))
+    .innerJoin(
+      schema.permissions,
+      eq(schema.permissions.id, schema.rolePermissions.permissionId),
+    )
+    .where(
+      and(
+        eq(schema.roles.key, roleKey),
+        eq(schema.permissions.name, "notification:subscribe_ci"),
+      ),
+    );
 
-  await db
-    .insert(schema.rolePermissions)
-    .values({ roleId: role!.id, permissionId: permission!.id })
-    .onConflictDoNothing();
+  expect(
+    row,
+    `${roleKey} does not hold notification:subscribe_ci — run pnpm db:seed`,
+  ).toBeTruthy();
 
-  try {
-    await run();
-  } finally {
-    await db
-      .delete(schema.rolePermissions)
-      .where(
-        and(
-          eq(schema.rolePermissions.roleId, role!.id),
-          eq(schema.rolePermissions.permissionId, permission!.id),
-        ),
-      );
-  }
+  await run();
 }
 
 const heading = (page: import("@playwright/test").Page) =>
   page.getByRole("heading", { name: "Development", exact: true });
 
 test.describe("CI alerts in settings", () => {
-  test("are absent for an admin, because no role holds the permission", async ({
+  test("are absent for an editor, which holds no CI subscription", async ({
     page,
   }) => {
-    await signInAsAdmin(page);
+    // Re-pointed from `admin` to `editor`, because the Admin now holds
+    // `notification:subscribe_ci` from the seed. The guard is unchanged and is
+    // the whole reason this file exists: branch names, commit messages and CI
+    // failure detail on the settings page of a site aimed at children. Editor is
+    // the sharper subject than a plain member — it holds `admin:access`, so this
+    // cannot pass merely by the account being powerless.
+    await signInAs(page, db, "editor");
     await page.goto("/en/profile/settings");
 
     // The rest of the page is there, so an empty assertion cannot pass by the
@@ -111,7 +132,7 @@ test.describe("CI alerts in settings", () => {
   test("the API says nothing either, without the permission", async ({
     page,
   }) => {
-    await signInAsAdmin(page);
+    await signInAs(page, db, "editor");
 
     // 404 rather than 403: somebody who does not work on this repository has
     // no business learning that it notifies anybody about its builds.

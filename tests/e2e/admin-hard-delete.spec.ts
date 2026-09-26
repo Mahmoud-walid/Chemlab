@@ -9,23 +9,25 @@ import { signInAs } from "./support/accounts";
 /**
  * Erasing a lesson, end to end.
  *
- * The two things a browser can prove that nothing else can: that the button
- * is simply absent for an account without the permission — which is every
- * account by default — and that the refusals reach the operator as sentences
- * rather than as a failed request.
+ * The two things a browser can prove that nothing else can: that the button is
+ * simply absent for an account without the permission — an editor, since the
+ * Admin holds it — and that the refusals reach the operator as sentences rather
+ * than as a failed request.
  */
 
 /**
- * Serial, and not because of speed.
+ * No longer serial, and the reason it was is worth keeping.
  *
- * Two of these tests grant `lesson:delete_hard` to the shared `admin` role
- * for their duration, and one asserts that no role holds it. `fullyParallel`
- * splits a single file across workers, so in parallel the third test can read
- * the role while another test has it granted — and it failed exactly that way
- * before this line existed. Serial is the honest fix: the tests share mutable
- * global state, so they cannot run at the same time.
+ * Two of these tests used to GRANT `lesson:delete_hard` to the shared `admin`
+ * role for their duration while a third asserted that no role held it — and
+ * `fullyParallel` splits one file across workers, so the third could read the
+ * role mid-grant. It failed exactly that way before the serial line existed.
+ *
+ * The Admin holds the permission from `db/seed/rbac.ts` now, so nothing here
+ * mutates a role and the shared mutable state is gone. The timeout stays: erasing
+ * a lesson navigates twice and the container is not fast.
  */
-test.describe.configure({ mode: "serial", timeout: 120_000 });
+test.describe.configure({ timeout: 120_000 });
 
 let db: SeedDatabase;
 let close: () => Promise<void>;
@@ -62,47 +64,63 @@ async function anyUserId(): Promise<string | undefined> {
   return user?.id;
 }
 
-/** Grants the permission to a role for this test only, then takes it back. */
+/**
+ * Runs `run` with `lesson:delete_hard` confirmed on the role.
+ *
+ * It used to GRANT the permission and take it back afterwards, because no role
+ * held it. The Admin holds it from `db/seed/rbac.ts` now, so this asserts the
+ * seed instead of mutating the role — and the change of direction matters: a
+ * grant-and-revoke here would strip a SEEDED permission halfway through the run
+ * and leave every later test failing for a reason nothing states.
+ *
+ * Kept as a wrapper rather than deleted, so the assertion sits exactly where the
+ * old grant did: if `pnpm db:seed` ever stops granting this, these tests say so
+ * in one line instead of failing on a missing button.
+ */
 async function withPermission(roleKey: string, run: () => Promise<void>) {
-  const [role] = await db
-    .select({ id: schema.roles.id })
-    .from(schema.roles)
-    .where(eq(schema.roles.key, roleKey));
-  const [permission] = await db
-    .select({ id: schema.permissions.id })
-    .from(schema.permissions)
-    .where(eq(schema.permissions.name, "lesson:delete_hard"));
+  const [row] = await db
+    .select({ roleId: schema.rolePermissions.roleId })
+    .from(schema.rolePermissions)
+    .innerJoin(schema.roles, eq(schema.roles.id, schema.rolePermissions.roleId))
+    .innerJoin(
+      schema.permissions,
+      eq(schema.permissions.id, schema.rolePermissions.permissionId),
+    )
+    .where(
+      and(
+        eq(schema.roles.key, roleKey),
+        eq(schema.permissions.name, "lesson:delete_hard"),
+      ),
+    );
 
-  await db
-    .insert(schema.rolePermissions)
-    .values({ roleId: role!.id, permissionId: permission!.id })
-    .onConflictDoNothing();
+  expect(
+    row,
+    `${roleKey} does not hold lesson:delete_hard — run pnpm db:seed`,
+  ).toBeTruthy();
 
-  try {
-    await run();
-  } finally {
-    await db
-      .delete(schema.rolePermissions)
-      .where(
-        and(
-          eq(schema.rolePermissions.roleId, role!.id),
-          eq(schema.rolePermissions.permissionId, permission!.id),
-        ),
-      );
-  }
+  await run();
 }
 
 test.describe("erasing a lesson", () => {
-  test("offers nothing to an admin, because no role holds the permission", async ({
+  test("offers nothing to an editor, which holds no hard delete", async ({
     page,
   }) => {
-    await signInAs(page, db, "admin");
+    // Re-pointed from `admin` to `editor`, because the Admin now holds
+    // `lesson:delete_hard` from the seed. The GUARD is unchanged and still worth
+    // a browser: an account that can read and publish lessons and cannot erase
+    // one must not be shown the control. Editor is the sharper subject anyway —
+    // it is privileged, so this cannot pass merely by the account being
+    // powerless.
+    await signInAs(page, db, "editor");
     const lesson = await draft("hidden");
     await page.goto(`/en/admin/lessons/${lesson.slug}`);
 
-    // The default state of the whole feature: Admin can withdraw a lesson and
-    // cannot erase one, until a Super Admin decides otherwise.
-    await expect(page.getByRole("button", { name: /withdraw/i })).toBeVisible();
+    // The page really rendered, so the absence below is an absence rather than a
+    // failed load. Deliberately the heading and not the Withdraw button: that is
+    // gated on `lesson:delete`, which an editor also lacks.
+    await expect(
+      page.getByRole("heading", { name: lesson.title }),
+    ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Erase permanently" }),
     ).toHaveCount(0);
