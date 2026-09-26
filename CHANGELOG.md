@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.28.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.27.0...v0.28.0) (2026-09-26)
+
+
+### Features
+
+* **admin:** roles and permissions screens, and role assignment on a user ([#145](https://github.com/Mahmoud-walid/Chemlab/issues/145)) ([9878cd4](https://github.com/Mahmoud-walid/Chemlab/commit/9878cd427a1eaafab4734eda213ce376edf184fe))
+
 ## [0.27.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.26.1...v0.27.0) (2026-09-26)
 
 
