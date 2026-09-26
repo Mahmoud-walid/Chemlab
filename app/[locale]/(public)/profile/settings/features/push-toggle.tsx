@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Bell, BellOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -70,6 +70,19 @@ export function PushToggle({
 }) {
   const [state, setState] = useState<PushState | null>(null);
   const [busy, setBusy] = useState(false);
+  /**
+   * Whether the silent re-subscribe below has already been tried.
+   *
+   * A ref rather than state, and the whole point of it. The effect that runs
+   * it depends on `state` and `busy`, and a failed attempt sets both back to
+   * what they were — so without a latch it fires again the moment `busy`
+   * clears, and again, for ever. That is not theoretical: it shipped, and it
+   * spent a toast, a `pushManager.subscribe()` and a POST per iteration.
+   */
+  const autoAttempted = useRef(false);
+  /** A failed silent attempt has to leave a way forward, or the card is a
+   * paragraph with no control in it. */
+  const [autoFailed, setAutoFailed] = useState(false);
 
   const refresh = useCallback(async () => {
     if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
@@ -90,38 +103,49 @@ export function PushToggle({
     void refresh();
   }, [refresh]);
 
-  const subscribe = useCallback(async () => {
-    if (!vapidPublicKey) return;
-    setBusy(true);
+  const subscribe = useCallback(
+    async ({ silent = false }: { silent?: boolean } = {}) => {
+      if (!vapidPublicKey) return;
+      setBusy(true);
 
-    try {
-      const registration = await navigator.serviceWorker.ready;
+      try {
+        const registration = await navigator.serviceWorker.ready;
 
-      const subscription = await registration.pushManager.subscribe({
-        // Required by every browser: a push that shows nothing is a push that
-        // can be used to track people silently, so they refuse to allow one.
-        userVisibleOnly: true,
-        applicationServerKey: toApplicationServerKey(vapidPublicKey),
-      });
+        const subscription = await registration.pushManager.subscribe({
+          // Required by every browser: a push that shows nothing is a push
+          // that can be used to track people silently, so they refuse to
+          // allow one.
+          userVisibleOnly: true,
+          applicationServerKey: toApplicationServerKey(vapidPublicKey),
+        });
 
-      const response = await fetch("/api/push/subscriptions", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(subscription.toJSON()),
-      });
-      if (!response.ok) throw new Error(String(response.status));
+        const response = await fetch("/api/push/subscriptions", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(subscription.toJSON()),
+        });
+        if (!response.ok) throw new Error(String(response.status));
 
-      await refresh();
-    } catch {
-      // Includes the user dismissing the browser's own dialog, which is not an
-      // error worth an alarming message — the state refresh below tells them
-      // where they stand.
-      toast.error({ title: labels.failed, description: "" });
-      await refresh();
-    } finally {
-      setBusy(false);
-    }
-  }, [vapidPublicKey, labels.failed, refresh]);
+        setAutoFailed(false);
+        await refresh();
+      } catch {
+        // Silent means silent. The re-subscribe below runs because the reader
+        // opened a settings page, not because they asked for anything — so a
+        // red toast blames them for a failure they did not cause and cannot
+        // read the cause of. It leaves a button instead.
+        //
+        // A subscribe the reader DID press still reports, because there the
+        // toast answers a question they just asked. That includes dismissing
+        // the browser's own dialog, which is not alarming but is an answer.
+        if (silent) setAutoFailed(true);
+        else toast.error({ title: labels.failed, description: "" });
+        await refresh();
+      } finally {
+        setBusy(false);
+      }
+    },
+    [vapidPublicKey, labels.failed, refresh],
+  );
 
   const unsubscribe = useCallback(async () => {
     setBusy(true);
@@ -146,14 +170,26 @@ export function PushToggle({
     }
   }, [labels.failed, refresh]);
 
-  // Permission already granted but no subscription — the user said yes and
+  // Permission already granted but no subscription — the reader said yes and
   // something dropped the endpoint. Re-subscribe silently rather than asking
   // them to re-consent to something they never withdrew.
+  //
+  // ONCE per mount, and the latch is the load-bearing part. `subscribe()`
+  // ends by refreshing the state and clearing `busy`, and when it fails both
+  // land back exactly where this effect's condition wants them: still
+  // `granted-unsubscribed`, no longer busy. Without the ref it re-fires on
+  // that very change and loops for as long as the page is open — a toast, a
+  // `pushManager.subscribe()` and a POST to /api/push/subscriptions per turn.
+  // Retrying on an interval would be the same bug with a timer in front of
+  // it; the manual button below is the retry.
   useEffect(() => {
-    if (state && shouldResubscribe(state) && vapidPublicKey && !busy) {
-      void subscribe();
-    }
-  }, [state, vapidPublicKey, busy, subscribe]);
+    if (!state || !vapidPublicKey) return;
+    if (!shouldResubscribe(state)) return;
+    if (autoAttempted.current) return;
+
+    autoAttempted.current = true;
+    void subscribe({ silent: true });
+  }, [state, vapidPublicKey, subscribe]);
 
   if (!vapidPublicKey || state === null) return null;
 
@@ -183,11 +219,16 @@ export function PushToggle({
         </p>
       )}
 
-      {canPrompt(state) && (
+      {(canPrompt(state) || (shouldResubscribe(state) && autoFailed)) && (
+        // The second case is the one that was missing. `granted-unsubscribed`
+        // matched no branch at all, so a reader whose silent re-subscribe had
+        // failed got a heading, a sentence and nothing to press — and the only
+        // sign anything was wrong was the toast, which is now suppressed. A
+        // state with no way out of it is worse than an error message.
         <Button
           type="button"
           variant="outline"
-          onClick={subscribe}
+          onClick={() => void subscribe()}
           disabled={busy}
           className="gap-2"
         >
