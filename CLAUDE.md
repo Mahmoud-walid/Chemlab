@@ -239,9 +239,24 @@ removed the "broken" check.
 Adding a permission: a row in `db/seed/rbac.ts`, a grant to whichever seeded
 roles should hold it, a line in `docs/PERMISSIONS.md`, then `pnpm db:seed`.
 
-Three permissions are held by **no role by default**, on purpose:
-`lesson:delete_hard`, `quiz:delete_hard`, and `notification:subscribe_ci`. A
-Super Admin grants them at runtime.
+**Admin holds every permission that anything implements** — 49 of the 53 in the
+catalogue, including `lesson:delete_hard`, `quiz:delete_hard` and
+`notification:subscribe_ci`, which were held by no role until the owner decided
+otherwise. The interruptions that make an irreversible erase deliberate are
+unchanged and are where they belong: the typed slug in the dialog, and the
+server-side refusals for a commented or published item. The CI gate is exactly as
+strict for everybody else — the section is absent without the permission and
+`/api/ci/preferences` answers 404.
+
+The four it does **not** hold are the four with no implementation:
+`user:delete`, `user:impersonate`, `permission:create` and `permission:delete`
+have zero use sites in `app/`, `lib/` and `db/`. Granting one would put a
+checkbox on a role that changes nothing. `permission:create` is worse than
+unimplemented — `isKnownPermission` reads the vocabulary from `db/seed/rbac.ts`,
+so a permission created at runtime throws `UnknownPermissionError` the first time
+anything checks it. Those four are also, now, the whole of an Admin's ceiling:
+`tests/integration/admin-roles.test.ts` asserts they stay out, because the
+escalation rules need a boundary to hold at.
 
 ---
 

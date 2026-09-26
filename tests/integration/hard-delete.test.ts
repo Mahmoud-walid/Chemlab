@@ -84,7 +84,7 @@ const auditEntries = async () =>
     );
 
 describe("the permission", () => {
-  it("exists in the catalogue and is held by no role", async () => {
+  it("exists in the catalogue and is held by the Admin alone", async () => {
     expect(allPermissionNames()).toContain("lesson:delete_hard");
 
     const rows = await db.execute<{ key: string }>(sql`
@@ -93,11 +93,19 @@ describe("the permission", () => {
       join role_permissions rp on rp.role_id = r.id
       join permissions p on p.id = rp.permission_id
       where p.name = 'lesson:delete_hard'
+      order by r.key
     `);
 
-    // Not even Admin. A Super Admin can grant it at runtime when somebody
-    // genuinely needs it; nobody holds it by default.
-    expect(rows.rows).toEqual([]);
+    // Inverted at the owner's decision: this asserted that NO role held it,
+    // including Admin, on the argument that an irreversible erase should be a
+    // deliberate runtime grant. In practice that meant whoever runs the platform
+    // could not clear a spam draft without a Super Admin.
+    //
+    // Still asserted exactly, not loosened to "at least Admin": the refusals in
+    // this file are what make the erase safe, and they are worth nothing if the
+    // permission quietly spreads to Editor on some later seed edit. Super Admin
+    // is absent because its power is a short-circuit, not grant rows.
+    expect(rows.rows.map((row) => row.key)).toEqual(["admin"]);
   });
 });
 

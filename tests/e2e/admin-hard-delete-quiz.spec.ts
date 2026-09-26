@@ -16,15 +16,18 @@ import { signInAs } from "./support/accounts";
  */
 
 /**
- * Serial, and not because of speed.
+ * No longer serial, and the reason it was is worth keeping.
  *
- * These tests grant `quiz:delete_hard` to the shared `admin` role for their
- * duration, and one asserts that no role holds it. `fullyParallel` splits a
- * single file across workers, so in parallel that test can read the role
- * while another has it granted. Serial is the honest fix: they share mutable
- * global state, so they cannot run at the same time.
+ * Two of these tests used to GRANT `quiz:delete_hard` to the shared `admin`
+ * role for their duration while a third asserted that no role held it — and
+ * `fullyParallel` splits one file across workers, so the third could read the
+ * role mid-grant. It failed exactly that way before the serial line existed.
+ *
+ * The Admin holds the permission from `db/seed/rbac.ts` now, so nothing here
+ * mutates a role and the shared mutable state is gone. The timeout stays: erasing
+ * a quiz navigates twice and the container is not fast.
  */
-test.describe.configure({ mode: "serial", timeout: 120_000 });
+test.describe.configure({ timeout: 120_000 });
 
 let db: SeedDatabase;
 let close: () => Promise<void>;
@@ -63,47 +66,60 @@ async function anyUserId(): Promise<string> {
   return user!.id;
 }
 
-/** Grants the permission to a role for this test only, then takes it back. */
+/**
+ * Runs `run` with `quiz:delete_hard` confirmed on the role.
+ *
+ * It used to GRANT the permission and take it back afterwards, because no role
+ * held it. The Admin holds it from `db/seed/rbac.ts` now, so this asserts the
+ * seed instead of mutating the role — and the change of direction matters: a
+ * grant-and-revoke here would strip a SEEDED permission halfway through the run
+ * and leave every later test failing for a reason nothing states.
+ *
+ * Kept as a wrapper rather than deleted, so the assertion sits exactly where the
+ * old grant did: if `pnpm db:seed` ever stops granting this, these tests say so
+ * in one line instead of failing on a missing button.
+ */
 async function withPermission(roleKey: string, run: () => Promise<void>) {
-  const [role] = await db
-    .select({ id: schema.roles.id })
-    .from(schema.roles)
-    .where(eq(schema.roles.key, roleKey));
-  const [permission] = await db
-    .select({ id: schema.permissions.id })
-    .from(schema.permissions)
-    .where(eq(schema.permissions.name, "quiz:delete_hard"));
+  const [row] = await db
+    .select({ roleId: schema.rolePermissions.roleId })
+    .from(schema.rolePermissions)
+    .innerJoin(schema.roles, eq(schema.roles.id, schema.rolePermissions.roleId))
+    .innerJoin(
+      schema.permissions,
+      eq(schema.permissions.id, schema.rolePermissions.permissionId),
+    )
+    .where(
+      and(
+        eq(schema.roles.key, roleKey),
+        eq(schema.permissions.name, "quiz:delete_hard"),
+      ),
+    );
 
-  await db
-    .insert(schema.rolePermissions)
-    .values({ roleId: role!.id, permissionId: permission!.id })
-    .onConflictDoNothing();
+  expect(
+    row,
+    `${roleKey} does not hold quiz:delete_hard — run pnpm db:seed`,
+  ).toBeTruthy();
 
-  try {
-    await run();
-  } finally {
-    await db
-      .delete(schema.rolePermissions)
-      .where(
-        and(
-          eq(schema.rolePermissions.roleId, role!.id),
-          eq(schema.rolePermissions.permissionId, permission!.id),
-        ),
-      );
-  }
+  await run();
 }
 
 test.describe("erasing a quiz", () => {
-  test("offers nothing to an admin, because no role holds the permission", async ({
+  test("offers nothing to an editor, which holds no hard delete", async ({
     page,
   }) => {
-    await signInAs(page, db, "admin");
+    // Re-pointed from `admin` to `editor`, because the Admin now holds
+    // `quiz:delete_hard` from the seed. The GUARD is unchanged and still worth a
+    // browser: an account that can read and publish quizzes and cannot erase one
+    // must not be shown the control. Editor is the sharper subject anyway — it is
+    // privileged, so this cannot pass merely by the account being powerless.
+    await signInAs(page, db, "editor");
     const quiz = await draft("hidden");
     await page.goto(`/en/admin/quizzes/${quiz.slug}`);
 
-    // The default state of the whole feature: Admin can withdraw a quiz and
-    // cannot erase one, until a Super Admin decides otherwise.
-    await expect(page.getByRole("button", { name: /withdraw/i })).toBeVisible();
+    // The page really rendered, so the absence below is an absence rather than a
+    // failed load. Deliberately the heading and not the Withdraw button: that is
+    // gated on `quiz:delete`, which an editor also lacks.
+    await expect(page.getByRole("heading", { name: quiz.title })).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Erase permanently" }),
     ).toHaveCount(0);

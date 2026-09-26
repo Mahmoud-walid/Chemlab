@@ -383,6 +383,15 @@ export const ROLES: RoleSpec[] = [
       p("lesson", "create"),
       p("lesson", "update"),
       p("lesson", "delete"),
+      // Hard delete, held by the Admin at the owner's decision. It was held by
+      // no role for a while, on the argument that an irreversible erase should
+      // be a deliberate runtime grant — and in practice that meant the person
+      // running the platform could not clear a spam draft without a Super
+      // Admin. The interruption that makes it deliberate is in the UI, where it
+      // belongs: the erase dialog requires the slug typed out, and the refusals
+      // (a lesson with comments, a published lesson) are server-side and
+      // unchanged.
+      p("lesson", "delete_hard"),
       p("lesson", "publish"),
       p("element", "read"),
       p("element", "update"),
@@ -390,6 +399,9 @@ export const ROLES: RoleSpec[] = [
       p("quiz", "create"),
       p("quiz", "update"),
       p("quiz", "delete"),
+      // See the note on `lesson:delete_hard` above — same decision, same
+      // typed-slug interruption, same server-side refusals.
+      p("quiz", "delete_hard"),
       p("quiz", "publish"),
       p("exam", "read"),
       p("exam", "export"),
@@ -428,6 +440,12 @@ export const ROLES: RoleSpec[] = [
       p("media", "delete"),
       p("notification", "read"),
       p("notification", "create"),
+      // Build alerts, held by the Admin at the owner's decision. The gate stays
+      // exactly as strict for everybody else: the Development section is absent
+      // without it and `/api/ci/preferences` answers 404, because a reader who
+      // does not work on this repository has no business learning that it
+      // notifies anybody about its builds.
+      p("notification", "subscribe_ci"),
       p("audit", "read"),
       p("activity", "read"),
       p("activity", "read_pii"),

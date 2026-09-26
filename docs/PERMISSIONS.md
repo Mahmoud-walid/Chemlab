@@ -26,12 +26,17 @@ unique key, so the admin UI can group by resource without parsing strings.
 `lesson:delete_hard` and `quiz:delete_hard` are separate from their `delete`
 counterparts for the same reason `setting:update_security` is separate from
 `setting:update`: soft delete keeps the row and can be undone, and erasing one
-cannot. **No role holds either by default, including Admin.** They exist for a
-row created by mistake — something somebody made while learning the editor —
-and the refusals are their definition rather than a safety net: a row that is
-published, was ever published, or that anything else refers to is history, and
-history gets withdrawn instead. A Super Admin can grant them at runtime when
-somebody genuinely needs it.
+cannot. They exist for a row created by mistake — something somebody made while
+learning the editor — and the refusals are their definition rather than a safety
+net: a row that is published, was ever published, or that anything else refers to
+is history, and history gets withdrawn instead.
+
+**Admin holds both.** It did not for a while, on the argument that an
+irreversible erase should be a deliberate runtime grant — and in practice that
+meant whoever runs the platform could not clear a spam draft without a Super
+Admin, which is a support ticket rather than a safeguard. What makes the erase
+deliberate is where it belongs: the dialog requires the slug typed out, and the
+refusals above are server-side and unchanged. No other seeded role holds either.
 
 What counts as a reference differs by resource, and the difference is
 structural rather than a choice. A lesson is blocked by a comment, a save, a
@@ -82,10 +87,11 @@ alternatives are wrong. Deriving it from `admin:access` contradicts what
 be woken by a build, and somebody who wants build alerts should not have to be
 granted admin to get them. Leaving it ungated puts branch names, commit
 messages and failure detail on the settings page of a site aimed at children.
-**No role holds it by default**, like the two `delete_hard` permissions; a
-Super Admin grants it. The API answers **404** without it rather than 403 —
-somebody who does not work on this repository has no business learning that it
-notifies anybody about its builds.
+**Admin holds it**, like the two `delete_hard` permissions, and no other seeded
+role does. The gate is exactly as strict for everybody else: the section is absent
+without the permission, and the API answers **404** rather than 403 — somebody who
+does not work on this repository has no business learning that it notifies anybody
+about its builds.
 
 `exam:void` is a third of the same shape. Reading the scores and striking one
 out are different levels of trust: a void changes somebody's record, is
@@ -192,9 +198,10 @@ granting a role, editing a role's grants, cloning a role — refuses anything th
 actor does not hold themselves, and `super_admin` by key. So the most powerful
 role an Admin can create is one exactly as powerful as an Admin.
 
-What widening Admin deliberately did **not** include is the three permissions no
-role holds by default. They stay runtime grants, and three e2e specs assert the
-panel offers nothing without them.
+Admin also holds `lesson:delete_hard`, `quiz:delete_hard` and
+`notification:subscribe_ci`, which no role held until the owner decided
+otherwise. What it does **not** hold is the four permissions nothing implements —
+see "Held by nobody, and why" below.
 
 Assigning happens on the person, at `/admin/users/<id>`, because "what can this
 account do" is a question about the account.
@@ -252,12 +259,40 @@ the permissions belong to the new role.
 Cloning `super_admin` needs no special case — it holds no grant rows, so the copy
 is an empty role. The short-circuit lives on the key and does not travel.
 
-This is also the documented route to the three permissions no role holds by
-default: put them on a custom role, and assign that.
+Cloning is still how a role narrower or wider than a seeded one gets made — and
+it is the only route to the four permissions the Admin does not hold, for a
+Super Admin who wants a role carrying one.
 
 Super Admin gets no checkbox list at all: rendering 53 ticked boxes would
 suggest the power comes from those rows and that unticking one removes it, which
 is the exact misunderstanding the short-circuit design prevents.
+
+### Held by nobody, and why
+
+Four permissions are in the catalogue and held by **no role, including Super
+Admin's implicit everything** — because nothing implements them:
+
+| Permission          | Why it is inert                               |
+| ------------------- | --------------------------------------------- |
+| `user:delete`       | No use site in `app/`, `lib/` or `db/`        |
+| `user:impersonate`  | The same                                      |
+| `permission:create` | The same, **and unimplementable as designed** |
+| `permission:delete` | The same                                      |
+
+Granting one would put a checkbox on a role that changes nothing — the "control
+that cannot work" this project bans, wearing a permission's clothes.
+
+`permission:create` is the interesting one. `isKnownPermission` reads the
+vocabulary from `db/seed/rbac.ts`, not from the `permissions` table, and
+deliberately: the check exists to catch a mistyped name in OUR code, and a name
+absent from the spec is a mistake whether or not a row exists. So a permission
+created at runtime could be stored and attached to a role, and would throw
+`UnknownPermissionError` the first time anything checked it. Creating permissions
+at runtime is not supported, and a UI for it would produce dead rows.
+
+These four are also, now, the whole of an Admin's ceiling — Admin holds the other 49. `tests/integration/admin-roles.test.ts` asserts they stay out, because the
+no-escalation rules need a boundary to hold at, and a boundary nothing pins is
+one that quietly moves.
 
 ## Using it
 

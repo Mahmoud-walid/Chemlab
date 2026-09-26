@@ -91,7 +91,7 @@ const startAttempt = () =>
   });
 
 describe("the permission", () => {
-  it("exists in the catalogue and is held by no role", async () => {
+  it("exists in the catalogue and is held by the Admin alone", async () => {
     expect(allPermissionNames()).toContain("quiz:delete_hard");
 
     const rows = await db.execute<{ key: string }>(sql`
@@ -100,11 +100,15 @@ describe("the permission", () => {
       join role_permissions rp on rp.role_id = r.id
       join permissions p on p.id = rp.permission_id
       where p.name = 'quiz:delete_hard'
+      order by r.key
     `);
 
-    // Not even Admin. A Super Admin can grant it at runtime when somebody
-    // genuinely needs it; nobody holds it by default.
-    expect(rows.rows).toEqual([]);
+    // Inverted at the owner's decision — see the same note in
+    // tests/integration/hard-delete.test.ts. Still asserted exactly rather than
+    // loosened to "at least Admin": the refusals in this file are what make the
+    // erase safe, and they are worth nothing if the permission quietly spreads on
+    // some later seed edit.
+    expect(rows.rows.map((row) => row.key)).toEqual(["admin"]);
   });
 });
 
