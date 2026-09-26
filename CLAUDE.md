@@ -99,10 +99,12 @@ The package manager is pinned by `packageManager` in `package.json`
 - **Next.js 16 App Router + Turbopack**, React 19, TypeScript 5.9 strict,
   Tailwind v4, shadcn/ui (added via its CLI — `pnpm ui:add` — never
   hand-copied, so upstream fixes stay mergeable).
-- **Postgres** via Drizzle ORM. Neon in the owner's environment; **Postgres 17
-  in CI, Postgres 16 in the container**. That gap is real and not cosmetic: a
-  suite that passes locally has not been run on the version CI will run it on,
-  so a version-specific behaviour fails in CI having passed on your machine.
+- **Postgres** via Drizzle ORM, on **three different major versions**:
+  **18 on the owner's Neon**, **17 in CI**, **16 in the container**
+  (`pnpm db:check` prints the one you are actually talking to). The spread is
+  real and not cosmetic: a suite that passes locally has not been run on the
+  version CI runs, and neither has been run on the version production uses, so
+  a version-specific behaviour can pass twice and still fail for a reader.
 - **Better Auth** for identity. **next-intl** for i18n. **Vitest** +
   **Playwright** for tests.
 
@@ -342,9 +344,12 @@ three are waiting on a credential rather than on work.**
 | **#24** CI alerts        | Web Push, the settings UI and the drain schedule are merged. **Slack** needs `SLACK_WEBHOOK_URL`                                                          |
 | **#27** Cloudinary media | Foundation merged (tables, signature, folder convention, constraints, `media:upload_video`). Everything that _calls_ Cloudinary is blocked on the account |
 
-**Three migrations are applied locally but NOT to Neon:** `0023`
-(quiz option translations), `0024` (presence opt-in + audit anonymisation),
-`0025` (media tables). The owner applies them when ready.
+**All 26 migrations are applied to Neon** as of 2026-09-26 — `0023` (quiz
+option translations), `0024` (presence opt-in + audit anonymisation) and
+`0025` (media tables) were the last three outstanding, and `pnpm db:check`
+against Neon now reports 26 applied. The owner also holds every credential
+listed below, so `pnpm env:check` there reports Google, Slack, Web Push and
+Cloudinary all configured.
 
 **No decision is waiting on the owner.** Q41–Q44 were all answered on
 2026-09-21, which closes the deferred-questions backlog: every remaining item
