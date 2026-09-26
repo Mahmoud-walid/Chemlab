@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.29.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.28.0...v0.29.0) (2026-09-26)
+
+
+### Features
+
+* **admin:** give the Admin hard delete and CI alerts ([#150](https://github.com/Mahmoud-walid/Chemlab/issues/150)) ([bf421b9](https://github.com/Mahmoud-walid/Chemlab/commit/bf421b913fa720097057ff27ce4714da1b53e6a5))
+* **admin:** let an Admin define roles, clone one, and rename its own ([#147](https://github.com/Mahmoud-walid/Chemlab/issues/147)) ([b1c7ad6](https://github.com/Mahmoud-walid/Chemlab/commit/b1c7ad69ae9c6fa7401ad650a6a02838aeab62a6))
+
 ## [0.28.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.27.0...v0.28.0) (2026-09-26)
 
 
