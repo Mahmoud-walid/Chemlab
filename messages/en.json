@@ -71,11 +71,6 @@
     },
     "subtitle": "Test your knowledge across {count, plural, one {# quiz} other {# quizzes}}",
     "questionCount": "{count, plural, one {# question} other {# questions}}",
-    "pagination": {
-      "page": "Page {current} of {total}",
-      "previous": "Previous page",
-      "next": "Next page"
-    },
     "backToQuizzes": "Back to quizzes",
     "result": "Result",
     "correctOf": "{score} / {total} correct",
@@ -127,7 +122,15 @@
     "answeredProgress": "Questions answered",
     "scoreProgress": "Score: {percent} percent",
     "questionPosition": "Question {current} of {total}",
-    "answeredCount": "{answered} answered"
+    "answeredCount": "{answered} answered",
+    "searchLabel": "Search quizzes",
+    "searchPlaceholder": "Search quizzes by title, topic or category",
+    "clearSearch": "Clear search",
+    "noMatches": "Nothing matched “{query}”.",
+    "noMatchesHint": "Try a single shorter word, or clear the search to see every quiz.",
+    "loadMore": "Show {count, plural, one {# more quiz} other {# more quizzes}}",
+    "quizCount": "{count, plural, one {# quiz} other {# quizzes}}",
+    "filterLabel": "Filter"
   },
   "lessons": {
     "title": "Lessons",
@@ -161,7 +164,13 @@
     "shareCopied": "Link copied",
     "shareFailed": "Could not share. Copy the link:",
     "signInToLike": "Sign in to like and save lessons.",
-    "engagementFailed": "That did not go through. Try again."
+    "engagementFailed": "That did not go through. Try again.",
+    "searchLabel": "Search lessons",
+    "searchPlaceholder": "Search lessons by title, topic or category",
+    "clearSearch": "Clear search",
+    "noMatches": "Nothing matched “{query}”.",
+    "noMatchesHint": "Try a single shorter word, or clear the search to see the whole curriculum.",
+    "loadMore": "Show {count, plural, one {# more lesson} other {# more lessons}}"
   },
   "element": {
     "atomicNumber": "Atomic number",

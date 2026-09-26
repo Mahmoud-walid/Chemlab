@@ -19,6 +19,19 @@ const difficultyStyles: Record<string, string> = {
   hard: "bg-rose-100 text-rose-800",
 };
 
+/**
+ * One lesson, as a full-width row.
+ *
+ * A row rather than a card in a four-column grid, and the reason is the
+ * content and not the fashion: a lesson's useful summary is a sentence or two,
+ * and a narrow card had to clamp it to three short lines — so the reader chose
+ * between fourteen titles rather than between fourteen lessons. One column
+ * gives the description the width to be read, and it is the same layout on a
+ * phone as on a desktop, which means one set of behaviours to get right.
+ *
+ * The description is clamped at two lines here rather than three: at this
+ * width two lines is more prose than three lines was in a card.
+ */
 const LessonCard: React.FC<LessonCardProps> = ({
   index,
   title,
@@ -36,51 +49,66 @@ const LessonCard: React.FC<LessonCardProps> = ({
     <Link
       href={`/lessons/${slug}`}
       aria-label={`${t("readLesson")}: ${title}`}
-      className="group relative flex flex-col bg-card text-card-foreground border border-border rounded-xl p-6 overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-primary/30 no-underline"
+      className="group relative flex items-start gap-4 border-b border-border px-1 py-6 no-underline transition-colors duration-150 hover:bg-muted/40 sm:gap-6 sm:px-2"
     >
-      {/* Top accent bar */}
-      <span className="absolute top-0 inset-x-0 h-0.75 bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-t-xl" />
+      {/* The lesson number as a left rail. Hidden below `sm`, where the row is
+          already narrow and the number is the least useful thing in it. */}
+      {/*
+        `text-muted-foreground`, not `/50` of it. Measured: at 50% opacity this
+        was 2.47:1 against the dark background where axe wants 3:1 for 24px
+        bold, and `tests/e2e/a11y-dark.spec.ts` failed on all six visible rows.
+        Decorative text is still text — `aria-hidden` excuses it from the
+        accessibility tree, not from being legible.
+      */}
+      <span
+        aria-hidden
+        className="hidden w-10 shrink-0 pt-0.5 font-serif text-2xl font-bold text-muted-foreground tabular-nums transition-colors duration-150 group-hover:text-primary-text sm:block"
+      >
+        {/* Padded to two digits so the rail is a column and not a ragged edge,
+            and kept in Latin digits to match the "1.1", "1.2" section numbers
+            used throughout the chemistry material. */}
+        {String(index).padStart(2, "0")}
+      </span>
 
-      {/* Card header row */}
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <span className="text-[11px] font-bold tracking-widest uppercase text-primary-text bg-secondary px-2.5 py-1 rounded-full whitespace-nowrap">
-          {/* The index is passed as a pre-padded string so the lesson numbering
-              stays in Latin digits, matching the "1.1", "1.2" section numbers
-              used throughout the chemistry material. */}
-          {t("lessonNumber", { number: String(index).padStart(2, "0") })}
-        </span>
-        <span
-          className={`text-[10px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full whitespace-nowrap ${difficultyStyles[difficulty]}`}
-        >
-          {t(`difficulty.${difficulty}`)}
-        </span>
-      </div>
+      <div className="min-w-0 flex-1">
+        {/* Eyebrow: the number for the readers who cannot see the rail, the
+            category from the lesson data (untranslated), and the difficulty. */}
+        <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="text-[10.5px] font-bold uppercase tracking-widest text-primary-text sm:hidden">
+            {t("lessonNumber", { number: String(index).padStart(2, "0") })}
+          </span>
+          <span className="text-[10.5px] font-bold uppercase tracking-widest text-primary-text">
+            {category}
+          </span>
+          <span className="text-muted-foreground/40" aria-hidden>
+            ·
+          </span>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap ${difficultyStyles[difficulty]}`}
+          >
+            {t(`difficulty.${difficulty}`)}
+          </span>
+        </div>
 
-      {/* Category eyebrow — comes from the lesson data, untranslated */}
-      <p className="text-[10.5px] font-bold tracking-widest uppercase text-primary-text mb-1.5">
-        {category}
-      </p>
+        {/* Title — lesson content, untranslated */}
+        <h2 className="font-serif text-lg font-bold leading-snug text-card-foreground transition-colors duration-150 group-hover:text-primary-text sm:text-xl">
+          {title}
+        </h2>
 
-      {/* Title — lesson content, untranslated */}
-      <h3 className="font-serif text-base font-bold leading-snug text-card-foreground mb-2">
-        {title}
-      </h3>
+        {/* Description — lesson content, untranslated */}
+        <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+          {description}
+        </p>
 
-      {/* Description — lesson content, untranslated */}
-      <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3 flex-1">
-        {description}
-      </p>
-
-      {/* Footer */}
-      <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
-        <span className="text-[10px] text-muted-foreground">
+        <p className="mt-3 text-[11px] text-muted-foreground">
           {t("studyGuide")}
-        </span>
-        <ArrowIcon
-          aria-hidden
-          className="size-4 text-primary-text transition-transform duration-200 ltr:group-hover:translate-x-1 rtl:group-hover:-translate-x-1"
-        />
+        </p>
       </div>
+
+      <ArrowIcon
+        aria-hidden
+        className="mt-1 size-4 shrink-0 self-center text-primary-text opacity-0 transition-all duration-150 group-hover:opacity-100 ltr:group-hover:translate-x-1 rtl:group-hover:-translate-x-1"
+      />
     </Link>
   );
 };
