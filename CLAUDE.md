@@ -420,13 +420,25 @@ set the storage quotas: `MEDIA_QUOTA_BYTES` in `lib/media/quota.ts`, 2 GB for
 accounts holding `media:create` and 10 MB for everybody else, keyed off the
 permission rather than a role name because roles here are data.
 
-Two pieces of future work fall out of those answers, and neither can be
-written before the Cloudinary account exists: `scripts/media-gc.ts`, deleting
-`chemlab/preview-*` older than 30 days (Q44), and the quota's **enforcement**
-(Q43). `checkQuota()` is pure and takes the running total as an argument;
-reading and incrementing `bytes_used` belongs in the sign and confirm
-endpoints and has to be one transaction, or two uploads that check at the same
-moment both pass and overrun the quota together.
+One piece of future work falls out of those answers and genuinely needs the
+Cloudinary account: `scripts/media-gc.ts`, deleting `chemlab/preview-*` older
+than 30 days (Q44).
+
+The quota's **enforcement** was listed here as blocked too, and it was not.
+Only the sign and confirm **endpoints** need the account; the transaction
+against `user_media_quota` is Postgres and nothing else. It is built —
+`db/queries/media-quota.ts`, `reserveQuota` / `releaseQuota` / `settleQuota`,
+locking the row with `for update` so `checkQuota()` stays the only decider. The
+lesson worth keeping is the one in §6: **two obvious versions of its concurrency
+test passed with the lock removed**, one of them because
+`insert … on conflict do nothing` probes the primary-key index and so blocks on
+a held row by itself — the setup was acting as the barrier the test thought it
+provided. What catches it is a lost-update invariant, not a race. See
+`docs/MEDIA.md`.
+
+Still unimplemented and deliberately so: the daily upload count
+(`uploads_today`, `window_started_at`). No number has been chosen — **Q45**, with
+a recommendation to argue with.
 
 Resolved recently and worth knowing: presence defaults to **`nobody`** (opt-in,
 Q39); the audit log is immutable **and** an audited actor can be deleted, via a

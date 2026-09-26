@@ -683,11 +683,17 @@ was given a specific allowance; its absence means the platform default
 applies, and `defaultQuotaBytes()` is where that is decided in the open rather
 than in a schema nobody re-reads.
 
-**What is still blocked on Cloudinary (Q3):** the enforcement. `checkQuota()`
-is pure and takes the running total as an argument; reading and incrementing
-`bytes_used` belongs in the sign and confirm endpoints, and it has to be one
-transaction — two uploads that check at the same moment would otherwise both
-pass and overrun the quota together.
+**The enforcement is built** (`db/queries/media-quota.ts`), and the note that
+used to sit here — that it was blocked on Cloudinary (Q3) — was wrong. Only the
+sign and confirm **endpoints** need the account; the transaction against
+`user_media_quota` is Postgres and nothing else, which is why it is done and
+tested against a real database with real concurrency.
+
+`reserveQuota` / `releaseQuota` / `settleQuota` claim, return and correct bytes.
+The row is locked with `for update` and `checkQuota()` stays the only decider —
+a single conditional `UPDATE` would have been shorter and was rejected, because
+it writes the policy a second time in SQL where it can drift without either copy
+looking wrong.
 
 ### Q44 — do previews share the production Cloudinary account? — **RESOLVED: yes**
 
@@ -706,6 +712,36 @@ uploads — not worth a second set of secrets to hold, rotate and get wrong.
 cannot be written before then — a reclamation job that has never called
 Cloudinary is a guess, and the one mistake worth making impossible here is a
 preview's clean-up reaching production's assets.
+
+### Q45 — how many uploads a day, and per what window? — **OPEN**
+
+`user_media_quota` carries `uploads_today` and `window_started_at` alongside
+`bytes_used`. They are a **daily upload count**, and nothing reads or writes
+them: Q43 set the byte quotas and said nothing about a count.
+
+The two limits answer different questions and neither substitutes for the other.
+A byte quota stops an account storing too much; it does nothing about an account
+that uploads and deletes a 10 MB image four thousand times in an hour, which
+costs transformation and bandwidth rather than storage and never shows up in
+`bytes_used` at all.
+
+**No number is implemented, deliberately.** `reserveQuota` enforces bytes only.
+Inventing a daily cap would have put a limit in front of authors that nobody
+chose, and a wrong one is worse than none: an author blocked mid-lesson has no
+way to tell a policy from a bug.
+
+**What is needed to close this:** a count, and a window. A recommendation, to
+argue with rather than adopt — **200 a day for `media:create`, 5 for everybody
+else, on a rolling 24-hour window from `window_started_at`**. 200 is a working
+day of heavy illustration and still two orders of magnitude below a script; 5
+covers changing an avatar a few times and no plausible use beyond it. A rolling
+window rather than a calendar day because a UTC reset hands anybody near the
+limit a fresh allowance at an hour that means nothing to them, and because a
+calendar day is a different day for an author in Cairo than for the server.
+
+Also undecided: whether a refused **reservation** should count against the
+daily number. It should not — refusing an upload and then charging the author
+for having asked is a limit that punishes discovering it.
 
 ## Per-issue open questions
 
