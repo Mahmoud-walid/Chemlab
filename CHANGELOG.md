@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.26.1](https://github.com/Mahmoud-walid/Chemlab/compare/v0.26.0...v0.26.1) (2026-09-26)
+
+
+### Bug Fixes
+
+* **push:** stop the settings page re-subscribing in a loop ([#142](https://github.com/Mahmoud-walid/Chemlab/issues/142)) ([3f54d56](https://github.com/Mahmoud-walid/Chemlab/commit/3f54d56b1bc9980e90097066c09e1a33e0edaebe))
+* **scripts:** stop the scripts reporting a failure as "[object Object]" ([#140](https://github.com/Mahmoud-walid/Chemlab/issues/140)) ([fba8733](https://github.com/Mahmoud-walid/Chemlab/commit/fba8733f9a52d1e9c871f3ed31df95b279ca1c36))
+
 ## [0.26.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.25.3...v0.26.0) (2026-09-21)
 
 
