@@ -55,6 +55,12 @@ export const ACTIVITY_VERBS = [
   "admin.page_toggled",
   "admin.settings_changed",
   "admin.exported",
+  // Their own verbs rather than a generic `admin.updated`, because these are
+  // the two the audit log exists for: how somebody came to hold a role has to
+  // be reconstructable, and a timeline row reading "Updated" about the account
+  // that gained Super Admin is a record that technically exists.
+  "admin.role_assigned",
+  "admin.role_revoked",
 ] as const;
 
 export type ActivityVerb = (typeof ACTIVITY_VERBS)[number];

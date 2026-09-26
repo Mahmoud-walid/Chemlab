@@ -213,6 +213,14 @@ permissions exist and who has them. Names are `resource:action`.
    `cache()` (per request). It is deliberately not a TTL cache: a revoked role
    has to take effect on the user's very next request.
 
+**`role:assign` is only half of an authorization decision.** It answers whether
+somebody may touch roles at all, never _which_ — and an Admin holds it. The
+which is in `lib/authz-roles.ts`: no granting a role that grants more than you
+hold, `super_admin` only by a Super Admin, no revoking your own last
+`role:assign`, no removing the last Super Admin. A system role's grants are not
+editable through the admin UI at all, because `pnpm db:seed` reconciles them on
+every deploy and the edit would silently revert. See `docs/PERMISSIONS.md`.
+
 `requirePermission("lesson:publsh")` **throws** rather than denying. Denying
 would look exactly like a guard that works and stay invisible until somebody
 removed the "broken" check.
@@ -315,9 +323,19 @@ are applied locally by you and **to Neon by the owner**, when they are ready.
   rather than a parent hash covering children.
 - **`md5(text)` is the only IMMUTABLE hash Postgres exposes over `text`.**
   `sha256` takes `bytea`, and `convert_to` is only STABLE.
-- **Drizzle renders columns unqualified inside a `sql` template.** In a
-  correlated subquery an unqualified `"id"` binds to the INNER table and
-  silently counts zero. Qualify them.
+- **Drizzle renders columns unqualified inside a `sql` template — but only
+  when the outer query has no join.** In a correlated subquery an unqualified
+  `"id"` then binds to the INNER table and silently counts zero. The
+  join-dependence is the part that costs time: `${users.id}` renders as
+  `"users"."id"` in `db/queries/admin/users.ts` purely because that query has a
+  `leftJoin`, and the identical template in a join-free query renders bare
+  `"id"`. `listRoles` was written that way and returned **zero grants for every
+  role** with no error — Super Admin reading "No grants" is indistinguishable
+  from Super Admin correctly holding none, which is why nothing looked wrong.
+  Prefer two small reads assembled in TypeScript over a correlated subquery
+  whose correctness depends on a join staying in the query for unrelated
+  reasons; where the subquery is worth it, verify the rendered SQL with
+  `.toSQL()`.
 - **Every primary-key column is `NOT NULL` whether the schema says so or not.**
   A nullable column in a composite key is a constraint that disagrees with its
   own declaration. `media_usages.block_id` is `NOT NULL DEFAULT ''` for exactly

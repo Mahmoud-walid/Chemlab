@@ -5,12 +5,15 @@ import {
   setRequestLocale,
 } from "next-intl/server";
 
+import { listRoles } from "@/db/queries/admin/roles";
 import { getUserDetail, getUserTimeline } from "@/db/queries/admin/users";
 import { requireAdminPermission } from "@/lib/admin/guard";
 import { hasPermission } from "@/lib/authz";
+import { refusalsForAssign } from "@/lib/authz-roles";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
+import { RoleManager } from "./features/role-manager";
 import { Timeline } from "./features/timeline";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +41,10 @@ export default async function AdminUserDetailPage({
   // person did and when.
   const canSeeActivity = hasPermission(actor, "activity:read");
   const canSeeExams = hasPermission(actor, "exam:read");
+  // `role:read` to see the roles at all; `role:assign` to change them. Somebody
+  // who can see the account list is not automatically owed either.
+  const canSeeRoles = hasPermission(actor, "role:read");
+  const canAssignRoles = hasPermission(actor, "role:assign");
 
   const user = await getUserDetail(id);
   if (!user) notFound();
@@ -46,7 +53,33 @@ export default async function AdminUserDetailPage({
     ? await getUserTimeline(id, { limit: 25 })
     : { entries: [], nextCursor: null };
 
+  /**
+   * The roles, split into what this account holds and what this reader could
+   * grant it.
+   *
+   * The assignable list is filtered by the same pure rules the action
+   * re-applies, so a role the reader could not grant is never offered. That is
+   * convenience: `role-actions.ts` checks again against a freshly-read role,
+   * because this list is as old as the page.
+   */
+  const allRoles = canSeeRoles ? await listRoles() : [];
+  const heldRoles = allRoles.filter((role) => user.roleKeys.includes(role.key));
+  const assignableRoles = allRoles.filter(
+    (role) =>
+      refusalsForAssign({
+        actor,
+        role: {
+          key: role.key,
+          permissionNames: role.permissionNames,
+          isSystem: role.isSystem,
+          isProtected: role.isProtected,
+        },
+        targetRoleKeys: user.roleKeys,
+      }).length === 0,
+  );
+
   const t = await getTranslations("admin.users");
+  const roleLabels = await getTranslations("admin.roles");
   const activity = await getTranslations("admin.activity");
   const format = await getFormatter();
 
@@ -62,16 +95,43 @@ export default async function AdminUserDetailPage({
         <h1 className="mt-1 text-2xl font-bold tracking-tight">{user.name}</h1>
         <p className="text-sm text-muted-foreground">{user.email}</p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          {user.roleKeys.map((key) => (
-            <Badge key={key} variant="outline">
-              {key}
-            </Badge>
-          ))}
+          {/* The role badges used to live here, read-only, with no way to
+              change them. They are now the managed section below — kept out of
+              the header so there is ONE place that answers "what can this
+              person do", rather than a list here and controls further down. */}
           {!user.emailVerified && (
             <Badge variant="secondary">{t("unverified")}</Badge>
           )}
         </div>
       </div>
+
+      {canSeeRoles && (
+        <RoleManager
+          userId={id}
+          held={heldRoles.map((role) => ({
+            id: role.id,
+            key: role.key,
+            name: role.name,
+          }))}
+          assignable={assignableRoles.map((role) => ({
+            id: role.id,
+            key: role.key,
+            name: role.name,
+          }))}
+          canAssign={canAssignRoles}
+          labels={{
+            heading: roleLabels("assign.heading"),
+            hint: roleLabels("assign.hint"),
+            add: roleLabels("assign.add"),
+            addPlaceholder: roleLabels("assign.addPlaceholder"),
+            adding: roleLabels("assign.adding"),
+            none: roleLabels("assign.none"),
+            noneAssignable: roleLabels("assign.noneAssignable"),
+            readOnly: roleLabels("assign.readOnly"),
+            failed: roleLabels("assign.failed"),
+          }}
+        />
+      )}
 
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <Stat

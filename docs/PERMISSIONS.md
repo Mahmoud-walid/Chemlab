@@ -176,6 +176,58 @@ exactly the fact worth recording.
 deployment that is a land grab — whoever signs up during the deploy window owns
 the platform.
 
+After that first grant, every other role is assigned from `/admin/users/<id>`.
+The script remains the only way to create a Super Admin, and only ever the
+first one.
+
+## The admin screens
+
+`/admin/roles` needs `role:read`; each action inside needs its own permission.
+Today only Super Admin holds `role:create`, `role:update` and `role:delete` —
+`db/seed/rbac.ts` gives Admin `role:read` and `role:assign`, so an Admin can
+staff the roles that exist without being able to invent one.
+
+Assigning happens on the person, at `/admin/users/<id>`, because "what can this
+account do" is a question about the account.
+
+### Which roles, not just whether
+
+`role:assign` answers _may this person touch roles at all_. It does not answer
+**which**, and getting that wrong is privilege escalation rather than a bug: an
+Admin holds `role:assign`, so if that alone were enough to grant `super_admin`,
+Admin and Super Admin are one role and the table above is decoration.
+
+The rules are in `lib/authz-roles.ts`, pure and exhaustively tested, and every
+one of them returns **all** its reasons rather than the first:
+
+| Rule                                                                           | Why                                                                                                |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| `super_admin` may only be granted or revoked by a Super Admin                  | The key decides, because the role holds no grant rows to compare                                   |
+| A role may not be granted if it grants anything the actor does not hold        | Escalation by proxy: grant a stronger role, then ask its holder to act for you                     |
+| The same applies to **revoking**                                               | Somebody who could revoke what they could not grant can dismantle a role they are not trusted with |
+| You may not revoke a role from yourself if it costs you your own `role:assign` | The only way back is a shell on the database                                                       |
+| The last `super_admin` holder cannot be revoked                                | The service layer says it in a sentence; `user_roles_protect_last_super_admin` says it in SQL      |
+
+Only what is **added** is checked against the actor when editing a role's
+grants. Removing a permission the actor does not hold is not escalation, and
+refusing it would leave an Admin unable to tidy up a role they can otherwise
+edit.
+
+### A system role's grants cannot be edited in the UI
+
+Not a missing feature. `db/seed/authorization.ts` reconciles every seeded role's
+grants to exactly what `db/seed/rbac.ts` says, and the seed runs on every
+deploy — so an edit through the screen would work, look like it worked, and
+silently revert. The form is absent and the screen says where the answer lives.
+Change a system role in `db/seed/rbac.ts` and re-seed.
+
+Custom roles created at runtime are `is_system: false`, which the seed
+deliberately never touches, so their grants **are** editable.
+
+Super Admin gets no checkbox list at all: rendering 53 ticked boxes would
+suggest the power comes from those rows and that unticking one removes it, which
+is the exact misunderstanding the short-circuit design prevents.
+
 ## Using it
 
 ```ts

@@ -70,7 +70,14 @@ export async function signUpViaApi(
   throw new Error(`sign-up for ${email} failed with ${lastStatus}`);
 }
 
-/** Grants a role directly: the admin UI for doing so is a later issue. */
+/**
+ * Grants a role by writing the row.
+ *
+ * The admin UI for this exists now (`/admin/users/<id>`), and this helper
+ * deliberately does not use it: a test that signs in as an Admin to grant the
+ * role it needs in order to sign in as an Admin cannot get started. Setup
+ * writes the row; `tests/e2e/admin-roles.spec.ts` is what exercises the UI.
+ */
 export async function grantRole(
   db: SeedDatabase,
   email: string,
