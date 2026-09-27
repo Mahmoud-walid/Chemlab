@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.30.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.29.0...v0.30.0) (2026-09-26)
+
+
+### Features
+
+* **media:** enforce the storage quota, atomically ([#153](https://github.com/Mahmoud-walid/Chemlab/issues/153)) ([6ad49bf](https://github.com/Mahmoud-walid/Chemlab/commit/6ad49bfaba2a4ef54fe7b44e73a6d247a8b5afcb))
+
 ## [0.29.0](https://github.com/Mahmoud-walid/Chemlab/compare/v0.28.0...v0.29.0) (2026-09-26)
 
 
